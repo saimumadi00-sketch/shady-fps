@@ -8,10 +8,13 @@ export class SettingsManager {
       autoQuality: true,
     };
     try {
-      Object.assign(
-        this.values,
-        JSON.parse(localStorage.getItem("crosscurrent-settings") || "{}"),
+      const saved = JSON.parse(
+        localStorage.getItem("crosscurrent-settings") || "{}",
       );
+      if (saved && typeof saved === "object" && !Array.isArray(saved))
+        for (const key of Object.keys(this.values))
+          if (Object.prototype.hasOwnProperty.call(saved, key))
+            this.values[key] = saved[key];
     } catch {}
     if (!["low", "medium", "high"].includes(this.values.quality))
       this.values.quality = "medium";
@@ -21,6 +24,8 @@ export class SettingsManager {
       0.4,
       Math.min(2, Number(this.values.sensitivity) || 1),
     );
+    for (const key of ["sound", "autoQuality"])
+      if (typeof this.values[key] !== "boolean") this.values[key] = true;
     for (const key of Object.keys(this.values)) {
       const el = document.getElementById(key);
       if (el.type === "checkbox") el.checked = this.values[key];
@@ -128,7 +133,7 @@ export class AudioManager {
     o.type = kind === "shot" ? "sawtooth" : "sine";
     const f =
       kind === "shot"
-        ? [145, 190, 100][weapon]
+        ? [145, 190, 100, 80, 115][weapon] || 145
         : kind === "hit"
           ? 820
           : kind === "kill"

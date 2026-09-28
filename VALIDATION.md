@@ -1,10 +1,20 @@
 # Validation record
 
+## Armory models and customization
+
+Original firearm-inspired triangle meshes replace the first-person cube guns. Added live preview, saved finish/optic/callsign/FOV/crosshair customization and configurable score/time limits. All 24 Node tests pass. Browser checks cover persistence, applied rules and FOV, all five weapon meshes without WebGL errors, and mobile menu operation. Screenshots: `artifacts/armory-menu.png`, `artifacts/weapon-model-0.png` through `weapon-model-4.png`, and `artifacts/weapon-ads.png`. Exact build version and sizes are generated in `dist/build-info.json`.
+
+## Weapon selection update
+
+Added marksman rifle and LMG to the original three weapons, plus saved starting-weapon selection and a pause-menu selector. All 24 Node tests pass, including all-weapon ammo conservation, starting selection, respawn retention, firing, and cycling. The production browser suite passes desktop/mobile selection, persistence after reload, pause-menu ammo preservation, keyboard/touch switching, existing gameplay checks, and mouse regressions. Selection screenshots are in `artifacts/weapons-desktop.png` and `artifacts/weapons-mobile.png`. Production files were rebuilt; current sizes and version are in `dist/build-info.json`.
+
 ## Tactical movement / voxel update
 
-Current build: `c38c6b74c658`, 53,449 bytes raw / 19,598 gzip / 17,098 Brotli. Eighteen simulation tests pass, adding mouse/ADS sensitivity, sprint-slide-jump cancel, slide expiry and wall blocking, respawn reset, and low-ceiling clearance. The original performance and memory measurements below describe the initial build and have not been remeasured for the new character parts. The renderer still batches characters into one draw call.
+Current build: see `dist/build-info.json` for the generated content version and exact sizes. Eighteen simulation tests cover mouse/ADS sensitivity, sprint-slide-jump cancel, slide expiry and wall blocking, respawn reset, and low-ceiling clearance. Three service-worker tests cover production version pinning, development network/offline behavior, and cleanup isolation between installation paths. Respawn input and saved-settings regressions bring the total to 23 passing tests. All 23 tests passed during the local fixes on 2026-09-28, and the production build succeeded. The original performance and memory measurements below describe the initial build and have not been remeasured for the new character parts. The renderer still batches characters into one draw call.
 
 The browser regression and new tactical controls check are recorded with this update.
+
+Local fixes verified on 2026-09-28: all 13 browser workflow checks, the tactical controls suite, and three mouse regression scenarios (capture denied, capture unavailable, and switching from touch to mouse during play) passed against the rebuilt production files at `http://localhost:8080`, with no reported page errors. Screenshots and `artifacts/browser-results.json` were refreshed. Chromium was installed in `node_modules/.cache/ms-playwright`; the browser test runner automatically uses that local installation unless `PLAYWRIGHT_BROWSERS_PATH` is explicitly set. This run used SwiftShader and does not establish physical-device performance.
 
 ## Initial-build record
 

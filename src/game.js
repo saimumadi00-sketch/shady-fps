@@ -6,7 +6,7 @@ import {
   DamageSystem,
   snapshot,
 } from "./match.js";
-import { WeaponController, EffectPool } from "./weapons.js";
+import { WeaponController, EffectPool, WEAPONS } from "./weapons.js";
 import { BotController } from "./bots.js";
 import { PlayerController } from "./player.js";
 export class OfflineSimulation {
@@ -32,7 +32,8 @@ export class OfflineSimulation {
     this.noticeTime = 0;
     for (const a of this.actors) this.spawns.spawn(a);
   }
-  start(difficulty) {
+  start(difficulty, weapon = 0) {
+    if (!Number.isInteger(weapon) || !WEAPONS[weapon]) weapon = 0;
     this.match.start();
     this.bots.difficulty = difficulty;
     this.events.length = 0;
@@ -42,7 +43,7 @@ export class OfflineSimulation {
     for (const a of this.actors) {
       a.kills = a.deaths = 0;
       a.alive = false;
-      a.weapon = a.id === 0 ? 0 : a.id % 3;
+      a.weapon = a.id === 0 ? weapon : a.id % WEAPONS.length;
       a.brain.think = a.id * 0.025;
     }
     for (const a of this.actors) this.spawns.spawn(a);
@@ -60,6 +61,7 @@ export class OfflineSimulation {
     for (const a of this.actors) {
       if (this.match.state !== "playing") break;
       if (!a.alive) {
+        if (a === this.player) this.controller.input.clear();
         a.respawn -= dt;
         if (a.respawn <= 0) this.spawns.spawn(a);
         continue;

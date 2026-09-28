@@ -57,6 +57,7 @@ input:focus-visible {
   padding: 24px;
 }
 .menu-shell {
+  margin-block: auto;
   max-width: 1100px;
   width: 100%;
   border: 1px solid #afc4be35;
@@ -324,6 +325,7 @@ footer b {
   color: var(--cyan);
 }
 .dialog {
+  margin-block: auto;
   width: min(480px, 100%);
   padding: 32px;
   border: 1px solid #66867d88;
@@ -889,5 +891,83 @@ footer b {
   }
   .eyebrow {
     font-size: 8px;
+  }
+}
+.weapon-choice {
+  width: 100%;
+}
+.weapon-info {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a7bfba;
+}
+/* Armory and customization */
+#menu {
+  align-items: flex-start;
+}
+.armory-preview {
+  margin-top: 30px;
+  padding: 18px 12px 10px;
+  border: 1px solid #71988e45;
+  background: radial-gradient(ellipse at center, #49636355, #0d2429);
+}
+.armory-preview .kicker {
+  display: block;
+  margin: 0;
+  font-size: 9px;
+}
+#weaponPreview {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.preview-note,
+.custom-note {
+  font-size: 10px;
+  color: #9bb4ae;
+}
+.custom-panel {
+  border-top: 1px solid #6e928555;
+  padding: 13px 0;
+}
+.custom-panel summary {
+  cursor: pointer;
+  color: var(--cyan);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+}
+.custom-panel .settings {
+  margin: 12px 0;
+}
+.custom-panel input:not([type="range"]) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 7px;
+  padding: 8px;
+  border: 1px solid #5a737366;
+  background: #20393b;
+  color: #e9efe7;
+  font-size: 12px;
+}
+.fov-label {
+  font-size: 10px;
+  color: #91ada7;
+  display: block;
+}
+#fovValue {
+  float: right;
+  color: var(--cyan);
+}
+#crosshair i {
+  background: var(--crosshair-color, #a7ead4);
+}
+@media (max-width: 700px), (max-height: 500px) {
+  .armory-preview {
+    margin-top: 12px;
+  }
+  #weaponPreview {
+    max-height: 135px;
+    object-fit: contain;
   }
 }

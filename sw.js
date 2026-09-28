@@ -1,4 +1,7 @@
 const CACHE = "crosscurrent-v1";
+const VERSIONED = false;
+const PREFIX = `crosscurrent:${encodeURIComponent(self.registration.scope)}:`;
+const CACHE_NAME = PREFIX + CACHE;
 const FILES = [
   "./",
   "./index.html",
@@ -7,6 +10,8 @@ const FILES = [
   "./src/math.js",
   "./src/world.js",
   "./src/renderer.js",
+  "./src/weapon-models.js",
+  "./src/customization.js",
   "./src/characters.js",
   "./src/input.js",
   "./src/weapons.js",
@@ -19,7 +24,7 @@ const FILES = [
   "./src/hud.js",
 ];
 self.addEventListener("install", (e) =>
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))),
+  e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(FILES))),
 );
 self.addEventListener("activate", (e) =>
   e.waitUntil(
@@ -28,7 +33,7 @@ self.addEventListener("activate", (e) =>
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k.startsWith("crosscurrent-") && k !== CACHE)
+            .filter((k) => k.startsWith(PREFIX) && k !== CACHE_NAME)
             .map((k) => caches.delete(k)),
         ),
       )
@@ -41,10 +46,23 @@ self.addEventListener("fetch", (e) => {
     new URL(e.request.url).origin !== location.origin
   )
     return;
+  if (VERSIONED) {
+    e.respondWith(
+      caches
+        .open(CACHE_NAME)
+        .then(
+          async (cache) =>
+            (await cache.match(e.request, { ignoreSearch: true })) ||
+            fetch(e.request),
+        ),
+    );
+    return;
+  }
   e.respondWith(
     fetch(e.request).catch(() =>
       caches
-        .match(e.request, { ignoreSearch: true })
+        .open(CACHE_NAME)
+        .then((cache) => cache.match(e.request, { ignoreSearch: true }))
         .then((r) => r || Response.error()),
     ),
   );

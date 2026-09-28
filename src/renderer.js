@@ -1,6 +1,6 @@
 import { drawCharacter } from "./characters.js";
 import { cameraMatrix, direction } from "./math.js";
-import { TEAM_COLORS } from "./world.js";
+import { weaponMesh } from "./weapon-models.js";
 const VS = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 vertex;
@@ -22,7 +22,7 @@ export class Renderer {
     this.arena = arena;
     this.matrix = new Float32Array(16);
     this.dynamic = new Float32Array(1024 * 10);
-    this.weapon = new Float32Array(160);
+    this.weaponModels = new Map();
     this.drawCalls = 0;
     this.initialize();
   }
@@ -128,7 +128,7 @@ export class Renderer {
     );
     this.staticBatch = this.batch(this.staticData, gl.STATIC_DRAW);
     this.dynamicBatch = this.batch(this.dynamic, gl.DYNAMIC_DRAW);
-    this.weaponBatch = this.batch(this.weapon, gl.DYNAMIC_DRAW);
+    this.weaponModels.clear();
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
     gl.clearColor(0.53, 0.66, 0.67, 1);
@@ -203,7 +203,8 @@ export class Renderer {
       cam = inGame
         ? { x: p.x, y: p.y + p.eye, z: p.z, yaw: p.yaw, pitch: p.pitch }
         : { x: -21, y: 12, z: 22, yaw: 0.72, pitch: -0.4 };
-    const fov = ((p.aim && inGame ? 57 : 83) * Math.PI) / 180;
+    const baseFov = this.customization?.fov || 83;
+    const fov = ((p.aim && inGame ? baseFov * 0.69 : baseFov) * Math.PI) / 180;
     cameraMatrix(
       this.matrix,
       cam.x,
@@ -256,27 +257,48 @@ export class Renderer {
       );
       g.uniformMatrix4fv(this.vp, false, this.matrix);
       g.uniform3f(this.eye, 0, 0, 0);
-      const x = p.aim ? 0 : 0.29,
+      const sightHeight =
+        p.weapon === 3 || this.customization?.optic === "scope"
+          ? 0.218
+          : this.customization?.optic === "reflex"
+            ? 0.205
+            : 0.16;
+      const x = p.aim ? 0 : 0.27,
         bob = p.moving && !p.sliding ? Math.sin(time * 10) * 0.009 : 0,
         y =
-          (p.aim ? -0.18 : -0.29) +
+          (p.aim ? -sightHeight : -0.29) +
           bob -
           (p.reload > 0 ? 0.16 : 0) -
           (p.sliding ? 0.08 : 0),
-        z = -0.58 + p.kick * 0.9;
-      let w = 0;
-      const gun = (a, b, c, d, e, f, col) =>
-        this.write(this.weapon, w++, x + a, y + b, z + c, d, e, f, col);
-      const metal = [0.12, 0.18, 0.19],
-        trim = TEAM_COLORS[0];
-      gun(0, 0, 0, 0.15, 0.16, p.weapon === 2 ? 0.26 : 0.48, metal);
-      gun(0, 0.015, -0.3, 0.06, 0.065, 0.26, metal);
-      gun(0, -0.12, 0.1, 0.09, 0.2, 0.11, [0.2, 0.25, 0.23]);
-      gun(0, 0.1, 0.12, 0.07, 0.055, 0.045, trim);
-      gun(0, 0.105, -0.2, 0.025, 0.06, 0.035, trim);
-      gun(0.075, -0.075, 0.16, 0.12, 0.12, 0.26, [0.4, 0.47, 0.38]);
-      if (p.flash > 0) gun(0, 0.02, -0.47, 0.1, 0.1, 0.15, [1, 0.88, 0.45]);
-      this.draw(this.weaponBatch, w, this.weapon);
+        z = -0.8 + p.kick * 0.9;
+      const finish = this.customization?.finish || "graphite";
+      const optic = this.customization?.optic || "iron";
+      const key = p.weapon + ":" + finish + ":" + optic + ":" + (p.flash > 0);
+      let model = this.weaponModels.get(key);
+      if (!model) {
+        const data = weaponMesh(p.weapon, finish, optic, p.flash > 0);
+        const vao = g.createVertexArray(),
+          buffer = g.createBuffer();
+        g.bindVertexArray(vao);
+        g.bindBuffer(g.ARRAY_BUFFER, buffer);
+        g.bufferData(g.ARRAY_BUFFER, data, g.STATIC_DRAW);
+        for (const [attribute, offset] of [
+          [0, 0],
+          [1, 12],
+          [4, 24],
+        ]) {
+          g.enableVertexAttribArray(attribute);
+          g.vertexAttribPointer(attribute, 3, g.FLOAT, false, 36, offset);
+        }
+        model = { vao, buffer, count: data.length / 9 };
+        this.weaponModels.set(key, model);
+      }
+      g.bindVertexArray(model.vao);
+      g.vertexAttrib3f(2, x, y, z);
+      g.vertexAttrib3f(3, 1, 1, 1);
+      g.vertexAttrib1f(5, p.aim ? 0 : -0.1);
+      g.drawArrays(g.TRIANGLES, 0, model.count);
+      this.drawCalls++;
     }
   }
 }

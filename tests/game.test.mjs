@@ -113,7 +113,7 @@ test("map cover stops hitscan", () => {
   assert.equal(e.hp, 100);
 });
 test("magazines, reserves and reload conservation for every weapon", () => {
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < WEAPONS.length; index++) {
     const { game } = setup();
     const p = game.player,
       w = WEAPONS[index];
@@ -354,4 +354,38 @@ test("slide cancellation cannot stand up through a low ceiling", () => {
   assert.equal(p.sliding, true);
   assert.equal(p.crouched, true);
   assert.equal(p.y, 0);
+});
+
+test("dead player input is cleared before respawn", () => {
+  const { game, input } = setup();
+  game.player.alive = false;
+  game.player.respawn = 0.01;
+  input.actions.add("fire");
+  input.actions.add("KeyR");
+  input.fire = true;
+  game.update(1 / 60);
+  assert.equal(game.player.alive, true);
+  assert.equal(input.fire, false);
+  assert.equal(input.actions.size, 0);
+});
+
+test("starting weapon, respawn, and selection cover the full arsenal", () => {
+  const { game, input } = setup();
+  for (let index = 0; index < WEAPONS.length; index++) {
+    game.start("normal", index);
+    assert.equal(game.player.weapon, index);
+    game.spawns.spawn(game.player);
+    assert.equal(game.player.weapon, index);
+    assert.equal(game.player.ammo[index].mag, WEAPONS[index].magazine);
+    game.player.cooldown = 0;
+    assert.equal(game.weapons.fire(game.player), true);
+    assert.equal(game.player.ammo[index].mag, WEAPONS[index].magazine - 1);
+    input.actions.add("switch");
+    game.controller.update(1 / 60, 1);
+    assert.equal(game.player.weapon, (index + 1) % WEAPONS.length);
+  }
+  game.start("normal", NaN);
+  assert.equal(game.player.weapon, 0);
+  game.weapons.equip(game.player, 1.5);
+  assert.equal(game.player.weapon, 0);
 });

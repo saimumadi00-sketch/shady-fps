@@ -3,6 +3,7 @@ export const WEAPONS = Object.freeze([
   {
     name: "AR / ASSAULT RIFLE",
     short: "AR",
+    description: "Balanced automatic fire for medium-range fights.",
     automatic: true,
     magazine: 30,
     reserve: 120,
@@ -16,6 +17,7 @@ export const WEAPONS = Object.freeze([
   {
     name: "SMG / COMPACT",
     short: "SMG",
+    description: "Fast automatic fire for close-range pressure.",
     automatic: true,
     magazine: 30,
     reserve: 150,
@@ -29,6 +31,7 @@ export const WEAPONS = Object.freeze([
   {
     name: "P / SIDEARM",
     short: "PISTOL",
+    description: "Accurate semi-automatic sidearm with a quick reload.",
     automatic: false,
     magazine: 12,
     reserve: 60,
@@ -38,6 +41,35 @@ export const WEAPONS = Object.freeze([
     recoil: 0.026,
     spread: 0.012,
     range: 42,
+  },
+  {
+    name: "DMR / MARKSMAN RIFLE",
+    short: "DMR",
+    description: "Powerful semi-automatic shots for long-range precision.",
+    automatic: false,
+    magazine: 10,
+    reserve: 50,
+    damage: 60,
+    interval: 0.55,
+    reload: 2.3,
+    recoil: 0.045,
+    spread: 0.006,
+    range: 90,
+  },
+  {
+    name: "LMG / SUPPORT",
+    short: "LMG",
+    description:
+      "Sustained automatic fire with a large magazine and slow reload.",
+    automatic: true,
+    magazine: 60,
+    reserve: 180,
+    damage: 23,
+    interval: 0.13,
+    reload: 3.4,
+    recoil: 0.024,
+    spread: 0.024,
+    range: 65,
   },
 ]);
 export class EffectPool {
@@ -68,7 +100,13 @@ export class WeaponController {
     this.game = game;
   }
   equip(a, index) {
-    if (index === a.weapon || index < 0 || index >= WEAPONS.length) return;
+    if (
+      !Number.isInteger(index) ||
+      index === a.weapon ||
+      index < 0 ||
+      index >= WEAPONS.length
+    )
+      return;
     a.weapon = index;
     a.reload = 0;
     a.cooldown = 0.22;

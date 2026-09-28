@@ -1,5 +1,11 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
+await mkdir("artifacts", { recursive: true });
+const base = (process.env.TEST_URL || "http://localhost:8080").replace(
+  /\/$/,
+  "",
+);
 const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -10,7 +16,7 @@ try {
     }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("http://localhost:8080/?debug=1");
+  await page.goto(base + "/?debug=1");
   await page.waitForFunction(() => !!window.__arena);
   await page.click("#play");
   await page.waitForFunction(() => !!document.pointerLockElement);
@@ -19,11 +25,10 @@ try {
     g.bots.update = () => {};
     Object.assign(g.player, { x: -15, z: -15, yaw: Math.PI / 2, pitch: 0 });
   });
-  const before = await page.evaluate(() => {window.mouseLog=[];document.addEventListener("mousemove",e=>mouseLog.push({x:e.movementX,y:e.movementY,trusted:e.isTrusted}));return __arena.game.player.yaw;});
+  const before = await page.evaluate(() => __arena.game.player.yaw);
   await page.mouse.move(660, 370);
-  await page.mouse.move(710, 390, {steps: 5});
+  await page.mouse.move(710, 390, { steps: 5 });
   await page.waitForTimeout(300);
-  console.log(await page.evaluate(()=>({events:mouseLog,input:{active:__arena.input.active,dx:__arena.input.dx},state:__arena.game.match.state,yaw:__arena.game.player.yaw,lock:!!document.pointerLockElement})));
   await page.waitForFunction(
     (before) => Math.abs(__arena.game.player.yaw - before) > 0.01,
     before,

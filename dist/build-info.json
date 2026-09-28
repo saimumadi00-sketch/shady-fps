@@ -1,12 +1,12 @@
 {
-  "version": "ddd102dcbc6b",
+  "version": "e987b898e107",
   "files": [
     "index.html",
     "game.js",
     "style.css",
     "sw.js"
   ],
-  "rawBytes": 53450,
-  "gzipBytes": 19597,
-  "brotliBytes": 17107
+  "rawBytes": 67354,
+  "gzipBytes": 23970,
+  "brotliBytes": 20869
 }

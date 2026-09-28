@@ -24,12 +24,16 @@ Press **Play Match**. Desktop play captures the mouse; Escape pauses and release
 | Sprint | Shift while moving | Push joystick fully forward |
 | Crouch / slide | C or Ctrl; press while sprinting to slide | SLIDE; tap while sprinting to slide |
 | Slide cancel | Space during a slide | JUMP during a slide |
-| Switch weapon | 1 / 2 / 3 | SWAP |
+| Switch weapon | 1 / 2 / 3 / 4 / 5, or pause to choose | SWAP, or pause to choose |
 | Pause | Escape or pause icon | Pause icon |
+
+## Armory and customization
+
+The first-person weapons use original low-poly meshes with shaped receivers, stocks, grips, magazines, round barrels, rails, and sights. These are recognizable firearm-inspired game models, not licensed replicas. The live armory preview shows the selected weapon and finish. Choose graphite, desert sand, or olive; factory, reflex, or scope sights (cosmetic); a callsign; crosshair color; and a 65?105 degree field of view. The marksman rifle retains its scope. Match rules allow 15/30/50 kills and 3/7/10 minutes. Customization is saved locally and match rules apply when starting or restarting a match.
 
 ## Tactical movement update
 
-Mouse movement aims the camera; holding right mouse aims down sights with reduced sensitivity. Click Play/Resume to capture the mouse. Using a mouse on a hybrid touch laptop selects desktop controls when the match is inactive.
+Mouse movement aims the camera; holding right mouse aims down sights with reduced sensitivity. Click Play/Resume to capture the mouse. If browser capture is denied or unavailable, hold right mouse and drag to aim; the HUD displays this fallback. Escape pauses, and Resume retries capture. Using a mouse on a hybrid touch laptop selects desktop controls even during a match.
 
 Sprint forward with Shift, then press C or Ctrl to slide. The slide lasts up to 0.8 seconds, decelerates from 9.4 to 3.4 units/second, and preserves its entry direction while you aim freely. Press Space to cancel into a short hop. On mobile, push the stick fully forward, tap SLIDE, then tap JUMP to cancel. Holding crouch cannot repeatedly trigger slides. Walls stop slides and low ceilings prevent standing through cover.
 
@@ -41,13 +45,15 @@ A 0.65-second slide cooldown, 0.14-second sprint-to-fire delay, 0.12-second slid
 - Three-second respawn, unlimited respawns, no friendly fire. Teammates block shots.
 - 100 HP. Regenerate 8 HP/second after six seconds without damage.
 - A 1.5-second spawn shield ends as soon as the actor fires. Spawn selection favors distance from enemies and avoids occupied friendly spawns.
-- Three data-driven weapons: 30-round assault rifle, 30-round SMG, 12-round semi-automatic pistol. Finite reserve ammo, reload delays, range falloff, spread, recoil, ADS, and weapon switching. Ammo resets on respawn. Switch weapons if reserves run out.
+- Five data-driven weapons: 30-round assault rifle, 30-round SMG, 12-round semi-automatic pistol, 10-round marksman rifle, and 60-round LMG. Choose your starting weapon in the menu; this choice is saved locally. The pause menu lets you equip any weapon without refilling its ammo. Finite reserve ammo, reload delays, range falloff, spread, recoil, ADS, and weapon switching. Ammo resets on respawn. Switch weapons if reserves run out.
 - Nine bots with Easy/Normal/Hard reaction, aim and movement parameters. Staggered perception and cached graph routes. Full bot-only simulation is supported internally for tests.
 - Match results show team scores and all ten players' kills/deaths. Restart begins immediately without downloading anything.
 
 ## Development and production
 
 Requires Node 20+ for development tools:
+
+On Windows PowerShell, if script execution policy blocks `npm.ps1`, use `npm.cmd` and `npx.cmd` for the commands below. No policy change is needed.
 
 ```sh
 npm ci
@@ -56,6 +62,8 @@ npm test
 npm run build
 npm run preview
 ```
+
+Development runs at `http://localhost:5173`; production preview runs at `http://localhost:8080`. Separate ports keep a production service worker from serving stale files during source editing. Close old game tabs before reopening the production preview to activate an updated build.
 
 `npm run build` bundles and minifies JavaScript with esbuild, minifies CSS, versions the service-worker cache, and writes `dist/`. The build also emits gzip and Brotli sidecars. **Development dependencies and the test browser are never included in the deployed game.** See `dist/build-info.json` for exact sizes and content version.
 
@@ -89,7 +97,7 @@ The simulation owns ammo, damage, scores and respawns; rendering never decides h
 ## Performance choices
 
 - WebGL 2 baseline; no WebGPU requirement. One simple directional-light term plus ambient shading, fog, no textures, no postprocessing, no shadow maps, no anti-aliasing, no physics engine.
-- Shared cube mesh and instanced geometry: one environment draw, one actor/effect draw, one viewmodel draw. 133 static instances. GPU clipping plus conservative CPU culling of characters behind the view.
+- Shared cube mesh for instanced environment and actors, plus a dedicated triangle mesh for each first-person weapon: one environment draw, one actor/effect draw, one viewmodel draw. 133 static instances. GPU clipping plus conservative CPU culling of characters behind the view.
 - Low/Medium/High use 65% / 90% / 115% CSS-pixel render scale. Device pixel ratio is deliberately not multiplied in, avoiding excessive rendering on high-DPI phones.
 - Low omits character ground shadows; Medium/High use inexpensive stylized ground shadow geometry. These are not physically accurate shadow maps. High also raises effect capacity. Texture/filtering presets are unnecessary because there are no textures.
 - Auto quality responds to sustained slow samples by reducing scale and effect count, then ground shadows. It recovers slowly with sustained headroom. Minimum scale: 45% / 55% / 60%.
@@ -100,10 +108,11 @@ The simulation owns ammo, damage, scores and respawns; rendering never decides h
 ## Verification
 
 ```sh
-npm test                       # 18 deterministic gameplay tests, including three full bot matches
+npm test                       # gameplay, settings, and service-worker regressions
 npx playwright install chromium
 npm run preview                # leave running in another terminal
-npm run test:browser            # production build: desktop + mobile-emulated Chromium
+npm run test:browser            # desktop, mobile, tactical controls, mouse-capture fallbacks
+npm run test:tactical           # tactical controls only; also respects TEST_URL
 ```
 
 The browser suite covers pointer lock, movement, shooting, reload, weapon switching, score updates, player death/respawn, a 30-kill victory, restart, graphics loss/recovery, real simultaneous touch events, portrait pausing, and cached offline reload. It writes screenshots and `artifacts/browser-results.json`. The `?debug=1` query exposes opt-in inspection hooks solely for testing; normal URLs do not expose them.

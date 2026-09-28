@@ -10,6 +10,9 @@ export class InputManager {
     this.fire = false;
     this.aim = false;
     this.active = false;
+    this.mouseFallback = false;
+    this.mouseDrag = false;
+    this.lastMouse = null;
     this.touch = matchMedia("(pointer: coarse)").matches;
     this.moveX = 0;
     this.moveY = 0;
@@ -28,10 +31,22 @@ export class InputManager {
       if (this.active && document.pointerLockElement === canvas) {
         this.dx += e.movementX;
         this.dy += e.movementY;
+      } else if (this.active && this.mouseFallback && this.mouseDrag) {
+        if (this.lastMouse) {
+          this.dx += e.clientX - this.lastMouse.x;
+          this.dy += e.clientY - this.lastMouse.y;
+        }
+        this.lastMouse = { x: e.clientX, y: e.clientY };
       }
     });
     document.addEventListener("mousedown", (e) => {
-      if (this.active && document.pointerLockElement === canvas) {
+      if (
+        this.active &&
+        (document.pointerLockElement === canvas ||
+          (this.mouseFallback && e.target === canvas))
+      ) {
+        this.mouseDrag = true;
+        this.lastMouse = { x: e.clientX, y: e.clientY };
         if (e.button === 0) {
           this.fire = true;
           this.actions.add("fire");
@@ -42,13 +57,21 @@ export class InputManager {
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.fire = false;
       if (e.button === 2) this.aim = false;
+      if (!this.fire && !this.aim) {
+        this.mouseDrag = false;
+        this.lastMouse = null;
+      }
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     document.addEventListener("pointerlockchange", () => {
+      if (document.pointerLockElement === canvas) {
+        this.mouseFallback = false;
+        onTouch();
+      }
       if (!document.pointerLockElement && this.active && !this.touch) onPause();
     });
     document.addEventListener("pointerlockerror", () =>
-      onPause("Mouse capture was denied. Press Resume to try again."),
+      this.enableMouseFallback(),
     );
     window.addEventListener("blur", () => {
       this.clear();
@@ -63,16 +86,18 @@ export class InputManager {
     window.addEventListener(
       "pointerdown",
       (e) => {
-        if (e.pointerType === "mouse" && this.touch && !this.active) {
+        if (e.pointerType === "mouse" && this.touch) {
+          this.clear();
           this.touch = false;
           onTouch();
+          if (this.active) this.lock();
         }
         if (e.pointerType === "touch" && !this.touch) {
           this.touch = true;
           onTouch();
         }
       },
-      { passive: true },
+      { passive: true, capture: true },
     );
     this.touchController = new TouchInputController(this);
   }
@@ -88,6 +113,8 @@ export class InputManager {
     this.aim = false;
     this.dx = 0;
     this.dy = 0;
+    this.mouseDrag = false;
+    this.lastMouse = null;
     this.moveX = 0;
     this.moveY = 0;
     this.touchController?.reset();
@@ -95,11 +122,25 @@ export class InputManager {
   async lock() {
     if (!this.touch) {
       try {
+        if (!this.canvas.requestPointerLock) {
+          this.enableMouseFallback();
+          return;
+        }
         await this.canvas.requestPointerLock();
       } catch {
-        this.onPause("Mouse capture was denied. Click Resume to try again.");
+        this.enableMouseFallback();
       }
     }
+  }
+  enableMouseFallback() {
+    if (
+      !this.active ||
+      this.touch ||
+      document.pointerLockElement === this.canvas
+    )
+      return;
+    this.mouseFallback = true;
+    this.onTouch();
   }
 }
 export class TouchInputController {

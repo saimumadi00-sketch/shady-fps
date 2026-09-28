@@ -50,7 +50,7 @@ export class HUDController {
           ? "NO AMMO · SWITCH WEAPON"
           : a.shield > 0
             ? "SPAWN SHIELD · FIRING ENDS IT"
-            : "1 — 2 — 3 / SWITCH";
+            : "1–5 / PAUSE TO CHOOSE";
     n.hitmarker.style.opacity = game.hit > 0 ? 1 : 0;
     n.damage.style.opacity = game.hurt * 0.9;
     n.notice.textContent =

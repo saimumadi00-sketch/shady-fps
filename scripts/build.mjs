@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, rm, readdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { gzipSync, brotliCompressSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { build, transform } from "esbuild";
@@ -28,10 +28,12 @@ await writeFile("dist/index.html", html);
 const files = ["index.html", "game.js", "style.css"];
 const hash = createHash("sha256");
 for (const file of files) hash.update(await readFile("dist/" + file));
+hash.update(await readFile("sw.js", "utf8"));
 const version = hash.digest("hex").slice(0, 12);
 let sw = await readFile("sw.js", "utf8");
 sw = sw
   .replace(/const CACHE = .*?;/, `const CACHE = "crosscurrent-${version}";`)
+  .replace("const VERSIONED = false;", "const VERSIONED = true;")
   .replace(
     /const FILES = \[[\s\S]*?\];/,
     `const FILES = ["./", "./index.html", "./game.js", "./style.css"];`,

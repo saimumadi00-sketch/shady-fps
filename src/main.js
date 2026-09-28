@@ -3,6 +3,8 @@ import { SettingsManager, QualityManager, AudioManager } from "./settings.js";
 import { OfflineSimulation } from "./game.js";
 import { Renderer } from "./renderer.js";
 import { HUDController } from "./hud.js";
+import { Customization } from "./customization.js";
+import { WEAPONS } from "./weapons.js";
 const $ = (id) => document.getElementById(id);
 let game,
   renderer,
@@ -23,13 +25,24 @@ function pause(reason = "Combat is paused.") {
   $("pauseReason").textContent =
     typeof reason === "string" ? reason : "Combat is paused.";
   $("pause").hidden = false;
+  $("pauseWeapon").value = String(game.player.weapon);
+  weaponInfo("pauseWeapon", "pauseWeaponInfo");
+}
+function weaponInfo(selectId, infoId) {
+  const w = WEAPONS[Number($(selectId).value)];
+  $(infoId).textContent =
+    `${w.description} ${w.magazine} rounds · ${w.damage} damage · ${w.reload}s reload`;
 }
 function controls() {
   document.body.classList.toggle("touch-mode", input.touch);
   $("touch").hidden = !input.touch || !input.active;
+  $("hint").textContent =
+    input.mouseFallback && !input.touch
+      ? "MOUSE CAPTURE UNAVAILABLE: HOLD RIGHT MOUSE + DRAG TO AIM"
+      : "MOUSE AIM · SHIFT + C SLIDE · SPACE CANCEL";
   if (!input.touch)
     $("controlsHelp").textContent =
-      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1–3 weapons · Esc pause";
+      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1–5 weapons · Esc pause";
   if (input.touch)
     $("controlsHelp").textContent =
       "Left stick move / push fully to sprint · Right drag aim · FIRE shoot · ADS aim · RLD reload · JUMP · SLIDE crouch / slide while sprinting · JUMP cancel · SWAP weapon";
@@ -53,17 +66,38 @@ try {
   game = new OfflineSimulation(input, audio);
   renderer = new Renderer($("canvas"), game.arena);
   const hud = new HUDController();
+  let selectedWeapon = 0;
+  try {
+    const saved = Number(localStorage.getItem("crosscurrent-weapon"));
+    if (Number.isInteger(saved) && WEAPONS[saved]) selectedWeapon = saved;
+  } catch {}
+  for (const id of ["startingWeapon", "pauseWeapon"]) {
+    WEAPONS.forEach((w, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = `${index + 1}. ${w.name}`;
+      $(id).append(option);
+    });
+    $(id).value = String(selectedWeapon);
+    const infoId =
+      id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
+    weaponInfo(id, infoId);
+    $(id).addEventListener("change", () => {
+      selectedWeapon = Number($(id).value);
+      $("startingWeapon").value = String(selectedWeapon);
+      weaponInfo("startingWeapon", "startingWeaponInfo");
+      weaponInfo(id, infoId);
+      if (id === "pauseWeapon") game.weapons.equip(game.player, selectedWeapon);
+      try {
+        localStorage.setItem("crosscurrent-weapon", String(selectedWeapon));
+      } catch {}
+    });
+  }
+  const customization = new Customization();
+  renderer.customization = customization.values;
   $("progress").textContent = "100%";
   async function resume() {
     if (contextLost) return;
-    if (!input.touch && !$("canvas").requestPointerLock) {
-      fatal(
-        Error(
-          "This browser does not support mouse capture. Use a current Chrome, Edge, or Firefox browser.",
-        ),
-      );
-      return;
-    }
     game.match.state = "playing";
     input.clear();
     input.active = true;
@@ -76,7 +110,8 @@ try {
     if (game.match.state === "playing") await input.lock();
   }
   function start() {
-    game.start(settings.values.difficulty);
+    customization.apply(game);
+    game.start(settings.values.difficulty, selectedWeapon);
     quality.configure();
     resume();
   }

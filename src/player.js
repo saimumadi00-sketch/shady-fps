@@ -25,9 +25,10 @@ export class PlayerController {
     );
     i.dx = i.dy = 0;
     this.movement.update(a, i, g.arena, dt);
-    for (let n = 0; n < 3; n++)
+    for (let n = 0; n < WEAPONS.length; n++)
       if (i.consume("Digit" + (n + 1))) g.weapons.equip(a, n);
-    if (i.consume("switch")) g.weapons.equip(a, (a.weapon + 1) % 3);
+    if (i.consume("switch"))
+      g.weapons.equip(a, (a.weapon + 1) % WEAPONS.length);
     if (i.consume("KeyR")) g.weapons.reload(a);
     const pressed = i.consume("fire");
     if (

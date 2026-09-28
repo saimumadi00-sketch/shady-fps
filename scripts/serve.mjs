@@ -2,7 +2,7 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 const root = resolve(process.argv[2] || "."),
-  port = Number(process.env.PORT || 8080);
+  port = Number(process.env.PORT || (process.argv[2] ? 8080 : 5173));
 const types = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -22,7 +22,15 @@ http
         res.end();
         return;
       }
-      if ((await stat(path)).isDirectory()) path = resolve(path, "index.html");
+      if ((await stat(path)).isDirectory()) {
+        const url = new URL(req.url, "http://localhost");
+        if (!url.pathname.endsWith("/")) {
+          res.writeHead(308, { Location: url.pathname + "/" + url.search });
+          res.end();
+          return;
+        }
+        path = resolve(path, "index.html");
+      }
       const body = await readFile(path);
       res.writeHead(200, {
         "Content-Type": types[extname(path)] || "application/octet-stream",
