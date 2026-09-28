@@ -67,11 +67,11 @@ assert.equal(await page.evaluate(() => __arena.game.player.ammo[0].mag), 30);
 results.push("Reload completes");
 await page.keyboard.press("Digit2");
 await page.waitForTimeout(300);
-assert.equal(await page.evaluate(() => __arena.game.player.weapon), 1);
+assert.equal(await page.evaluate(() => __arena.game.player.weapon), 0);
 await page.keyboard.press("Digit3");
 await page.waitForTimeout(300);
 assert.equal(await page.evaluate(() => __arena.game.player.weapon), 2);
-results.push("Keyboard weapon switching");
+results.push("Keyboard switches to the class sidearm and rejects foreign guns");
 await page.evaluate(() => {
   const p = __arena.game.player;
   Object.assign(p, { x: -18, z: -13, yaw: 1.85, pitch: -0.03 });
@@ -275,7 +275,7 @@ results.push(
 );
 await mp.locator("#switch").tap();
 await mp.waitForTimeout(100);
-assert.equal(await mp.evaluate(() => __arena.game.player.weapon), 1);
+assert.equal(await mp.evaluate(() => __arena.game.player.weapon), 2);
 await mp.locator("#aim").tap();
 await mp.waitForTimeout(100);
 assert.equal(await mp.evaluate(() => __arena.game.player.aim), true);

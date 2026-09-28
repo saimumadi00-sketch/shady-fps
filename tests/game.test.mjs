@@ -7,6 +7,7 @@ import { Arena, NavigationSystem } from "../src/world.js";
 import { WEAPONS, EffectPool } from "../src/weapons.js";
 import { rayBox } from "../src/math.js";
 import { QualityManager } from "../src/settings.js";
+import { CLASS_IDS, LOADOUTS, classForWeapon } from "../src/loadouts.js";
 // Reset a seeded simulation and lightweight input adapter for each independent rule test.
 function setup() {
   let seed = 42;
@@ -124,9 +125,9 @@ test("map cover stops hitscan", () => {
 test("magazines, reserves and reload conservation for every weapon", () => {
   for (let index = 0; index < WEAPONS.length; index++) {
     const { game } = setup();
+    game.start("normal", index);
     const p = game.player,
       w = WEAPONS[index];
-    game.weapons.equip(p, index);
     p.ammo[index].mag = 0;
     game.weapons.reload(p);
     game.weapons.update(p, w.reload - 0.01);
@@ -164,11 +165,11 @@ test("weapon switching cancels reload and does not transfer ammo", () => {
     p = game.player;
   p.ammo[0].mag = 2;
   game.weapons.reload(p);
-  game.weapons.equip(p, 1);
+  game.weapons.equip(p, 2);
   game.weapons.update(p, 5);
   assert.equal(p.reload, 0);
   assert.equal(p.ammo[0].mag, 2);
-  assert.equal(p.ammo[1].mag, 30);
+  assert.equal(p.ammo[2].mag, WEAPONS[2].magazine);
 });
 // Verify displacement and stance against arena collision with bot interference disabled.
 test("walking, sprinting, crouching, jumping and solid collision", () => {
@@ -391,13 +392,17 @@ test("dead player input is cleared before respawn", () => {
   assert.equal(input.actions.size, 0);
 });
 
-// Iterate the complete arsenal to catch new weapons missing from spawn, fire, or cycling logic.
-test("starting weapon, respawn, and selection cover the full arsenal", () => {
+// Legacy weapon-only starts infer the owning class; SWAP stays inside its two-weapon inventory.
+test("starting weapon, respawn, and selection cover each class inventory", () => {
   const { game, input } = setup();
   for (let index = 0; index < WEAPONS.length; index++) {
     game.start("normal", index);
+    const classId = classForWeapon(index),
+      kit = LOADOUTS[classId];
+    assert.equal(game.player.classId, classId);
     assert.equal(game.player.weapon, index);
     game.spawns.spawn(game.player);
+    assert.equal(game.player.classId, classId);
     assert.equal(game.player.weapon, index);
     assert.equal(game.player.ammo[index].mag, WEAPONS[index].magazine);
     game.player.cooldown = 0;
@@ -405,10 +410,107 @@ test("starting weapon, respawn, and selection cover the full arsenal", () => {
     assert.equal(game.player.ammo[index].mag, WEAPONS[index].magazine - 1);
     input.actions.add("switch");
     game.controller.update(1 / 60, 1);
-    assert.equal(game.player.weapon, (index + 1) % WEAPONS.length);
+    assert.equal(
+      game.player.weapon,
+      kit.weapons[(kit.weapons.indexOf(index) + 1) % kit.weapons.length],
+    );
+    input.actions.add("switch");
+    game.controller.update(1 / 60, 1);
+    assert.equal(game.player.weapon, index);
   }
   game.start("normal", NaN);
   assert.equal(game.player.weapon, 0);
   game.weapons.equip(game.player, 1.5);
   assert.equal(game.player.weapon, 0);
+});
+
+// Assert the intended class-to-gun mapping independently of the implementation definitions.
+test("classes own their primary and shared pistol, and keep both across respawns", () => {
+  const expected = { assault: 0, support: 4, engineer: 1, scout: 3 };
+  assert.deepEqual([...CLASS_IDS].sort(), Object.keys(expected).sort());
+  for (const [classId, primary] of Object.entries(expected)) {
+    const { game } = setup();
+    game.start("normal", primary, classId);
+    const p = game.player;
+    assert.equal(p.classId, classId);
+    assert.equal(p.weapon, primary);
+    assert.deepEqual(LOADOUTS[classId].weapons, [primary, 2]);
+    for (let index = 0; index < WEAPONS.length; index++) {
+      const owned = index === primary || index === 2;
+      assert.deepEqual(p.ammo[index], {
+        mag: owned ? WEAPONS[index].magazine : 0,
+        reserve: owned ? WEAPONS[index].reserve : 0,
+      });
+    }
+    game.weapons.equip(p, 2);
+    p.ammo[2].mag = 1;
+    game.spawns.spawn(p);
+    assert.equal(p.classId, classId);
+    assert.equal(p.weapon, 2);
+    assert.equal(p.ammo[2].mag, WEAPONS[2].magazine);
+    // An explicit class wins over an incompatible requested starting weapon.
+    const foreign = Object.values(expected).find((index) => index !== primary);
+    game.start("normal", foreign, classId);
+    assert.equal(p.weapon, primary);
+  }
+});
+
+// Foreign hotkeys and direct equip calls cannot cancel a valid reload or access another class gun.
+test("class restrictions reject foreign guns without changing weapon, ammo, or reload", () => {
+  for (const classId of CLASS_IDS) {
+    const { game, input } = setup(),
+      kit = LOADOUTS[classId];
+    game.start("normal", kit.primary, classId);
+    const p = game.player;
+    p.ammo[p.weapon].mag = 1;
+    game.weapons.reload(p);
+    const remaining = p.reload,
+      ammunition = structuredClone(p.ammo);
+    for (let index = 0; index < WEAPONS.length; index++) {
+      if (kit.weapons.includes(index)) continue;
+      game.weapons.equip(p, index);
+      input.actions.add("Digit" + (index + 1));
+      game.controller.update(1 / 60, 1);
+      assert.equal(p.weapon, kit.primary);
+      assert.equal(p.reload, remaining);
+      assert.deepEqual(p.ammo, ammunition);
+      // Combat also rejects callers that bypass the validated equip method.
+      p.weapon = index;
+      p.reload = 0;
+      p.cooldown = 0;
+      p.ammo[index] = { mag: 1, reserve: 1 };
+      assert.equal(game.weapons.fire(p), false);
+      game.weapons.reload(p);
+      assert.equal(p.reload, 0);
+      p.weapon = kit.primary;
+      p.reload = remaining;
+      p.ammo = structuredClone(ammunition);
+    }
+  }
+});
+
+// Exhaustion makes bots use their pistol, even when a foreign slot contains leftover ammunition.
+test("bots spawn with class guns and only switch within their assigned inventory", () => {
+  const { game } = setup();
+  for (const a of game.actors.slice(1)) {
+    const kit = LOADOUTS[a.classId];
+    assert.equal(a.weapon, kit.primary);
+    for (let index = 0; index < WEAPONS.length; index++)
+      if (!kit.weapons.includes(index))
+        assert.deepEqual(a.ammo[index], { mag: 0, reserve: 0 });
+    a.ammo[kit.primary] = { mag: 0, reserve: 0 };
+    const foreign = WEAPONS.findIndex(
+      (_, index) => !kit.weapons.includes(index),
+    );
+    a.ammo[foreign] = { mag: 1, reserve: 1 };
+    a.brain.target = null;
+    a.brain.think = 10;
+    game.bots.update(a, 1 / 60);
+    assert.equal(a.weapon, 2);
+    const classId = a.classId;
+    game.spawns.spawn(a);
+    assert.equal(a.classId, classId);
+    assert.equal(a.weapon, 2);
+    assert.deepEqual(a.ammo[foreign], { mag: 0, reserve: 0 });
+  }
 });

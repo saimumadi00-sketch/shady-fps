@@ -24,12 +24,27 @@ Press **Play Match**. Desktop play captures the mouse; Escape pauses and release
 | Sprint | Shift while moving | Push joystick fully forward |
 | Crouch / slide | C or Ctrl; press while sprinting to slide | SLIDE; tap while sprinting to slide |
 | Slide cancel | Space during a slide | JUMP during a slide |
-| Switch weapon | 1 / 2 / 3 / 4 / 5, or pause to choose | SWAP, or pause to choose |
+| Switch weapon | Class primary key (below), 3 for pistol, or pause to choose | SWAP between primary/pistol, or pause to choose |
 | Pause | Escape or pause icon | Pause icon |
+
+## Class loadouts
+
+The proposed large-scale Assault/Engineer/Support/Recon weapon-role system is specified in [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md). Its tuning and new mechanics are a design target; the playable prototype below still uses the current Scout-based loadouts.
+
+Choose a class before starting a match. Each class carries its assigned primary plus the shared pistol:
+
+| Class | Primary | Desktop key | Sidearm |
+|---|---|---|---|
+| Assault | Assault rifle | 1 | Pistol (3) |
+| Support | LMG | 5 | Pistol (3) |
+| Engineer | SMG | 2 | Pistol (3) |
+| Scout | Marksman rifle | 4 | Pistol (3) |
+
+The class and starting weapon are saved locally. The start and pause menus show only the two assigned weapons; keyboard and touch switching enforce the same inventory. Respawning preserves the class and equipped weapon and refills only that class's ammunition. Bots use the same restrictions. Return to the start menu to change class for a new match. Classes currently determine weapons; there are no extra gadgets or class abilities.
 
 ## Armory and customization
 
-The first-person weapons use original low-poly meshes with shaped receivers, stocks, grips, magazines, round barrels, rails, and sights. These are recognizable firearm-inspired game models, not licensed replicas. The live armory preview shows the selected weapon and finish. Choose graphite, desert sand, or olive; factory, reflex, or scope sights (cosmetic); a callsign; crosshair color; and a 65?105 degree field of view. The marksman rifle retains its scope. Match rules allow 15/30/50 kills and 3/7/10 minutes. Customization is saved locally and match rules apply when starting or restarting a match.
+The first-person weapons use original low-poly meshes with shaped receivers, stocks, grips, magazines, round barrels, rails, and sights. These are recognizable firearm-inspired game models, not licensed replicas. The live armory preview shows the selected weapon and finish. Choose graphite, desert sand, or olive; factory, reflex, or scope sights (cosmetic); a callsign; crosshair color; and a 65-105 degree field of view. The marksman rifle retains its scope. Match rules allow 15/30/50 kills and 3/7/10 minutes. Customization is saved locally and match rules apply when starting or restarting a match.
 
 ## Reload animation
 
@@ -49,7 +64,7 @@ A 0.65-second slide cooldown, 0.14-second sprint-to-fire delay, 0.12-second slid
 - Three-second respawn, unlimited respawns, no friendly fire. Teammates block shots.
 - 100 HP. Regenerate 8 HP/second after six seconds without damage.
 - A 1.5-second spawn shield ends as soon as the actor fires. Spawn selection favors distance from enemies and avoids occupied friendly spawns.
-- Five data-driven weapons: 30-round assault rifle, 30-round SMG, 12-round semi-automatic pistol, 10-round marksman rifle, and 60-round LMG. Choose your starting weapon in the menu; this choice is saved locally. The pause menu lets you equip any weapon without refilling its ammo. Finite reserve ammo, reload delays, range falloff, spread, recoil, ADS, and weapon switching. Ammo resets on respawn. Switch weapons if reserves run out.
+- Five data-driven weapons: 30-round assault rifle, 30-round SMG, 12-round semi-automatic pistol, 10-round marksman rifle, and 60-round LMG. Choose a class and one of its assigned weapons in the menu; these choices are saved locally. The pause menu lets you switch between that class's primary and pistol without refilling ammo. Finite reserve ammo, reload delays, range falloff, spread, recoil, ADS, and weapon switching. Ammo resets on respawn. Switch weapons if reserves run out.
 - Nine bots with Easy/Normal/Hard reaction, aim and movement parameters. Staggered perception and cached graph routes. Full bot-only simulation is supported internally for tests.
 - Match results show team scores and all ten players' kills/deaths. Restart begins immediately without downloading anything.
 

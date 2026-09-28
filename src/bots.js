@@ -1,5 +1,6 @@
 // Bot perception and navigation are staggered; movement and shooting still run at simulation frequency.
 import { distance } from "./math.js";
+import { loadout } from "./loadouts.js";
 // Difficulty changes reaction delay, aim error, walking speed, and perception cadence.
 export const DIFFICULTY = {
   easy: { reaction: 0.6, spread: 0.16, speed: 2.9, interval: 0.3 },
@@ -102,8 +103,11 @@ export class BotController {
     if (a.ammo[a.weapon].mag === 0) {
       if (a.ammo[a.weapon].reserve > 0) g.weapons.reload(a);
       else {
-        const loaded = a.ammo.findIndex((s) => s.mag > 0 || s.reserve > 0);
-        if (loaded >= 0) g.weapons.equip(a, loaded);
+        // Search the class inventory explicitly, even if another slot contains stale ammo.
+        const loaded = loadout(a.classId).weapons.find(
+          (index) => a.ammo[index].mag > 0 || a.ammo[index].reserve > 0,
+        );
+        if (loaded !== undefined) g.weapons.equip(a, loaded);
       }
     }
   }

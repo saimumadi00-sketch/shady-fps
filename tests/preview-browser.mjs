@@ -12,15 +12,16 @@ try {
       "/?debug=1",
   );
   await p.waitForFunction(() => !!window.__arena);
-  await p.selectOption("#startingWeapon", "4");
+  await p.selectOption("#loadoutClass", "support");
+  await p.selectOption("#startingWeapon", "2");
   // Capture a known-good preview of the destination weapon for exact canvas comparison.
   const expected = await p
     .locator("#weaponPreview")
     .evaluate((c) => c.toDataURL());
-  await p.selectOption("#startingWeapon", "0");
+  await p.selectOption("#startingWeapon", "4");
   await p.click("#play");
   await p.evaluate(() => __arena.pause());
-  await p.selectOption("#pauseWeapon", "4");
+  await p.selectOption("#pauseWeapon", "2");
   await p.click("#back");
   assert.equal(
     await p.locator("#weaponPreview").evaluate((c) => c.toDataURL()),

@@ -48,7 +48,7 @@ function controls() {
       : "MOUSE AIM · SHIFT + C SLIDE · SPACE CANCEL";
   if (!input.touch)
     $("controlsHelp").textContent =
-      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1–5 weapons · Esc pause";
+      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · class primary key / 3 pistol · Esc pause";
   if (input.touch)
     $("controlsHelp").textContent =
       "Left stick move / push fully to sprint · Right drag aim · FIRE shoot · ADS aim · RLD reload · JUMP · SLIDE crouch / slide while sprinting · JUMP cancel · SWAP weapon";
@@ -81,32 +81,42 @@ try {
   } catch {}
   // Keep menu and pause selectors synchronized; equipping never replenishes ammunition.
   let selectedClass = classForWeapon(selectedWeapon);
-  try { const saved = localStorage.getItem("crosscurrent-class"); if (CLASS_IDS.includes(saved)) selectedClass = saved; } catch {}
-  for (const id of CLASS_IDS) { const option = document.createElement("option"); option.value = id; option.textContent = LOADOUTS[id].name; $("loadoutClass").append(option); }
+  try {
+    const saved = localStorage.getItem("crosscurrent-class");
+    if (CLASS_IDS.includes(saved)) selectedClass = saved;
+  } catch {}
+  for (const id of CLASS_IDS) {
+    const option = document.createElement("option");
+    option.value = id;
+    option.textContent = LOADOUTS[id].name;
+    $("loadoutClass").append(option);
+  }
   $("loadoutClass").value = selectedClass;
   // Rebuild both weapon selectors from the class definition; never expose other class guns.
   function refreshLoadout() {
     const kit = loadout(selectedClass);
     if (!kit.weapons.includes(selectedWeapon)) selectedWeapon = kit.primary;
-    $("classInfo").textContent = `${kit.description} Primary: ${WEAPONS[kit.primary].short} / Sidearm: PISTOL. Change class here before your next match.`;
+    $("classInfo").textContent =
+      `${kit.description} Primary: ${WEAPONS[kit.primary].short} / Sidearm: PISTOL. Change class here before your next match.`;
     for (const id of ["startingWeapon", "pauseWeapon"]) {
-    $(id).replaceChildren();
-    kit.weapons.forEach((index) => {
-      const w = WEAPONS[index];
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = `${index + 1}. ${w.name}`;
-      $(id).append(option);
-    });
-    $(id).value = String(selectedWeapon);
-    const infoId =
-      id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
-    weaponInfo(id, infoId);
+      $(id).replaceChildren();
+      kit.weapons.forEach((index) => {
+        const w = WEAPONS[index];
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${index + 1}. ${w.name}`;
+        $(id).append(option);
+      });
+      $(id).value = String(selectedWeapon);
+      const infoId =
+        id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
+      weaponInfo(id, infoId);
     }
   }
   refreshLoadout();
   for (const id of ["startingWeapon", "pauseWeapon"]) {
-    const infoId = id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
+    const infoId =
+      id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
     $(id).addEventListener("change", () => {
       selectedWeapon = Number($(id).value);
       $("startingWeapon").value = String(selectedWeapon);
@@ -114,6 +124,8 @@ try {
       weaponInfo(id, infoId);
       if (id === "pauseWeapon") game.weapons.equip(game.player, selectedWeapon);
       try {
+        // Persist the inferred class too, so legacy primary saves retain their class after selecting a pistol.
+        localStorage.setItem("crosscurrent-class", selectedClass);
         localStorage.setItem("crosscurrent-weapon", String(selectedWeapon));
       } catch {}
     });
@@ -123,8 +135,12 @@ try {
   $("loadoutClass").addEventListener("change", () => {
     selectedClass = $("loadoutClass").value;
     selectedWeapon = loadout(selectedClass).primary;
-    refreshLoadout(); customization.refresh();
-    try { localStorage.setItem("crosscurrent-class", selectedClass); localStorage.setItem("crosscurrent-weapon", String(selectedWeapon)); } catch {}
+    refreshLoadout();
+    customization.refresh();
+    try {
+      localStorage.setItem("crosscurrent-class", selectedClass);
+      localStorage.setItem("crosscurrent-weapon", String(selectedWeapon));
+    } catch {}
   });
   $("progress").textContent = "100%";
   // Resume from a user gesture so the browser can grant pointer lock and audio access.

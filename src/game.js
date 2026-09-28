@@ -48,9 +48,15 @@ export class OfflineSimulation {
       a.kills = a.deaths = 0;
       a.alive = false;
       // Distribute bot classes across both teams; only the local player uses the saved choice.
-      a.classId = a.id === 0 && CLASS_IDS.includes(classId) ? classId : a.id === 0 ? 'assault' : CLASS_IDS[(a.id % 5) % CLASS_IDS.length];
+      a.classId =
+        a.id === 0 && CLASS_IDS.includes(classId)
+          ? classId
+          : a.id === 0
+            ? "assault"
+            : CLASS_IDS[(a.id % 5) % CLASS_IDS.length];
       const kit = loadout(a.classId);
-      a.weapon = a.id === 0 && kit.weapons.includes(weapon) ? weapon : kit.primary;
+      a.weapon =
+        a.id === 0 && kit.weapons.includes(weapon) ? weapon : kit.primary;
       a.brain.think = a.id * 0.025;
     }
     for (const a of this.actors) this.spawns.spawn(a);

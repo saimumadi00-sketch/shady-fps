@@ -45,8 +45,18 @@ try {
   });
   // Render every weapon variant and capture screenshots while checking the WebGL error state.
   for (let i = 0; i < 5; i++) {
+    // Return through the real menu to select the class owning the next primary.
+    await page.evaluate(() => __arena.pause());
+    await page.click("#back");
+    await page.selectOption(
+      "#loadoutClass",
+      ["assault", "engineer", "assault", "scout", "support"][i],
+    );
+    await page.selectOption("#startingWeapon", String(i));
+    await page.click("#play");
     await page.keyboard.press("Digit" + (i + 1));
     await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => __arena.game.player.weapon), i);
     assert.equal(await page.evaluate(() => __arena.renderer.gl.getError()), 0);
     await page.screenshot({ path: `artifacts/weapon-model-${i}.png` });
   }

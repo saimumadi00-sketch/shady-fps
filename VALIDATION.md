@@ -1,5 +1,9 @@
 # Validation record
 
+## Class loadouts
+
+Assault carries the assault rifle, Support the LMG, Engineer the SMG, and Scout the marksman rifle; all classes share the pistol. Menus, combat permissions, ammunition, respawns, keyboard/touch switching, and bot fallback use the same class definitions. All 32 Node tests passed, including foreign-weapon rejection and class inventory/respawn rules. The full production browser suite passed desktop/mobile class selection, legacy weapon-save migration, restricted switching, existing gameplay checks, and all five reload sequences. Class selection is saved locally and applies when starting a new match. The class menu is captured in `artifacts/loadout-menu.png`; generated production version and sizes are in `dist/build-info.json`.
+
 ## Reload animation update
 
 All 29 Node tests pass, including animated-part movement, finite mesh coordinates, empty versus partial reload action, and restoration of the original mesh for all five weapons. A production browser check verifies all five timed reloads, ammo remaining unchanged until completion, no WebGL errors, and weapon-switch cancellation. Reload poses are captured in `artifacts/reload-0.png` through `reload-4.png`. Mesh buffers are reused rather than caching a mesh for every animation frame.

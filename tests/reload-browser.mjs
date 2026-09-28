@@ -21,9 +21,17 @@ try {
   });
   // Force an empty magazine, observe an intermediate pose, then wait for the real timer to complete.
   for (let weapon = 0; weapon < 5; weapon++) {
+    // Class selection uses normal menu actions so each reload starts with a valid inventory.
+    await page.evaluate(() => __arena.pause());
+    await page.click("#back");
+    await page.selectOption(
+      "#loadoutClass",
+      ["assault", "engineer", "assault", "scout", "support"][weapon],
+    );
+    await page.selectOption("#startingWeapon", String(weapon));
+    await page.click("#play");
     await page.evaluate((w) => {
       const g = __arena.game;
-      g.weapons.equip(g.player, w);
       g.player.ammo[w].mag = 0;
       g.player.cooldown = 0;
       g.weapons.reload(g.player);
@@ -51,8 +59,8 @@ try {
     g.weapons.reload(g.player);
   });
   // Switching during an unfinished reload must immediately discard the old animation/timer.
-  await page.keyboard.press("Digit1");
-  await page.waitForFunction(() => __arena.game.player.weapon === 0);
+  await page.keyboard.press("Digit3");
+  await page.waitForFunction(() => __arena.game.player.weapon === 2);
   assert.equal(await page.evaluate(() => __arena.game.player.reload), 0);
   assert.deepEqual(errors, []);
   console.log(

@@ -54,7 +54,7 @@
             <span id="weaponName">AR / ASSAULT RIFLE</span
             ><strong
               ><b id="ammo">30</b><small id="reserve"> / 120</small></strong
-            ><span id="reloadState">1–5 / PAUSE TO CHOOSE</span>
+            ><span id="reloadState">1 PRIMARY / 3 PISTOL</span>
           </div>
         </div>
         <div id="stats"></div>
@@ -133,6 +133,16 @@
                 </div>
                 <div><b>03s</b><span>RESPAWN</span></div>
               </div>
+              <!-- Class selection controls the permitted primary and shared sidearm. -->
+              <div class="settings">
+                <label class="weapon-choice"
+                  >LOADOUT CLASS<select
+                    id="loadoutClass"
+                    aria-describedby="classInfo"
+                  ></select
+                ></label>
+              </div>
+              <p id="classInfo" class="weapon-info" aria-live="polite"></p>
               <div class="settings">
                 <label class="weapon-choice"
                   >STARTING WEAPON
@@ -250,8 +260,8 @@
           <footer>
             <span id="controlsHelp"
               >WASD move · Mouse aim · Click fire · R reload · Space jump<br />Shift
-              sprint · C / Ctrl crouch or slide · Right click ADS · 1–5 weapons
-              · Esc pause</span
+              sprint · C / Ctrl crouch or slide · Right click ADS · class
+              primary key / 3 pistol · Esc pause</span
             ><span
               >BUILT FOR THE EVERYDAY DEVICE<br /><b
                 >WEBGL 2 · NO ASSET DOWNLOADS</b

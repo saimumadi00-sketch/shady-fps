@@ -1,10 +1,10 @@
 {
-  "date": "2026-09-28T10:07:16.996Z",
+  "date": "2026-09-28T14:10:24.946Z",
   "results": [
     "Desktop Play obtains pointer lock",
     "Desktop movement and automatic fire",
     "Reload completes",
-    "Keyboard weapon switching",
+    "Keyboard switches to the class sidearm and rejects foreign guns",
     "Lost pointer lock pauses simulation and input",
     "Hitscan kill updates live score",
     "Player death overlay and timed respawn",
@@ -18,17 +18,17 @@
   "errors": [],
   "performance": {
     "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
-    "frames": 181,
+    "frames": 182,
     "meanFps": 60,
     "p95FrameMs": 16.700000000000728,
     "drawCalls": 3,
     "renderScale": 0.9,
     "geometryBoxes": 133,
     "navigationNodes": 326,
-    "pathCache": 2,
+    "pathCache": 3,
     "heap": {
-      "used": 6225453,
-      "total": 11214733
+      "used": 6262972,
+      "total": 11043272
     }
   },
   "caveat": "Headless Chromium with SwiftShader; mobile emulation is not a physical Android performance measurement."

@@ -35,7 +35,10 @@ export class PlayerController {
       if (i.consume("Digit" + (n + 1))) g.weapons.equip(a, n);
     if (i.consume("switch")) {
       const allowed = loadout(a.classId).weapons;
-      g.weapons.equip(a, allowed[(allowed.indexOf(a.weapon) + 1) % allowed.length]);
+      g.weapons.equip(
+        a,
+        allowed[(allowed.indexOf(a.weapon) + 1) % allowed.length],
+      );
     }
     if (i.consume("KeyR")) g.weapons.reload(a);
     // Automatic guns use held fire; semi-automatic guns require a new press.

@@ -54,7 +54,7 @@ export class HUDController {
           ? "NO AMMO · SWITCH WEAPON"
           : a.shield > 0
             ? "SPAWN SHIELD · FIRING ENDS IT"
-            : "1–5 / PAUSE TO CHOOSE";
+            : `${loadout(a.classId).primary + 1} PRIMARY · 3 PISTOL / PAUSE TO CHOOSE`;
     n.hitmarker.style.opacity = game.hit > 0 ? 1 : 0;
     n.damage.style.opacity = game.hurt * 0.9;
     n.notice.textContent =
@@ -95,7 +95,7 @@ export class HUDController {
       `YOU / ${game.player.kills} eliminations · ${game.player.deaths} deaths`;
     const table = document.createElement("table");
     const head = document.createElement("tr");
-    for (const text of ["PLAYER", "TEAM", "K", "D"]) {
+    for (const text of ["PLAYER", "CLASS", "TEAM", "K", "D"]) {
       const th = document.createElement("th");
       th.textContent = text;
       head.append(th);
@@ -107,6 +107,7 @@ export class HUDController {
       let tr = document.createElement("tr");
       for (const text of [
         a.name,
+        loadout(a.classId).name,
         a.team === 0 ? "CYAN" : "EMBER",
         a.kills,
         a.deaths,

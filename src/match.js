@@ -173,7 +173,10 @@ export class SpawnManager {
       lastDamage: 0,
     });
     // Keep stable global ammo indices, but unassigned weapons receive no usable ammunition.
-    a.ammo = WEAPONS.map((w, index) => ({ mag: canEquip(a,index) ? w.magazine : 0, reserve: canEquip(a,index) ? w.reserve : 0 }));
+    a.ammo = WEAPONS.map((w, index) => ({
+      mag: canEquip(a, index) ? w.magazine : 0,
+      reserve: canEquip(a, index) ? w.reserve : 0,
+    }));
     a.brain.path = [];
     a.brain.target = null;
     a.brain.state = "Patrol";
