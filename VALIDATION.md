@@ -1,5 +1,9 @@
 # Validation record
 
+## Reload animation update
+
+All 29 Node tests pass, including animated-part movement, finite mesh coordinates, empty versus partial reload action, and restoration of the original mesh for all five weapons. A production browser check verifies all five timed reloads, ammo remaining unchanged until completion, no WebGL errors, and weapon-switch cancellation. Reload poses are captured in `artifacts/reload-0.png` through `reload-4.png`. Mesh buffers are reused rather than caching a mesh for every animation frame.
+
 ## Armory models and customization
 
 Original firearm-inspired triangle meshes replace the first-person cube guns. Added live preview, saved finish/optic/callsign/FOV/crosshair customization and configurable score/time limits. All 24 Node tests pass. Browser checks cover persistence, applied rules and FOV, all five weapon meshes without WebGL errors, and mobile menu operation. Screenshots: `artifacts/armory-menu.png`, `artifacts/weapon-model-0.png` through `weapon-model-4.png`, and `artifacts/weapon-ads.png`. Exact build version and sizes are generated in `dist/build-info.json`.

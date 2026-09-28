@@ -1,9 +1,11 @@
+// Builds the self-contained deployment directory; run from the repository root.
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { gzipSync, brotliCompressSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { build, transform } from "esbuild";
 
 // esbuild is a development tool. The deployed game has no runtime dependencies.
+// Replace prior output so removed assets cannot remain in a new deployment.
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
 await build({
@@ -15,21 +17,25 @@ await build({
   outfile: "dist/game.js",
   legalComments: "none",
 });
+// Minify CSS separately from the bundled JavaScript entry point.
 const css = await transform(await readFile("style.css", "utf8"), {
   loader: "css",
   minify: true,
 });
 await writeFile("dist/style.css", css.code);
+// Point production HTML at the bundle while preserving relative subdirectory-safe URLs.
 const html = (await readFile("index.html", "utf8")).replace(
   "./src/main.js",
   "./game.js",
 );
 await writeFile("dist/index.html", html);
 const files = ["index.html", "game.js", "style.css"];
+// Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.
 const hash = createHash("sha256");
 for (const file of files) hash.update(await readFile("dist/" + file));
 hash.update(await readFile("sw.js", "utf8"));
 const version = hash.digest("hex").slice(0, 12);
+// Replace development cache settings and module paths with production equivalents.
 let sw = await readFile("sw.js", "utf8");
 sw = sw
   .replace(/const CACHE = .*?;/, `const CACHE = "crosscurrent-${version}";`)
@@ -46,6 +52,7 @@ files.push("sw.js");
 let total = 0,
   gzip = 0,
   brotli = 0;
+// Emit gzip/Brotli sidecars for hosts that negotiate precompressed responses.
 for (const file of files) {
   const content = await readFile("dist/" + file),
     gz = gzipSync(content, { level: 9 }),
@@ -56,6 +63,7 @@ for (const file of files) {
   gzip += gz.length;
   brotli += br.length;
 }
+// Record exact payload sizes so validation reports can reference generated metadata.
 const manifest = {
   version,
   files,

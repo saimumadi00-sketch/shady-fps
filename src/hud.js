@@ -1,5 +1,8 @@
+// DOM presentation of simulation state; this module never changes combat outcomes.
+import { loadout } from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
 export class HUDController {
+  // Cache frequently updated elements to avoid repeated selector lookups.
   constructor() {
     this.nodes = {};
     for (const id of [
@@ -23,6 +26,7 @@ export class HUDController {
       this.nodes[id] = document.getElementById(id);
     this.lastFeed = "";
   }
+  // Refresh score, ammo, health, notices, and death countdown from the current snapshot of state.
   update(game, quality, renderer) {
     const n = this.nodes,
       a = game.player,
@@ -42,7 +46,7 @@ export class HUDController {
     n.healthBar.style.width = a.hp + "%";
     n.ammo.textContent = s.mag;
     n.reserve.textContent = " / " + s.reserve;
-    n.weaponName.textContent = w.name;
+    n.weaponName.textContent = `${loadout(a.classId).name.toUpperCase()} / ${w.short}`;
     n.reloadState.textContent =
       a.reload > 0
         ? `RELOADING ${a.reload.toFixed(1)}s`
@@ -63,6 +67,7 @@ export class HUDController {
             : "";
     n.death.hidden = a.alive || m.state === "ended" || m.state === "menu";
     n.countdown.textContent = Math.max(1, Math.ceil(a.respawn));
+    // Rebuild the kill feed only when its visible contents change.
     const events = game.events.filter((e) => e.time > 0);
     const key = events.map((e) => e.killer + e.victim + e.team).join("|");
     if (key !== this.lastFeed) {
@@ -80,6 +85,7 @@ export class HUDController {
     }
     n.stats.textContent = `${quality.fps} FPS · ${Math.round(quality.scale * 100)}% SCALE · ${renderer.drawCalls} DRAWS · OFFLINE`;
   }
+  // Build a safely escaped scoreboard sorted by team and eliminations.
   end(game) {
     const m = game.match;
     document.getElementById("winner").textContent =

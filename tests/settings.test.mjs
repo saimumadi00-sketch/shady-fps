@@ -1,4 +1,5 @@
-﻿import test from "node:test";
+// Mocks browser settings controls to verify unknown saved fields and invalid toggles cannot break startup.
+import test from "node:test";
 import assert from "node:assert/strict";
 import { SettingsManager } from "../src/settings.js";
 test("unknown persisted fields do not crash startup and invalid toggles use defaults", () => {
@@ -33,6 +34,7 @@ test("unknown persisted fields do not crash startup and invalid toggles use defa
     assert.equal(settings.values.sound, true);
     assert.equal(settings.values.autoQuality, true);
     assert.equal(settings.values.sensitivity, 1.5);
+    // Restore globals even after assertion failures so other tests do not inherit the mocked DOM.
   } finally {
     for (const [key, value] of Object.entries(originals)) {
       if (value === undefined) delete globalThis[key];

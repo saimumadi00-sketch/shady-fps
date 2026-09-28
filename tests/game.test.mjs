@@ -1,3 +1,4 @@
+// Deterministic headless simulation regressions. Seeded randomness and muted audio isolate game rules from browser timing.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { OfflineSimulation } from "../src/game.js";
@@ -6,6 +7,7 @@ import { Arena, NavigationSystem } from "../src/world.js";
 import { WEAPONS, EffectPool } from "../src/weapons.js";
 import { rayBox } from "../src/math.js";
 import { QualityManager } from "../src/settings.js";
+// Reset a seeded simulation and lightweight input adapter for each independent rule test.
 function setup() {
   let seed = 42;
   const input = {
@@ -36,6 +38,7 @@ function setup() {
   game.start("normal");
   return { game, input };
 }
+// Remove other actors and place one opposing pair in a clear lane for unambiguous hitscan assertions.
 function isolate(game) {
   for (const a of game.actors) a.alive = false;
   for (const i of [0, 5]) {
@@ -55,6 +58,7 @@ function isolate(game) {
   Object.assign(e, { x: 5, z: -15, y: 0 });
   return { p, e };
 }
+// Lock down roster and default rules so UI, bots, and scoring agree on match structure.
 test("5v5 roster and regulation settings", () => {
   const { game } = setup();
   assert.equal(game.actors.filter((a) => a.team === 0).length, 5);
@@ -66,12 +70,14 @@ test("5v5 roster and regulation settings", () => {
     respawn: 3,
   });
 });
+// Exercise degenerate rays explicitly: division by zero and inside origins are common collision edge cases.
 test("raycasts handle parallel rays, inside origins and occluders", () => {
   const b = { x: 0, y: 1, z: 0, w: 2, h: 2, d: 2 };
   assert.equal(rayBox([-4, 1, 0], [1, 0, 0], b), 3);
   assert.equal(rayBox([-4, 4, 0], [1, 0, 0], b), Infinity);
   assert.equal(rayBox([0, 1, 0], [1, 0, 0], b), 0);
 });
+// Repeated lethal shots must count once, then the actor becomes available exactly at respawn time.
 test("hitscan kills, gives one point, prevents repeated death, respawns at 3 seconds", () => {
   const { game } = setup(),
     { p, e } = isolate(game);
@@ -93,6 +99,7 @@ test("hitscan kills, gives one point, prevents repeated death, respawns at 3 sec
   assert.equal(e.hp, 100);
   assert.equal(e.ammo[0].mag, 30);
 });
+// Protection rules must prevent both HP changes and score side effects.
 test("friendly fire and spawn protection cannot damage or score", () => {
   const { game } = setup(),
     { p, e } = isolate(game);
@@ -104,6 +111,7 @@ test("friendly fire and spawn protection cannot damage or score", () => {
   assert.equal(e.hp, 100);
   assert.deepEqual(game.match.scores, [0, 0]);
 });
+// Place solid cover between the pair to distinguish geometric obstruction from aim error.
 test("map cover stops hitscan", () => {
   const { game } = setup(),
     { p, e } = isolate(game);
@@ -112,6 +120,7 @@ test("map cover stops hitscan", () => {
   game.weapons.fire(p, Math.PI / 2, 0, 0);
   assert.equal(e.hp, 100);
 });
+// Validate conservation of total ammunition for full, partial, and exhausted reserves on every weapon.
 test("magazines, reserves and reload conservation for every weapon", () => {
   for (let index = 0; index < WEAPONS.length; index++) {
     const { game } = setup();
@@ -131,6 +140,7 @@ test("magazines, reserves and reload conservation for every weapon", () => {
     assert.deepEqual(p.ammo[index], { mag: 3, reserve: 0 });
   }
 });
+// Separate edge-triggered semi-auto fire from held automatic input.
 test("pistol requires another press; automatic weapon repeats", () => {
   const { game, input } = setup(),
     p = game.player;
@@ -148,6 +158,7 @@ test("pistol requires another press; automatic weapon repeats", () => {
   for (let i = 0; i < 60; i++) game.update(1 / 60);
   assert.ok(p.ammo[0].mag < 27);
 });
+// Cancelling a reload cannot transfer rounds into another weapon or finish the abandoned reload.
 test("weapon switching cancels reload and does not transfer ammo", () => {
   const { game } = setup(),
     p = game.player;
@@ -159,6 +170,7 @@ test("weapon switching cancels reload and does not transfer ammo", () => {
   assert.equal(p.ammo[0].mag, 2);
   assert.equal(p.ammo[1].mag, 30);
 });
+// Verify displacement and stance against arena collision with bot interference disabled.
 test("walking, sprinting, crouching, jumping and solid collision", () => {
   const { game, input } = setup(),
     p = game.player;
@@ -180,6 +192,7 @@ test("walking, sprinting, crouching, jumping and solid collision", () => {
   game.arena.move(p, 1, 0);
   assert.equal(p.x, -2.1);
 });
+// Check all match termination paths plus paused time and restart reset semantics.
 test("scoring, timer, ties, pause and instant restart", () => {
   const m = new MatchManager();
   m.start();
@@ -203,6 +216,7 @@ test("scoring, timer, ties, pause and instant restart", () => {
   assert.equal(m.remaining, 420);
   assert.deepEqual(m.scores, [0, 0]);
 });
+// Ensure each team can reach the opposing side and repeated queries reuse the cached path.
 test("all spawns have cached routes across the map", () => {
   const arena = new Arena(),
     nav = new NavigationSystem(arena);
@@ -215,6 +229,7 @@ test("all spawns have cached routes across the map", () => {
     }
   assert.ok(nav.cache.size <= 256);
 });
+// Seeded full matches catch integration failures that isolated damage tests cannot expose.
 test("three complete seeded bot matches finish with kills and valid totals", () => {
   for (const difficulty of ["easy", "normal", "hard"]) {
     const { game } = setup();
@@ -238,6 +253,7 @@ test("three complete seeded bot matches finish with kills and valid totals", () 
     assert.equal(game.player.hp, 100);
   }
 });
+// Stress the ring buffer and check the transport representation stays compact.
 test("fixed-size effects and compact transport snapshot", () => {
   const pool = new EffectPool();
   for (let i = 0; i < 5000; i++) pool.add(i, 0, 0);
@@ -248,6 +264,7 @@ test("fixed-size effects and compact transport snapshot", () => {
   assert.equal(game.snapshot().actors.length, 10);
   assert.ok(JSON.stringify(game.snapshot()).length < 800);
 });
+// Feed synthetic frame timing to quality adaptation without depending on the test machine speed.
 test("sustained slow frames reduce only rendering quality", () => {
   const settings = { values: { quality: "high", autoQuality: true } },
     q = new QualityManager(settings);
@@ -260,6 +277,7 @@ test("sustained slow frames reduce only rendering quality", () => {
   assert.equal(q.scale, scale);
 });
 
+// Camera rotation must remain independent of movement, with reduced sensitivity while aiming.
 test("mouse deltas control yaw/pitch independently of movement and ADS slows aim", () => {
   const { game, input } = setup();
   game.bots.update = () => {};
@@ -279,6 +297,7 @@ test("mouse deltas control yaw/pitch independently of movement and ADS slows aim
   game.update(1 / 60);
   assert.ok(Math.abs(p.yaw - aimed - 0.156) < 1e-8);
 });
+// Freeze the entry direction through a slide and verify jump cancellation exits into a hop.
 test("sprint crouch starts directional slide; jump cancels and restores standing", () => {
   const { game, input } = setup();
   game.bots.update = () => {};
@@ -306,6 +325,7 @@ test("sprint crouch starts directional slide; jump cancels and restores standing
   assert.ok(p.slideCooldown > 0);
   assert.ok(p.fireDelay > 0);
 });
+// Cover slide prerequisites, expiry, collision, and reset to prevent persistent movement-state bugs.
 test("slide needs sprint, expires, respects collision and resets on respawn", () => {
   const { game, input } = setup();
   game.bots.update = () => {};
@@ -338,6 +358,7 @@ test("slide needs sprint, expires, respects collision and resets on respawn", ()
   assert.ok(p.x < -2.05);
   assert.equal(p.sliding, false);
 });
+// A low ceiling must prevent a jump-cancel from expanding the actor through solid geometry.
 test("slide cancellation cannot stand up through a low ceiling", () => {
   const { game, input } = setup();
   game.bots.update = () => {};
@@ -356,6 +377,7 @@ test("slide cancellation cannot stand up through a low ceiling", () => {
   assert.equal(p.y, 0);
 });
 
+// Input recorded while dead must not execute automatically on the first living tick.
 test("dead player input is cleared before respawn", () => {
   const { game, input } = setup();
   game.player.alive = false;
@@ -369,6 +391,7 @@ test("dead player input is cleared before respawn", () => {
   assert.equal(input.actions.size, 0);
 });
 
+// Iterate the complete arsenal to catch new weapons missing from spawn, fire, or cycling logic.
 test("starting weapon, respawn, and selection cover the full arsenal", () => {
   const { game, input } = setup();
   for (let index = 0; index < WEAPONS.length; index++) {

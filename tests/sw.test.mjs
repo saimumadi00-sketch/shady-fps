@@ -1,8 +1,10 @@
-﻿import { readFile } from "node:fs/promises";
+// Executes worker source in an isolated VM with fake cache/network APIs to test version pinning and scope cleanup.
+import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import test from "node:test";
 import assert from "node:assert/strict";
 const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
+// Capture registered event callbacks so requests can be driven without installing a real worker.
 function worker(versioned, offline = false) {
   const handlers = {},
     requests = [];

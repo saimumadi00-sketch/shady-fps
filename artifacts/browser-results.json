@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-28T09:15:57.911Z",
+  "date": "2026-09-28T10:07:16.996Z",
   "results": [
     "Desktop Play obtains pointer lock",
     "Desktop movement and automatic fire",
@@ -27,8 +27,8 @@
     "navigationNodes": 326,
     "pathCache": 2,
     "heap": {
-      "used": 6299833,
-      "total": 9899181
+      "used": 6225453,
+      "total": 11214733
     }
   },
   "caveat": "Headless Chromium with SwiftShader; mobile emulation is not a physical Android performance measurement."

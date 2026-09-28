@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+  <!-- Document metadata and shared stylesheet; all assets use relative paths for nested hosting. -->
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -17,7 +18,9 @@
   </head>
   <body>
     <main id="game">
+      <!-- WebGL scene surface. DOM overlays provide menus and accessible gameplay information. -->
       <canvas id="canvas" aria-label="First-person game view"></canvas>
+      <!-- Live match HUD; JavaScript reads simulation state and updates these stable element IDs. -->
       <div id="hud" hidden>
         <div class="topline">
           <div class="map-label">
@@ -56,6 +59,7 @@
         </div>
         <div id="stats"></div>
       </div>
+      <!-- Independent pointer targets allow movement, aiming, and firing at the same time. -->
       <div id="touch" hidden>
         <div id="lookZone" aria-label="Drag to look"></div>
         <div id="joystick" aria-label="Movement joystick"><i></i></div>
@@ -66,6 +70,7 @@
         ><button data-action="crouch" id="crouch">SLIDE</button
         ><button data-action="switch" id="switch">SWAP</button>
       </div>
+      <!-- Start menu and saved setup controls. Gameplay begins only after explicit Play interaction. -->
       <section id="menu" class="overlay">
         <div class="menu-shell">
           <div class="eyebrow">
@@ -79,6 +84,7 @@
               <p class="tagline">
                 Three lanes. Ten contenders.<br />One yard to control.
               </p>
+              <!-- Canvas preview reuses the procedural weapon mesh with the chosen finish and sight. -->
               <div class="armory-preview">
                 <span class="kicker">YOUR LOADOUT / LIVE PREVIEW</span
                 ><canvas
@@ -127,6 +133,9 @@
                 </div>
                 <div><b>03s</b><span>RESPAWN</span></div>
               </div>
+              <!-- Class selection controls the permitted primary and shared sidearm. -->
+              <div class="settings"><label class="weapon-choice">LOADOUT CLASS<select id="loadoutClass" aria-describedby="classInfo"></select></label></div>
+              <p id="classInfo" class="weapon-info" aria-live="polite"></p>
               <div class="settings">
                 <label class="weapon-choice"
                   >STARTING WEAPON
@@ -156,6 +165,7 @@
                   </select></label
                 >
               </div>
+              <!-- General preferences persist separately from weapon and cosmetic selections. -->
               <div class="settings secondary">
                 <label
                   >SENSITIVITY<input
@@ -172,6 +182,7 @@
                   SCALE</label
                 >
               </div>
+              <!-- Cosmetics and camera options apply immediately to the preview; choices are stored locally. -->
               <details class="custom-panel" open>
                 <summary>PERSONALIZE YOUR LOADOUT</summary>
                 <div class="settings">
@@ -214,6 +225,7 @@
                   ><input id="fov" type="range" min="65" max="105" value="83"
                 /></label>
               </details>
+              <!-- Score and time limits are copied into match rules on start/restart, not mid-match. -->
               <details class="custom-panel">
                 <summary>MATCH RULES</summary>
                 <div class="settings">
@@ -251,6 +263,7 @@
           </footer>
         </div>
       </section>
+      <!-- Pause releases pointer capture so the player can select a weapon or return to setup. -->
       <section id="pause" class="overlay" hidden>
         <div class="dialog">
           <p class="kicker">CROSSCURRENT / TIME OUT</p>
@@ -270,6 +283,7 @@
           ><button id="back" class="secondary-button">RETURN TO MENU</button>
         </div>
       </section>
+      <!-- End-of-match results are populated once when the simulation reaches an end condition. -->
       <section id="end" class="overlay" hidden>
         <div class="dialog">
           <p class="kicker">MATCH COMPLETE</p>
@@ -281,11 +295,13 @@
           ><button id="endMenu" class="secondary-button">RETURN TO MENU</button>
         </div>
       </section>
+      <!-- Respawn countdown is separate from pause and menu overlays. -->
       <div id="death" hidden>
         <p>BACK IN THE FIGHT IN</p>
         <strong id="countdown">3</strong
         ><span>Unlimited respawns. Keep pushing.</span>
       </div>
+      <!-- Touch gameplay pauses in portrait until there is enough horizontal room for controls. -->
       <div id="rotate" class="overlay" hidden>
         <div class="dialog">
           <div class="rotate-icon">↻</div>
@@ -293,6 +309,7 @@
           <p>Turn your phone or tablet sideways to play.</p>
         </div>
       </div>
+      <!-- Recoverable startup failure display; textContent is used for error messages. -->
       <div id="fatal" class="overlay" hidden>
         <div class="dialog">
           <h2>CAN’T START THE ARENA</h2>
@@ -301,6 +318,7 @@
         </div>
       </div>
     </main>
+    <!-- The build script replaces this development module entry with the production bundle. -->
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>

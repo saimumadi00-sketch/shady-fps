@@ -1,11 +1,21 @@
-﻿// Original low-poly firearm meshes. Dimensions are visual game units.
+// Procedural firearm-inspired triangle meshes; named part ranges allow animation without rebuilding topology.
+// Original low-poly firearm meshes. Dimensions are visual game units.
+// Generate packed position/normal/color vertices for one weapon and optional gameplay hands.
 export function weaponMesh(
   index,
   finish = "graphite",
   optic = "iron",
   firing = false,
+  hands = false,
 ) {
-  const out = [];
+  const out = [],
+    parts = [];
+  // Record contiguous float ranges belonging to independently movable components.
+  const part = (name, fn) => {
+    const start = out.length;
+    fn();
+    parts.push({ name, start, end: out.length });
+  };
   const body = {
     graphite: [0.16, 0.19, 0.21],
     sand: [0.49, 0.4, 0.27],
@@ -14,6 +24,7 @@ export function weaponMesh(
   const steel = [0.09, 0.11, 0.13],
     edge = [0.29, 0.32, 0.34],
     rubber = [0.055, 0.065, 0.07];
+  // Compute a flat-shaded face normal and emit three interleaved vertices.
   function tri(a, b, c, col) {
     const u = b.map((v, i) => v - a[i]),
       v = c.map((n, i) => n - a[i]);
@@ -45,6 +56,7 @@ export function weaponMesh(
       tri(p, r, s, col);
     }
   }
+  // Reuse the profile extrusion helper for rectangular components.
   function box(x, y, z, w, h, d, col) {
     profile(
       [
@@ -58,6 +70,7 @@ export function weaponMesh(
       x,
     );
   }
+  // Approximate cylinders with twelve facets; open tubes provide unobstructed scope sightlines.
   function tube(x, y, z, r, len, col, open = false) {
     for (let i = 0; i < 12; i++) {
       const a = (i * Math.PI) / 6,
@@ -77,17 +90,20 @@ export function weaponMesh(
     dmr = index === 3,
     lmg = index === 4;
   const front = pistol ? -0.19 : smg ? -0.3 : dmr ? -0.56 : lmg ? -0.49 : -0.43;
+  // Use a short slide and angled grip instead of the rifle receiver/stock assembly.
   if (pistol) {
-    profile(
-      [
-        [-0.22, 0.025],
-        [0.14, 0.025],
-        [0.17, 0.09],
-        [0.12, 0.135],
-        [-0.2, 0.135],
-      ],
-      0.085,
-      body,
+    part("slide", () =>
+      profile(
+        [
+          [-0.22, 0.025],
+          [0.14, 0.025],
+          [0.17, 0.09],
+          [0.12, 0.135],
+          [-0.2, 0.135],
+        ],
+        0.085,
+        body,
+      ),
     );
     profile(
       [
@@ -101,8 +117,11 @@ export function weaponMesh(
     );
     box(0, 0.008, -0.09, 0.075, 0.045, 0.23, steel);
     tube(0, 0.072, -0.225, 0.019, 0.032, steel);
-    for (let i = 0; i < 6; i++)
-      box(0.044, 0.085, 0.07 + i * 0.012, 0.003, 0.054, 0.005, edge);
+    part("magazine", () => box(0, -0.205, 0.145, 0.063, 0.18, 0.068, steel));
+    part("slide", () => {
+      for (let i = 0; i < 6; i++)
+        box(0.044, 0.085, 0.07 + i * 0.012, 0.003, 0.054, 0.005, edge);
+    });
   } else {
     profile(
       [
@@ -159,44 +178,49 @@ export function weaponMesh(
     tube(0, 0.035, front - 0.165, 0.025, 0.045, edge);
     // A visible dark bore instead of a solid block muzzle.
     tube(0, 0.035, front - 0.19, 0.013, 0.006, rubber);
+    // Separate the ammo box, belt, and feed cover so the reload can articulate each one.
     if (lmg) {
-      box(0, -0.14, -0.09, 0.18, 0.2, 0.16, body);
-      for (let i = 0; i < 5; i++)
-        box(
-          0.083 + i * 0.014,
-          -0.04,
-          -0.08,
-          0.012,
-          0.015,
-          0.07,
-          [0.61, 0.46, 0.2],
-        );
-      box(0, 0.13, -0.025, 0.055, 0.025, 0.16, steel);
+      part("magazine", () => box(0, -0.14, -0.09, 0.18, 0.2, 0.16, body));
+      part("belt", () => {
+        for (let i = 0; i < 5; i++)
+          box(
+            0.083 + i * 0.014,
+            -0.04,
+            -0.08,
+            0.012,
+            0.015,
+            0.07,
+            [0.61, 0.46, 0.2],
+          );
+      });
+      part("cover", () => box(0, 0.13, -0.025, 0.11, 0.025, 0.22, steel));
     } else {
-      profile(
-        smg
-          ? [
-              [-0.095, -0.03],
-              [-0.035, -0.03],
-              [-0.025, -0.29],
-              [-0.1, -0.29],
-            ]
-          : [
-              [-0.13, -0.03],
-              [-0.035, -0.03],
-              [-0.04, -0.18],
-              [-0.1, -0.28],
-              [-0.19, -0.26],
-              [-0.14, -0.14],
-            ],
-        0.068,
-        steel,
-      );
-      for (let i = 0; i < 3; i++)
-        box(0.035, -0.095 - i * 0.045, -0.094, 0.004, 0.008, 0.066, edge);
+      part("magazine", () => {
+        profile(
+          smg
+            ? [
+                [-0.095, -0.03],
+                [-0.035, -0.03],
+                [-0.025, -0.29],
+                [-0.1, -0.29],
+              ]
+            : [
+                [-0.13, -0.03],
+                [-0.035, -0.03],
+                [-0.04, -0.18],
+                [-0.1, -0.28],
+                [-0.19, -0.26],
+                [-0.14, -0.14],
+              ],
+          0.068,
+          steel,
+        );
+        for (let i = 0; i < 3; i++)
+          box(0.035, -0.095 - i * 0.045, -0.094, 0.004, 0.008, 0.066, edge);
+      });
     }
     box(0.057, 0.043, 0.03, 0.008, 0.039, 0.085, steel); // ejection port
-    box(0.069, 0.032, 0.015, 0.027, 0.014, 0.028, edge);
+    part("bolt", () => box(0.069, 0.032, 0.015, 0.027, 0.014, 0.028, edge));
     for (let i = 0; i < 13; i++)
       box(0, 0.113, -0.2 + i * 0.027, 0.075, 0.012, 0.012, steel);
   }
@@ -207,6 +231,7 @@ export function weaponMesh(
   for (const side of [-1, 1])
     box(side * 0.027, 0.143, pistol ? 0.11 : 0.13, 0.015, 0.038, 0.021, steel);
   box(0, 0.14, pistol ? -0.18 : front + 0.03, 0.018, 0.048, 0.018, steel);
+  // The marksman rifle retains its scope; other weapons follow the cosmetic sight selection.
   if (dmr || optic === "scope") {
     box(0, 0.16, -0.04, 0.045, 0.08, 0.1, steel);
     tube(0, 0.218, -0.055, 0.044, 0.25, steel, true);
@@ -220,6 +245,7 @@ export function weaponMesh(
     box(0, 0.252, -0.055, 0.1, 0.013, 0.035, steel);
     box(0, 0.205, -0.057, 0.006, 0.006, 0.008, [1, 0.2, 0.1]);
   }
+  // Add a brief muzzle flash to the firing variant at the weapon-specific barrel tip.
   if (firing) {
     const tip = pistol ? -0.26 : front - 0.22;
     profile(
@@ -232,9 +258,33 @@ export function weaponMesh(
       [1, 0.76, 0.25],
     );
   }
-  return new Float32Array(out);
+  // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
+  if (hands) {
+    const glove = [0.22, 0.25, 0.2],
+      cuff = [0.13, 0.17, 0.15];
+    box(0.025, -0.12, 0.155, 0.11, 0.12, 0.1, glove);
+    box(0.045, -0.21, 0.24, 0.105, 0.18, 0.16, cuff);
+    part("support", () => {
+      box(-0.07, -0.11, pistol ? 0.1 : -0.29, 0.105, 0.105, 0.13, glove);
+      for (let i = 0; i < 4; i++)
+        box(
+          -0.035,
+          -0.075 - i * 0.02,
+          pistol ? 0.08 : -0.29,
+          0.07,
+          0.016,
+          0.085,
+          glove,
+        );
+      box(-0.1, -0.2, pistol ? 0.16 : -0.2, 0.09, 0.16, 0.13, cuff);
+    });
+  }
+  const result = new Float32Array(out);
+  result.parts = parts;
+  return result;
 }
 
+// Project the same mesh into a 2D canvas for a lightweight static armory preview.
 export function previewWeapon(canvas, index, finish, optic) {
   const ctx = canvas.getContext("2d"),
     mesh = weaponMesh(index, finish, optic);
@@ -266,6 +316,7 @@ export function previewWeapon(canvas, index, finish, optic) {
       color: `rgb(${[6, 7, 8].map((k) => Math.round(mesh[i + k] * light * 255)).join(",")})`,
     });
   }
+  // Paint back-to-front to approximate triangle visibility without creating a second WebGL context.
   faces.sort((a, b) => a.depth - b.depth);
   for (const f of faces) {
     ctx.beginPath();

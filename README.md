@@ -31,6 +31,10 @@ Press **Play Match**. Desktop play captures the mouse; Escape pauses and release
 
 The first-person weapons use original low-poly meshes with shaped receivers, stocks, grips, magazines, round barrels, rails, and sights. These are recognizable firearm-inspired game models, not licensed replicas. The live armory preview shows the selected weapon and finish. Choose graphite, desert sand, or olive; factory, reflex, or scope sights (cosmetic); a callsign; crosshair color; and a 65?105 degree field of view. The marksman rifle retains its scope. Match rules allow 15/30/50 kills and 3/7/10 minutes. Customization is saved locally and match rules apply when starting or restarting a match.
 
+## Reload animation
+
+Reloads now animate a gloved support hand, magazine removal/reinsertion, and a canted weapon pose. The pistol slide stays back during an empty reload; empty rifle reloads animate the charging handle. The LMG uses an ammo-box, feed-belt, and hinged-cover sequence. Partial reloads skip the empty-chamber action. Mechanical sounds follow the reload phases. Animations use the gameplay reload timer, pause with the match, cancel on weapon changes, and return to the ready pose on completion or respawn. These are stylized animations for the fictional game weapons.
+
 ## Tactical movement update
 
 Mouse movement aims the camera; holding right mouse aims down sights with reduced sensitivity. Click Play/Resume to capture the mouse. If browser capture is denied or unavailable, hold right mouse and drag to aim; the HUD displays this fallback. Escape pauses, and Resume retries capture. Using a mouse on a hybrid touch laptop selects desktop controls even during a match.

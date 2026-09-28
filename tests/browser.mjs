@@ -1,7 +1,9 @@
+// End-to-end desktop/mobile workflows against a running production preview, including offline reload and context restoration.
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile, mkdir } from "node:fs/promises";
 await mkdir("artifacts", { recursive: true });
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: [
@@ -34,6 +36,7 @@ results.push("Desktop Play obtains pointer lock");
 await page.evaluate(() => {
   __arena.game.bots.update = () => {};
 });
+// Compare actual browser input effects rather than merely checking key-handler state.
 const beforeMove = await page.evaluate(() => ({
   x: __arena.game.player.x,
   z: __arena.game.player.z,
@@ -78,6 +81,7 @@ await page.waitForTimeout(250);
 await page.screenshot({ path: "artifacts/game-desktop.png" });
 await page.evaluate(() => document.exitPointerLock());
 await page.waitForFunction(() => __arena.game.match.state === "paused");
+// Capture the timer before waiting to prove pointer-lock loss stops simulation.
 const pausedTime = await page.evaluate(() => __arena.game.match.remaining);
 await page.waitForTimeout(300);
 assert.equal(
@@ -137,7 +141,20 @@ await page.evaluate(() => {
   Object.assign(enemy, { x: 5, z: -15, y: 0, alive: true, shield: 0, hp: 26 });
   __arena.input.fire = true;
 });
-try { await page.waitForSelector("#end:not([hidden])"); } catch(e) { console.log(await page.evaluate(()=>({p:__arena.game.player,enemy:__arena.game.actors[5],match:__arena.game.match,input:{fire:__arena.input.fire,keys:[...__arena.input.keys]}}))); await browser.close();throw e; }
+try {
+  await page.waitForSelector("#end:not([hidden])");
+} catch (e) {
+  console.log(
+    await page.evaluate(() => ({
+      p: __arena.game.player,
+      enemy: __arena.game.actors[5],
+      match: __arena.game.match,
+      input: { fire: __arena.input.fire, keys: [...__arena.input.keys] },
+    })),
+  );
+  await browser.close();
+  throw e;
+}
 assert.equal(await page.locator("#winner").textContent(), "CYAN WINS");
 await page.screenshot({ path: "artifacts/match-end.png" });
 await page.click("#restart");
@@ -162,6 +179,7 @@ results.push(
   "WebGL context loss pauses and restoration rebuilds GPU resources",
 );
 // Sample a short unthrottled run: software-renderer figures are not device targets.
+// Sample rendering separately from gameplay assertions; SwiftShader timing is diagnostic only.
 const perf = await page.evaluate(async () => {
   const a = __arena,
     frames = [],
@@ -238,6 +256,7 @@ await cdp.send("Input.dispatchTouchEvent", {
   touchPoints: points,
 });
 await mp.waitForTimeout(350);
+// Inspect all touch axes/buttons together to prove simultaneous pointers remain independent.
 const multi = await mp.evaluate(() => ({
   move: __arena.input.moveY,
   yaw: __arena.game.player.yaw,
@@ -272,6 +291,7 @@ await mp.setViewportSize({ width: 844, height: 390 });
 await mp.waitForSelector("#rotate[hidden]", { state: "attached" });
 results.push("Portrait rotate prompt pauses combat");
 await mp.waitForFunction(() => navigator.serviceWorker.controller !== null);
+// Disable networking only after the worker controls the page, then verify a complete offline reload.
 await mobile.setOffline(true);
 await mp.reload();
 await mp.waitForFunction(() => !!window.__arena);

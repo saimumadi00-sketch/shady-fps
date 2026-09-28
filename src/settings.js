@@ -1,4 +1,6 @@
+// Persisted preferences, adaptive rendering quality, and synthesized sound without external assets.
 export class SettingsManager {
+  // Load known settings only; invalid or blocked storage must never prevent startup.
   constructor() {
     this.values = {
       quality: matchMedia("(pointer:coarse)").matches ? "low" : "medium",
@@ -26,6 +28,7 @@ export class SettingsManager {
     );
     for (const key of ["sound", "autoQuality"])
       if (typeof this.values[key] !== "boolean") this.values[key] = true;
+    // Bind form controls after normalization and persist changes when storage is available.
     for (const key of Object.keys(this.values)) {
       const el = document.getElementById(key);
       if (el.type === "checkbox") el.checked = this.values[key];
@@ -47,12 +50,14 @@ export class SettingsManager {
     }
   }
 }
+// Render scale ignores device pixel ratio to keep high-DPI screens within a predictable GPU budget.
 export const PRESETS = {
   low: { scale: 0.65, min: 0.45, effects: 10, shadows: false },
   medium: { scale: 0.9, min: 0.55, effects: 24, shadows: true },
   high: { scale: 1.15, min: 0.6, effects: 48, shadows: true },
 };
 export class QualityManager {
+  // Retain preferences so menu changes are observed by the runtime subsystem.
   constructor(settings) {
     this.settings = settings;
     this.preset = "";
@@ -63,6 +68,7 @@ export class QualityManager {
     this.fps = 60;
     this.configure();
   }
+  // Reset adaptation only when the selected quality preset changes.
   configure() {
     const name = this.settings.values.quality;
     if (name !== this.preset) {
@@ -74,6 +80,7 @@ export class QualityManager {
       this.elapsed = this.frames = this.slow = this.fast = 0;
     }
   }
+  // Estimate FPS over two-second windows; reduce quality faster than it recovers.
   update(dt) {
     this.configure();
     this.elapsed += dt;
@@ -86,12 +93,14 @@ export class QualityManager {
     this.slow = this.fps < 43 ? this.slow + 1 : 0;
     this.fast = this.fps > 57 ? this.fast + 1 : 0;
     const p = PRESETS[this.preset];
+    // Lower visual cost after sustained slow frames without changing simulation tick speed.
     if (this.slow >= 2) {
       this.scale = Math.max(p.min, this.scale - 0.1);
       this.effects = Math.max(6, Math.floor(this.effects * 0.7));
       if (this.scale < 0.7) this.shadows = false;
       this.slow = 0;
     }
+    // Restore detail cautiously after several windows with frame-time headroom.
     if (this.fast >= 4) {
       this.scale = Math.min(p.scale, this.scale + 0.05);
       this.effects = Math.min(p.effects, this.effects + 4);
@@ -101,12 +110,14 @@ export class QualityManager {
   }
 }
 export class AudioManager {
+  // Retain preferences so menu changes are observed by the runtime subsystem.
   constructor(settings) {
     this.settings = settings;
     this.context = null;
     this.lastShot = 0;
     this.voices = 0;
   }
+  // Create/resume audio only from an interaction permitted by browser autoplay policy.
   unlock() {
     try {
       if (!this.context)
@@ -114,6 +125,7 @@ export class AudioManager {
       this.context.resume().catch(() => {});
     } catch {}
   }
+  // Limit simultaneous voices and synthesize short cues using oscillator envelopes.
   play(kind, volume = 0.5, weapon = 0) {
     const c = this.context;
     if (
@@ -152,6 +164,7 @@ export class AudioManager {
     gain.connect(c.destination);
     o.start(t);
     o.stop(t + duration);
+    // Disconnect completed voices so audio nodes do not accumulate during long matches.
     o.onended = () => {
       o.disconnect();
       gain.disconnect();

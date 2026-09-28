@@ -1,5 +1,7 @@
-﻿import { chromium } from "@playwright/test";
+// Exercises saved customization and custom rules, then checks every weapon mesh and mobile startup.
+import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -23,6 +25,7 @@ try {
   await page.selectOption("#duration", "180");
   await page.selectOption("#crosshairColor", "#ffbf69");
   await page.screenshot({ path: "artifacts/armory-menu.png", fullPage: true });
+  // A new page load must recover saved preferences before Play applies them to the simulation.
   await page.reload();
   await page.waitForFunction(() => !!window.__arena);
   assert.equal(await page.locator("#finish").inputValue(), "sand");
@@ -40,6 +43,7 @@ try {
   await page.evaluate(() => {
     __arena.game.bots.update = () => {};
   });
+  // Render every weapon variant and capture screenshots while checking the WebGL error state.
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press("Digit" + (i + 1));
     await page.waitForTimeout(250);
@@ -67,6 +71,7 @@ try {
   console.log(
     "PASS customization persistence, rules, FOV, five meshes, mobile menu",
   );
+  // Always release the browser, including after a failed assertion.
 } finally {
   await browser.close();
 }

@@ -1,5 +1,7 @@
-﻿import { previewWeapon } from "./weapon-models.js";
+// Saved cosmetic and match setup choices plus the live armory preview.
+import { previewWeapon } from "./weapon-models.js";
 export class Customization {
+  // Restore and validate customization, then bind each control to persistence and preview updates.
   constructor() {
     this.values = {
       callsign: "You",
@@ -18,6 +20,7 @@ export class Customization {
         if (saved && Object.prototype.hasOwnProperty.call(saved, k))
           this.values[k] = saved[k];
     } catch {}
+    // Reject unknown enum values before using them in rendering or match rules.
     for (const [key, choices] of Object.entries({
       finish: ["graphite", "sand", "olive"],
       optic: ["iron", "reflex", "scope"],
@@ -59,6 +62,7 @@ export class Customization {
       .addEventListener("change", () => this.refresh());
     this.refresh();
   }
+  // Update presentation immediately; score/time choices apply to gameplay only when a match starts.
   refresh() {
     const v = this.values;
     document.documentElement.style.setProperty(
@@ -76,6 +80,7 @@ export class Customization {
       v.optic,
     );
   }
+  // Copy selected rules into the match before its timer is initialized and update the HUD target.
   apply(game) {
     game.player.name = this.values.callsign;
     game.match.rules = {

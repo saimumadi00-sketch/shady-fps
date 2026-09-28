@@ -1,3 +1,4 @@
+// Ground movement state machine; all rates use world units and seconds rather than frame counts.
 import { clamp } from "./math.js";
 
 export const MOVEMENT = Object.freeze({
@@ -14,10 +15,12 @@ export const MOVEMENT = Object.freeze({
 // Tactical movement is independent of camera aim: turning during a slide does
 // not redirect its initial momentum. Crouch edges prevent held-key slide spam.
 export class TacticalMovement {
+  // Resolve intent, slide transitions, horizontal collision, and vertical motion in that order.
   update(a, i, arena, dt) {
     const k = i.keys;
     let forward = (k.has("KeyW") ? 1 : 0) - (k.has("KeyS") ? 1 : 0) + i.moveY;
     let side = (k.has("KeyD") ? 1 : 0) - (k.has("KeyA") ? 1 : 0) + i.moveX;
+    // Normalize combined axes to prevent diagonal movement from exceeding forward speed.
     const length = Math.max(1, Math.hypot(forward, side));
     forward /= length;
     side /= length;
@@ -26,11 +29,13 @@ export class TacticalMovement {
       k.has("ControlLeft") ||
       k.has("ControlRight") ||
       i.touchCrouch;
+    // Detect a new crouch press so holding the key cannot chain slides.
     const crouchPressed = crouch && !a.crouchHeld;
     a.crouchHeld = crouch;
     const jump = i.consume("Space");
     const floor = arena.floor(a.x, a.z, a.y),
       grounded = a.y <= floor + 0.02;
+    // Check the full standing volume before leaving a low stance under cover.
     const standingClear = () => !arena.blocked(a.x, a.z, 0.35, a.y, 1.8);
     a.slideCooldown = Math.max(0, a.slideCooldown - dt);
     a.fireDelay = Math.max(0, a.fireDelay - dt);
@@ -40,6 +45,7 @@ export class TacticalMovement {
         (i.touch && i.moveY > 0.92)) &&
       forward > 0.5 &&
       !i.aim;
+    // Capture slide direction at entry; subsequent camera movement does not steer momentum.
     if (crouchPressed && a.sprinting && grounded && a.slideCooldown === 0) {
       a.sliding = true;
       a.slideTime = MOVEMENT.slideDuration;
@@ -49,6 +55,7 @@ export class TacticalMovement {
       a.slideX /= norm;
       a.slideZ /= norm;
     }
+    // Use one exit path for expiry, wall impacts, and jump cancellation.
     const stopSlide = () => {
       a.sliding = false;
       a.slideTime = 0;
@@ -66,16 +73,19 @@ export class TacticalMovement {
     }
     if (!crouch) a.ignoreCrouch = false;
     if (a.sliding && !grounded) stopSlide();
+    // Keep the actor crouched when a ceiling prevents safely restoring standing height.
     a.crouched =
       a.sliding ||
       (crouch && !a.ignoreCrouch) ||
       (a.crouched && !standingClear());
+    // Apply sprint-to-fire recovery only when leaving sprint, not every tick.
     const wasSprint = a.sprinting;
     a.sprinting =
       wantsSprint && !a.crouched && !a.sliding && grounded && !cancelled;
     if (wasSprint && !a.sprinting)
       a.fireDelay = Math.max(a.fireDelay, MOVEMENT.sprintToFire);
     a.aim = i.aim && !a.sliding;
+    // Interpolate slide speed over its lifetime and stop when collision blocks travel.
     if (a.sliding) {
       const t = 1 - a.slideTime / MOVEMENT.slideDuration;
       const speed =
@@ -104,9 +114,11 @@ export class TacticalMovement {
       );
     }
     if (jump && !cancelled && grounded && !a.crouched) a.vy = 6;
+    // Smooth camera height independently of collision height to avoid abrupt stance jumps.
     a.eye +=
       ((a.sliding ? 0.78 : a.crouched ? 1.02 : 1.58) - a.eye) *
       Math.min(1, dt * 15);
+    // Apply gravity, reject upward ceiling penetration, then snap onto the supporting floor.
     a.vy -= 18 * dt;
     const nextY = a.y + a.vy * dt;
     if (

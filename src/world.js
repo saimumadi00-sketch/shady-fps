@@ -1,9 +1,11 @@
+// Procedural arena geometry doubles as collision data; navigation uses a coarse walkable graph.
 import { rayBox } from "./math.js";
 export const TEAM_COLORS = [
   [0.25, 0.78, 0.72],
   [0.96, 0.38, 0.19],
 ];
 export class Arena {
+  // Build visual boxes, collidable solids, and team spawn lists once.
   constructor() {
     this.boxes = [];
     this.solids = [];
@@ -90,6 +92,7 @@ export class Arena {
         false,
       );
   }
+  // Expand solid bounds by the actor radius and compare vertical spans with a small tolerance.
   blocked(x, z, r = 0.36, y = 0, height = 1.8) {
     return this.solids.some(
       (b) =>
@@ -99,12 +102,14 @@ export class Arena {
         Math.abs(z - b.z) < b.d / 2 + r,
     );
   }
+  // Resolve X and Z separately so actors can slide along a wall instead of sticking to it.
   move(a, dx, dz) {
     if (!this.blocked(a.x + dx, a.z, 0.36, a.y, a.crouched ? 1.15 : 1.8))
       a.x += dx;
     if (!this.blocked(a.x, a.z + dz, 0.36, a.y, a.crouched ? 1.15 : 1.8))
       a.z += dz;
   }
+  // Choose the highest supporting solid below the actor, allowing a small step tolerance.
   floor(x, z, y) {
     let top = 0;
     for (const b of this.solids) {
@@ -118,12 +123,14 @@ export class Arena {
     }
     return top;
   }
+  // Find the nearest solid intersection and include the ground plane for downward shots.
   ray(o, d, max = 100) {
     let hit = max;
     for (const b of this.solids) hit = Math.min(hit, rayBox(o, d, b, hit));
     if (d[1] < 0) hit = Math.min(hit, -o[1] / d[1]);
     return hit;
   }
+  // Cast from eye height toward the target body with a small endpoint tolerance.
   visible(a, b) {
     const o = [a.x, a.y + 1.45, a.z],
       v = [b.x - a.x, b.y + 1.1 - o[1], b.z - a.z],
@@ -139,6 +146,7 @@ export class Arena {
   }
 }
 export class NavigationSystem {
+  // Sample walkable grid points and connect adjacent orthogonal neighbors.
   constructor(arena) {
     this.arena = arena;
     this.nodes = [];
@@ -156,6 +164,7 @@ export class NavigationSystem {
         }
       }
   }
+  // Use squared distance to map an arbitrary actor position onto a graph node.
   nearest(a) {
     let best = 0,
       d = Infinity;
@@ -169,11 +178,13 @@ export class NavigationSystem {
     }
     return best;
   }
+  // Cache paths by endpoint node IDs; breadth-first search is sufficient for equal-cost edges.
   path(a, b) {
     const start = this.nearest(a),
       end = this.nearest(b),
       key = start + ":" + end;
     if (this.cache.has(key)) return this.cache.get(key);
+    // Use predecessor markers for both visitation and later path reconstruction.
     const prev = new Int16Array(this.nodes.length).fill(-1),
       queue = [start];
     prev[start] = start;
@@ -186,6 +197,7 @@ export class NavigationSystem {
           queue.push(v);
         }
     }
+    // Backtrack from the destination and reverse to return waypoints in travel order.
     const path = [];
     if (prev[end] >= 0) {
       let v = end;
@@ -195,6 +207,7 @@ export class NavigationSystem {
       }
       path.reverse();
     }
+    // Evict the oldest inserted route to bound memory across repeated matches.
     if (this.cache.size >= 256)
       this.cache.delete(this.cache.keys().next().value);
     this.cache.set(key, path);

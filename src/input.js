@@ -1,5 +1,7 @@
+// Normalizes keyboard, captured mouse, fallback dragging, and multi-pointer touch into one input state.
 import { clamp } from "./math.js";
 export class InputManager {
+  // Install browser listeners once; active gates prevent menu interactions from firing the weapon.
   constructor(canvas, onPause, onTouch) {
     this.canvas = canvas;
     this.onPause = onPause;
@@ -18,6 +20,7 @@ export class InputManager {
     this.moveY = 0;
     this.touchCrouch = false;
     this.onTouch = onTouch;
+    // Keep held keys separate from one-shot actions so jumps and semi-auto shots use press edges.
     window.addEventListener("keydown", (e) => {
       if (!this.active) return;
       if (["Space", "ControlLeft", "ControlRight", "Tab"].includes(e.code))
@@ -27,6 +30,7 @@ export class InputManager {
       if (e.code === "Escape") onPause();
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    // Captured aim uses relative deltas; fallback drag uses client-coordinate differences.
     document.addEventListener("mousemove", (e) => {
       if (this.active && document.pointerLockElement === canvas) {
         this.dx += e.movementX;
@@ -39,6 +43,7 @@ export class InputManager {
         this.lastMouse = { x: e.clientX, y: e.clientY };
       }
     });
+    // Only gameplay mouse presses can set fire or ADS; fallback presses must start on the canvas.
     document.addEventListener("mousedown", (e) => {
       if (
         this.active &&
@@ -63,6 +68,7 @@ export class InputManager {
       }
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    // Restore normal aim after capture succeeds; pause when desktop capture is lost.
     document.addEventListener("pointerlockchange", () => {
       if (document.pointerLockElement === canvas) {
         this.mouseFallback = false;
@@ -73,6 +79,7 @@ export class InputManager {
     document.addEventListener("pointerlockerror", () =>
       this.enableMouseFallback(),
     );
+    // Clear sticky keys and buttons when focus leaves the game.
     window.addEventListener("blur", () => {
       this.clear();
       onPause();
@@ -83,6 +90,7 @@ export class InputManager {
         onPause();
       }
     });
+    // Detect real device changes during capture phase, before touch elements handle the press.
     window.addEventListener(
       "pointerdown",
       (e) => {
@@ -101,11 +109,13 @@ export class InputManager {
     );
     this.touchController = new TouchInputController(this);
   }
+  // Read and remove a one-shot action so catch-up ticks cannot repeat it.
   consume(k) {
     const v = this.actions.has(k);
     this.actions.delete(k);
     return v;
   }
+  // Reset accumulated movement and held controls on pause, death, and mode changes.
   clear() {
     this.keys.clear();
     this.actions.clear();
@@ -119,6 +129,7 @@ export class InputManager {
     this.moveY = 0;
     this.touchController?.reset();
   }
+  // Try native capture; a denied or unsupported request falls back to drag aiming.
   async lock() {
     if (!this.touch) {
       try {
@@ -132,6 +143,7 @@ export class InputManager {
       }
     }
   }
+  // Ignore late capture failures after play stops or a successful lock has already arrived.
   enableMouseFallback() {
     if (
       !this.active ||
@@ -144,6 +156,7 @@ export class InputManager {
   }
 }
 export class TouchInputController {
+  // Track joystick, look, and action buttons by pointer ID for simultaneous touch controls.
   constructor(input) {
     this.input = input;
     this.look = null;
@@ -152,6 +165,7 @@ export class TouchInputController {
     const zone = document.getElementById("lookZone"),
       joy = document.getElementById("joystick");
     this.stick = joy.firstElementChild;
+    // Capture each touch and treat release, cancellation, and lost capture as equivalent cleanup.
     const bind = (el, down, move, up) => {
       el.addEventListener("pointerdown", (e) => {
         if (!input.active) return;
@@ -187,6 +201,7 @@ export class TouchInputController {
         if (e.pointerId === this.look) this.look = null;
       },
     );
+    // Clamp joystick displacement to its radius while preserving movement direction.
     const update = (e) => {
       const r = joy.getBoundingClientRect(),
         x = e.clientX - r.left - r.width / 2,
@@ -215,6 +230,7 @@ export class TouchInputController {
         }
       },
     );
+    // Map touch actions to the same gameplay commands as keyboard and mouse.
     document.querySelectorAll("[data-action]").forEach((el) => {
       const a = el.dataset.action;
       bind(
@@ -239,6 +255,7 @@ export class TouchInputController {
       );
     });
   }
+  // Forget pointer ownership and return the joystick to its neutral visual state.
   reset() {
     this.look = this.joy = null;
     this.buttons.clear();

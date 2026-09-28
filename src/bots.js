@@ -1,14 +1,18 @@
+// Bot perception and navigation are staggered; movement and shooting still run at simulation frequency.
 import { distance } from "./math.js";
+// Difficulty changes reaction delay, aim error, walking speed, and perception cadence.
 export const DIFFICULTY = {
   easy: { reaction: 0.6, spread: 0.16, speed: 2.9, interval: 0.3 },
   normal: { reaction: 0.32, spread: 0.085, speed: 3.6, interval: 0.22 },
   hard: { reaction: 0.16, spread: 0.035, speed: 4.2, interval: 0.16 },
 };
 export class BotController {
+  // Start at normal difficulty until match setup chooses another preset.
   constructor(game) {
     this.game = game;
     this.difficulty = "normal";
   }
+  // Advance one living bot using its cached target and route between perception updates.
   update(a, dt) {
     if (!a.alive) return;
     const g = this.game,
@@ -18,6 +22,7 @@ export class BotController {
     b.repath -= dt;
     b.reaction = Math.max(0, b.reaction - dt);
     let enemy = b.target;
+    // Retain a visible target or search for the nearest visible living opponent.
     if (b.think <= 0) {
       b.think = d.interval;
       if (!enemy || !enemy.alive || !g.arena.visible(a, enemy)) {
@@ -32,9 +37,11 @@ export class BotController {
             }
           }
       }
+      // A newly acquired target must wait through the reaction delay before firing.
       if (enemy !== b.target) b.reaction = d.reaction;
       b.target = enemy;
       b.state = enemy ? (a.hp < 28 ? "SeekCover" : "Attack") : "MoveToTarget";
+      // When sight is lost, periodically route toward an opponent rather than recomputing every frame.
       if (!enemy && b.repath <= 0) {
         let target = null,
           l = Infinity;
@@ -54,6 +61,7 @@ export class BotController {
       }
     }
     a.moving = false;
+    // Aim toward the target torso and strafe while maintaining a useful combat distance.
     if (enemy && enemy.alive) {
       const dx = enemy.x - a.x,
         dz = enemy.z - a.z,
@@ -76,6 +84,7 @@ export class BotController {
         (-Math.cos(a.yaw) * forward + Math.sin(a.yaw) * side) * d.speed * dt,
       );
       a.moving = true;
+      // Walk the cached path one waypoint at a time, using arena collision for actual movement.
     } else if (b.step < b.path.length) {
       const n = b.path[b.step],
         dx = n.x - a.x,
@@ -89,6 +98,7 @@ export class BotController {
         a.moving = true;
       }
     }
+    // Reload while reserves remain; otherwise switch to a weapon with ammunition.
     if (a.ammo[a.weapon].mag === 0) {
       if (a.ammo[a.weapon].reserve > 0) g.weapons.reload(a);
       else {

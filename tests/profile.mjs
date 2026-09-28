@@ -1,5 +1,7 @@
+// Synthetic bot-match soak and render timing. Forced test-only GC measures retained JS heap, not hardware performance.
 import { chromium } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: [
@@ -19,6 +21,7 @@ try {
   await page.waitForFunction(() => !!window.__arena);
   const cdp = await page.context().newCDPSession(page);
   const heap = [];
+  // Cumulative checkpoints at zero, ten, and forty completed matches reveal retained growth.
   for (const rounds of [0, 10, 30]) {
     const matches = await page.evaluate((rounds) => {
       const g = __arena.game;
@@ -106,6 +109,7 @@ try {
       2,
     ),
   );
+  // Always release the browser, including after a failed assertion.
 } finally {
   await browser.close();
 }

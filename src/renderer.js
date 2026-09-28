@@ -1,6 +1,9 @@
+// WebGL 2 renderer: instanced arena/actors plus a separate animated first-person triangle mesh.
 import { drawCharacter } from "./characters.js";
 import { cameraMatrix, direction } from "./math.js";
+import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
+// The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 vertex;
@@ -12,11 +15,13 @@ layout(location=5) in float angle;
 uniform mat4 vp;uniform vec3 eye;
 out vec3 tint;out float dist;
 void main(){float c=cos(angle),s=sin(angle);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c);vec3 world=rot*(vertex*size)+offset;vec3 n=rot*normal;float light=.58+.42*max(0.,dot(n,normalize(vec3(-.4,.85,.3))));tint=color*light;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
+// Distance fog blends distant geometry into the sky color without textures or postprocessing.
 const FS = `#version 300 es
 precision mediump float;
 in vec3 tint;in float dist;out vec4 pixel;
 void main(){float fog=smoothstep(25.,100.,dist);pixel=vec4(mix(tint,vec3(.53,.66,.67),fog*.8),1.);}`;
 export class Renderer {
+  // Allocate reusable CPU buffers before creating GPU resources.
   constructor(canvas, arena) {
     this.canvas = canvas;
     this.arena = arena;
@@ -26,6 +31,7 @@ export class Renderer {
     this.drawCalls = 0;
     this.initialize();
   }
+  // Create or recreate all GPU objects, including after WebGL context restoration.
   initialize() {
     const gl = this.canvas.getContext("webgl2", {
       antialias: false,
@@ -38,6 +44,7 @@ export class Renderer {
         "WebGL 2 is unavailable. Enable hardware acceleration in your browser, or try a compatible browser.",
       );
     this.gl = gl;
+    // Fail early with shader diagnostics instead of silently drawing an empty canvas.
     const compile = (type, code) => {
       let s = gl.createShader(type);
       gl.shaderSource(s, code);
@@ -60,6 +67,7 @@ export class Renderer {
     this.vp = gl.getUniformLocation(this.program, "vp");
     this.eye = gl.getUniformLocation(this.program, "eye");
     const vertices = [];
+    // Describe the six cube faces once; indexed corner expansion emits two triangles per face.
     const faces = [
       [
         [1, 0, 0],
@@ -133,6 +141,7 @@ export class Renderer {
     gl.disable(gl.CULL_FACE);
     gl.clearColor(0.53, 0.66, 0.67, 1);
   }
+  // Create a VAO with shared cube vertices and per-instance position, size, color, and yaw.
   batch(data, usage) {
     const g = this.gl,
       vao = g.createVertexArray(),
@@ -159,6 +168,7 @@ export class Renderer {
     }
     return { vao, buffer };
   }
+  // Pack one cube instance into ten floats, matching the attribute stride configured in batch().
   write(array, i, x, y, z, w, h, d, color, angle = 0) {
     const k = i * 10;
     array[k] = x;
@@ -172,6 +182,7 @@ export class Renderer {
     array[k + 8] = color[2];
     array[k + 9] = angle;
   }
+  // Change framebuffer dimensions only when render scale or CSS viewport size changes.
   resize(scale) {
     const w = Math.max(1, Math.round(this.canvas.clientWidth * scale)),
       h = Math.max(1, Math.round(this.canvas.clientHeight * scale));
@@ -181,6 +192,7 @@ export class Renderer {
       this.gl.viewport(0, 0, w, h);
     }
   }
+  // Upload only the live instance range before issuing a single instanced draw.
   draw(batch, count, data) {
     if (!count) return;
     const g = this.gl;
@@ -192,6 +204,7 @@ export class Renderer {
     g.drawArraysInstanced(g.TRIANGLES, 0, 36, count);
     this.drawCalls++;
   }
+  // Draw the world, actors/effects, then a camera-relative weapon with its own depth layer.
   render(game, quality, time) {
     const g = this.gl,
       p = game.player;
@@ -199,12 +212,17 @@ export class Renderer {
     g.useProgram(this.program);
     g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
     this.drawCalls = 0;
+    // Use the player camera during a match and an overview camera behind the start menu.
     const inGame = game.match.state !== "menu",
       cam = inGame
         ? { x: p.x, y: p.y + p.eye, z: p.z, yaw: p.yaw, pitch: p.pitch }
         : { x: -21, y: 12, z: 22, yaw: 0.72, pitch: -0.4 };
+    // ADS narrows the world view; reloading temporarily returns to the normal field of view.
     const baseFov = this.customization?.fov || 83;
-    const fov = ((p.aim && inGame ? baseFov * 0.69 : baseFov) * Math.PI) / 180;
+    const fov =
+      ((p.aim && p.reload <= 0 && inGame ? baseFov * 0.69 : baseFov) *
+        Math.PI) /
+      180;
     cameraMatrix(
       this.matrix,
       cam.x,
@@ -228,6 +246,7 @@ export class Renderer {
         continue;
       drawCharacter(add, a, time, quality.shadows);
     }
+    // Respect the adaptive visual-effect budget without modifying simulated shots or damage.
     let effects = 0;
     for (const e of game.effects.items)
       if (e.life > 0 && effects++ < quality.effects) {
@@ -244,6 +263,7 @@ export class Renderer {
       }
     this.draw(this.dynamicBatch, n, this.dynamic);
     if (inGame && p.alive && game.match.state !== "ended") {
+      // Keep nearby world geometry from clipping through the first-person weapon.
       g.clear(g.DEPTH_BUFFER_BIT);
       cameraMatrix(
         this.matrix,
@@ -257,31 +277,36 @@ export class Renderer {
       );
       g.uniformMatrix4fv(this.vp, false, this.matrix);
       g.uniform3f(this.eye, 0, 0, 0);
+      // Derive visual reload motion from the authoritative remaining reload timer.
+      const pose = reloadPose(p);
+      const aiming = p.aim && !pose.active;
       const sightHeight =
         p.weapon === 3 || this.customization?.optic === "scope"
           ? 0.218
           : this.customization?.optic === "reflex"
             ? 0.205
             : 0.16;
-      const x = p.aim ? 0 : 0.27,
+      const x = (aiming ? 0 : 0.27) - pose.lift * 0.1,
         bob = p.moving && !p.sliding ? Math.sin(time * 10) * 0.009 : 0,
         y =
-          (p.aim ? -sightHeight : -0.29) +
+          (aiming ? -sightHeight : -0.29) +
           bob -
-          (p.reload > 0 ? 0.16 : 0) -
+          -pose.lift * 0.1 -
           (p.sliding ? 0.08 : 0),
         z = -0.8 + p.kick * 0.9;
       const finish = this.customization?.finish || "graphite";
       const optic = this.customization?.optic || "iron";
+      // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
       const key = p.weapon + ":" + finish + ":" + optic + ":" + (p.flash > 0);
       let model = this.weaponModels.get(key);
+      // Build and upload each chosen weapon variant once; reuse its buffer on later frames.
       if (!model) {
-        const data = weaponMesh(p.weapon, finish, optic, p.flash > 0);
+        const data = weaponMesh(p.weapon, finish, optic, p.flash > 0, true);
         const vao = g.createVertexArray(),
           buffer = g.createBuffer();
         g.bindVertexArray(vao);
         g.bindBuffer(g.ARRAY_BUFFER, buffer);
-        g.bufferData(g.ARRAY_BUFFER, data, g.STATIC_DRAW);
+        g.bufferData(g.ARRAY_BUFFER, data, g.DYNAMIC_DRAW);
         for (const [attribute, offset] of [
           [0, 0],
           [1, 12],
@@ -290,13 +315,26 @@ export class Renderer {
           g.enableVertexAttribArray(attribute);
           g.vertexAttribPointer(attribute, 3, g.FLOAT, false, 36, offset);
         }
-        model = { vao, buffer, count: data.length / 9 };
+        model = {
+          vao,
+          buffer,
+          count: data.length / 9,
+          base: data,
+          animated: new Float32Array(data.length),
+        };
         this.weaponModels.set(key, model);
       }
+      // Animate into reusable storage, then set constant transform attributes for the weapon draw.
       g.bindVertexArray(model.vao);
+      g.bindBuffer(g.ARRAY_BUFFER, model.buffer);
+      g.bufferSubData(
+        g.ARRAY_BUFFER,
+        0,
+        animateWeapon(model.base, model.animated, pose),
+      );
       g.vertexAttrib3f(2, x, y, z);
       g.vertexAttrib3f(3, 1, 1, 1);
-      g.vertexAttrib1f(5, p.aim ? 0 : -0.1);
+      g.vertexAttrib1f(5, aiming ? 0 : -0.1 + pose.lift * 0.18);
       g.drawArrays(g.TRIANGLES, 0, model.count);
       this.drawCalls++;
     }

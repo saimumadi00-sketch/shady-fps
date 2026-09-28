@@ -1,5 +1,7 @@
-﻿import { chromium } from "@playwright/test";
+// Simulates denied, missing, and hybrid pointer capture to verify aiming remains usable.
+import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -9,6 +11,7 @@ const base = (process.env.TEST_URL || "http://localhost:8080").replace(
   "",
 );
 try {
+  // Simulate browser API limitations and touch-to-mouse changes without relying on host hardware.
   for (const mode of ["denied", "missing", "hybrid"]) {
     const page = await browser.newPage({
       viewport: { width: 1280, height: 720 },
@@ -59,6 +62,7 @@ try {
     await page.close();
     console.log("PASS mouse aiming: " + mode);
   }
+  // Always release the browser, including after a failed assertion.
 } finally {
   await browser.close();
 }

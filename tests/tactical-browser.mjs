@@ -1,3 +1,4 @@
+// Exercises actual mouse/keyboard events for aim, ADS, sprint, slide, and jump cancellation.
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
@@ -6,6 +7,7 @@ const base = (process.env.TEST_URL || "http://localhost:8080").replace(
   /\/$/,
   "",
 );
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -85,6 +87,7 @@ try {
   console.log(
     "PASS: captured mouse aim, right-button ADS, keyboard sprint-slide-cancel, voxel renderer; no page errors.",
   );
+  // Always release the browser, including after a failed assertion.
 } finally {
   await browser.close();
 }

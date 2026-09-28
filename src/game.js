@@ -1,3 +1,5 @@
+// Simulation owner: all authoritative movement, combat, timers, and respawns run here.
+import { CLASS_IDS, classForWeapon, loadout } from "./loadouts.js";
 import { Arena, NavigationSystem } from "./world.js";
 import {
   MatchManager,
@@ -10,6 +12,7 @@ import { WeaponController, EffectPool, WEAPONS } from "./weapons.js";
 import { BotController } from "./bots.js";
 import { PlayerController } from "./player.js";
 export class OfflineSimulation {
+  // Inject input, sound, and randomness so the same simulation can run in deterministic tests.
   constructor(input, audio, random = Math.random) {
     this.random = random;
     this.audio = audio;
@@ -32,7 +35,8 @@ export class OfflineSimulation {
     this.noticeTime = 0;
     for (const a of this.actors) this.spawns.spawn(a);
   }
-  start(difficulty, weapon = 0) {
+  // Reset match state and loadout while reusing the arena, navigation graph, and effect pool.
+  start(difficulty, weapon = 0, classId = classForWeapon(weapon)) {
     if (!Number.isInteger(weapon) || !WEAPONS[weapon]) weapon = 0;
     this.match.start();
     this.bots.difficulty = difficulty;
@@ -43,11 +47,15 @@ export class OfflineSimulation {
     for (const a of this.actors) {
       a.kills = a.deaths = 0;
       a.alive = false;
-      a.weapon = a.id === 0 ? weapon : a.id % WEAPONS.length;
+      // Distribute bot classes across both teams; only the local player uses the saved choice.
+      a.classId = a.id === 0 && CLASS_IDS.includes(classId) ? classId : a.id === 0 ? 'assault' : CLASS_IDS[(a.id % 5) % CLASS_IDS.length];
+      const kit = loadout(a.classId);
+      a.weapon = a.id === 0 && kit.weapons.includes(weapon) ? weapon : kit.primary;
       a.brain.think = a.id * 0.025;
     }
     for (const a of this.actors) this.spawns.spawn(a);
   }
+  // Advance only an active match; elapsed times are seconds supplied by the fixed-step loop.
   update(dt, sensitivity = 1) {
     if (this.match.state !== "playing") return;
     this.time += dt;
@@ -58,14 +66,17 @@ export class OfflineSimulation {
     this.hurt = Math.max(0, this.hurt - dt);
     this.noticeTime = Math.max(0, this.noticeTime - dt);
     for (const e of this.events) e.time -= dt;
+    // Process actors in roster order and stop immediately after the score limit is reached.
     for (const a of this.actors) {
       if (this.match.state !== "playing") break;
+      // Discard dead-player input before respawning, preventing buffered shots or reloads.
       if (!a.alive) {
         if (a === this.player) this.controller.input.clear();
         a.respawn -= dt;
         if (a.respawn <= 0) this.spawns.spawn(a);
         continue;
       }
+      // Expire protection and regenerate health only after the damage-free grace period.
       a.shield = Math.max(0, a.shield - dt);
       a.lastDamage += dt;
       if (a.lastDamage > 6) a.hp = Math.min(100, a.hp + 8 * dt);
@@ -74,6 +85,7 @@ export class OfflineSimulation {
       else this.bots.update(a, dt);
     }
   }
+  // Expose compact read-only transport data without giving rendering authority over combat.
   snapshot() {
     return snapshot(this);
   }

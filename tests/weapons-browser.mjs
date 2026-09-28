@@ -1,5 +1,7 @@
-﻿import { chromium } from "@playwright/test";
+// Runs the same loadout selection, persistence, ammo-preservation, and switching checks on desktop and touch.
+import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
+// Software rendering makes automation portable; these samples are not physical-GPU benchmarks.
 const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -9,6 +11,7 @@ const base = (process.env.TEST_URL || "http://localhost:8080").replace(
   "",
 );
 try {
+  // Reuse assertions across desktop and emulated touch to keep both selection paths equivalent.
   for (const mobile of [false, true]) {
     const context = await browser.newContext({
       viewport: mobile
@@ -62,6 +65,7 @@ try {
         (mobile ? "mobile" : "desktop"),
     );
   }
+  // Always release the browser, including after a failed assertion.
 } finally {
   await browser.close();
 }

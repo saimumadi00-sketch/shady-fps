@@ -1,3 +1,4 @@
+/* Global type, palette, and theme variables shared by menus and HUD. */
 :root {
   font-family: Arial, Helvetica, sans-serif;
   color: #e8f0e9;
@@ -7,6 +8,7 @@
   --cyan: #a7ead4;
   --orange: #f29a66;
 }
+/* Include padding and borders in component dimensions to keep responsive layouts predictable. */
 * {
   box-sizing: border-box;
 }
@@ -21,15 +23,18 @@ select {
 button {
   cursor: pointer;
 }
+/* Visible keyboard focus is retained even when pointer interactions use custom styles. */
 button:focus-visible,
 select:focus-visible,
 input:focus-visible {
   outline: 3px solid var(--orange);
   outline-offset: 4px;
 }
+/* Ensure the hidden attribute wins over layout display rules on overlays and controls. */
 [hidden] {
   display: none !important;
 }
+/* Constrain the scene to the current viewport; overlays scroll within this container. */
 #game {
   position: relative;
   width: 100%;
@@ -37,6 +42,7 @@ input:focus-visible {
   height: 100dvh;
   overflow: hidden;
 }
+/* Disable native touch gestures on the game surface to preserve camera and joystick input. */
 #canvas {
   width: 100%;
   height: 100%;
@@ -44,6 +50,7 @@ input:focus-visible {
   touch-action: none;
   background: #91a5a6;
 }
+/* Shared modal layer for setup, pause, results, rotation guidance, and startup errors. */
 .overlay {
   position: absolute;
   inset: 0;
@@ -56,6 +63,7 @@ input:focus-visible {
   overflow: auto;
   padding: 24px;
 }
+/* Bound desktop setup width while allowing its content to grow and scroll on short screens. */
 .menu-shell {
   margin-block: auto;
   max-width: 1100px;
@@ -84,6 +92,7 @@ input:focus-visible {
 .version {
   margin-left: auto;
 }
+/* Two-column desktop layout separates branding/preview from match setup. */
 .menu-body {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
@@ -94,6 +103,7 @@ input:focus-visible {
   background: radial-gradient(ellipse at 10% 80%, #39636260, transparent 65%);
   overflow: hidden;
 }
+/* Decorative yard number must never intercept menu clicks. */
 .intro:after {
   content: "07";
   position: absolute;
@@ -149,6 +159,7 @@ h1 > span {
   padding: 25px 30px;
   border-left: 1px solid #afc4be25;
 }
+/* Draw the tactical-map background with CSS gradients instead of downloaded textures. */
 .map-art {
   height: 132px;
   background:
@@ -239,6 +250,7 @@ h2 {
   letter-spacing: 1px;
   color: #8aa6a0;
 }
+/* Flexible form rows share available width; responsive rules adjust narrow layouts below. */
 .settings {
   display: flex;
   gap: 14px;
@@ -280,6 +292,7 @@ input[type="range"] {
 .check input {
   accent-color: var(--cyan);
 }
+/* Primary actions use the strongest contrast and a shared full-width touch target. */
 .primary {
   width: 100%;
   padding: 17px;
@@ -324,6 +337,7 @@ footer b {
   font-weight: 400;
   color: var(--cyan);
 }
+/* Compact modal layout for pause, result, orientation, and failure screens. */
 .dialog {
   margin-block: auto;
   width: min(480px, 100%);
@@ -350,6 +364,7 @@ footer b {
   font-size: 11px;
   letter-spacing: 1px;
 }
+/* Gameplay information overlays the scene without generally intercepting aiming input. */
 #hud {
   position: absolute;
   inset: 0;
@@ -478,6 +493,7 @@ footer b {
   letter-spacing: 1px;
   color: #e9f6e3aa;
 }
+/* Anchor aim feedback at the exact center of the viewport. */
 #crosshair {
   position: absolute;
   left: 50%;
@@ -486,6 +502,7 @@ footer b {
   height: 0;
   filter: drop-shadow(0 1px 1px #000);
 }
+/* Four short arms form the crosshair; the later customization rule sets their color. */
 #crosshair i {
   position: absolute;
   background: white;
@@ -599,6 +616,7 @@ footer b {
 #roster th:not(:first-child) {
   text-align: right;
 }
+/* The touch container passes events through; individual interactive children opt back in. */
 #touch {
   position: absolute;
   inset: 0;
@@ -620,6 +638,7 @@ footer b {
   font-size: 10px;
   touch-action: none;
 }
+/* Reserve a right-side drag surface for looking independently of the left joystick. */
 #lookZone {
   position: absolute;
   right: 0;
@@ -629,6 +648,7 @@ footer b {
   pointer-events: auto;
   touch-action: none;
 }
+/* The joystick knob is translated by input logic while the outer hit region stays fixed. */
 #joystick {
   position: absolute;
   left: max(28px, env(safe-area-inset-left));
@@ -690,6 +710,7 @@ footer b {
 #fatal {
   z-index: 30;
 }
+/* Hide desktop instructions when real touch input selects the mobile control mode. */
 .touch-mode #hint {
   display: none;
 }
@@ -717,6 +738,7 @@ footer b {
 .touch-mode .scoreboard strong {
   font-size: 16px;
 }
+/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
 @media (max-width: 800px) {
   .overlay {
     padding: 12px;
@@ -774,6 +796,7 @@ footer b {
     display: none;
   }
 }
+/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
 @media (max-height: 600px) and (min-width: 600px) {
   .overlay {
     padding: 10px;
@@ -870,6 +893,7 @@ footer b {
     bottom: 145px;
   }
 }
+/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
 @media (max-width: 599px) {
   .menu-body {
     grid-template-columns: 1fr;
@@ -905,6 +929,7 @@ footer b {
 #menu {
   align-items: flex-start;
 }
+/* Keep the weapon preview framed separately from text and customization controls. */
 .armory-preview {
   margin-top: 30px;
   padding: 18px 12px 10px;
@@ -926,6 +951,7 @@ footer b {
   font-size: 10px;
   color: #9bb4ae;
 }
+/* Disclosure sections reduce setup clutter while preserving native keyboard accessibility. */
 .custom-panel {
   border-top: 1px solid #6e928555;
   padding: 13px 0;
@@ -962,6 +988,7 @@ footer b {
 #crosshair i {
   background: var(--crosshair-color, #a7ead4);
 }
+/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
 @media (max-width: 700px), (max-height: 500px) {
   .armory-preview {
     margin-top: 12px;

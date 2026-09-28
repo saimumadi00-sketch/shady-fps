@@ -1,3 +1,4 @@
+// Builds original voxel characters from reusable cube instances.
 import { TEAM_COLORS } from "./world.js";
 const SKINS = [
   [0.73, 0.48, 0.32],
@@ -17,6 +18,7 @@ const BOOTS = [0.13, 0.19, 0.2],
 
 // Original voxel people: large cubic heads, square faces, broad arms and
 // separate rectangular legs. All parts share the existing instanced cube mesh.
+// Emit local body parts transformed by actor position/yaw; crouching changes body proportions.
 export function drawCharacter(add, a, time, shadows) {
   const color = TEAM_COLORS[a.team],
     skin = SKINS[a.id % SKINS.length],
@@ -24,6 +26,7 @@ export function drawCharacter(add, a, time, shadows) {
   const c = Math.cos(a.yaw),
     s = Math.sin(a.yaw),
     height = a.crouched ? 1.15 : 1.8;
+  // Convert model-local offsets into world coordinates while keeping each box oriented with the actor.
   const part = (x, y, z, w, h, d, tint) =>
     add(
       a.x + c * x - s * z,
@@ -35,8 +38,10 @@ export function drawCharacter(add, a, time, shadows) {
       tint,
       -a.yaw,
     );
+  // Offset the legs only while moving to create a lightweight walk cycle.
   const step = a.moving ? Math.sin(time * 9 + a.id) * 0.13 : 0;
   if (shadows) add(a.x, 0.015, a.z, 0.9, 0.015, 0.7, [0.33, 0.38, 0.35]);
+  // Anchor upper-body parts to total stance height so crouching lowers them together.
   const head = height - 0.27,
     torso = height - 0.83;
   part(0, head, 0, 0.54, 0.54, 0.54, skin);
@@ -67,6 +72,7 @@ export function drawCharacter(add, a, time, shadows) {
     part(side * 0.145, 0.08, side * step - 0.04, 0.25, 0.16, 0.34, BOOTS);
   }
   part(0.22, torso - 0.06, -0.38, 0.13, 0.13, 0.65, BOOTS);
+  // Show a simple overhead marker while spawn protection remains active.
   if (a.shield > 0)
     part(0, height + 0.14, 0, 0.38, 0.06, 0.38, [0.85, 0.95, 0.65]);
 }

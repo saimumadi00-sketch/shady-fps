@@ -1,3 +1,5 @@
+// Match rules, roster creation, safe spawning, damage bookkeeping, and compact snapshots.
+import { CLASS_IDS, loadout, canEquip } from "./loadouts.js";
 import { distance } from "./math.js";
 import { WEAPONS } from "./weapons.js";
 export const TDM_RULES = Object.freeze({
@@ -7,6 +9,7 @@ export const TDM_RULES = Object.freeze({
   respawn: 3,
 });
 export class MatchManager {
+  // Accept alternate rules while keeping per-match score and time state separate.
   constructor(rules = TDM_RULES) {
     this.rules = rules;
     this.state = "menu";
@@ -14,22 +17,26 @@ export class MatchManager {
     this.remaining = rules.duration;
     this.winner = null;
   }
+  // Reset scores and timer without rebuilding the actor roster.
   start() {
     this.state = "playing";
     this.scores = [0, 0];
     this.remaining = this.rules.duration;
     this.winner = null;
   }
+  // Count kills only during active play and finish immediately at the score limit.
   kill(team) {
     if (this.state !== "playing") return;
     this.scores[team]++;
     if (this.scores[team] >= this.rules.target) this.finish();
   }
+  // Clamp the countdown at zero and resolve timed matches through the same finish path.
   update(dt) {
     if (this.state !== "playing") return;
     this.remaining = Math.max(0, this.remaining - dt);
     if (this.remaining <= 0) this.finish();
   }
+  // Represent a tied score with a null winner rather than choosing a team arbitrarily.
   finish() {
     this.state = "ended";
     this.winner =
@@ -41,6 +48,7 @@ export class MatchManager {
   }
 }
 export class TeamManager {
+  // Create ten independent actor records with movement, weapon, and bot-brain state.
   static createActors() {
     const names = [
       "You",
@@ -71,6 +79,7 @@ export class TeamManager {
       shield: 0,
       kills: 0,
       deaths: 0,
+      classId: CLASS_IDS[(id % 5) % CLASS_IDS.length],
       weapon: 0,
       ammo: [],
       reload: 0,
@@ -103,10 +112,14 @@ export class TeamManager {
   }
 }
 export class SpawnManager {
+  // Use the owning simulation for world queries and match-level bookkeeping.
   constructor(game) {
     this.game = game;
   }
+  // Rank team spawn points by enemy distance, friendly occupancy, and a small random tie-break.
   spawn(a) {
+    // Repair invalid equipped IDs before restoring only the class inventory.
+    if (!canEquip(a, a.weapon)) a.weapon = loadout(a.classId).primary;
     let best = null,
       score = -Infinity;
     for (const p of this.game.arena.spawns[a.team]) {
@@ -128,6 +141,7 @@ export class SpawnManager {
         best = p;
       }
     }
+    // Reset transient combat/movement state while preserving identity, score, and equipped weapon.
     Object.assign(a, {
       x: best.x,
       z: best.z,
@@ -158,7 +172,8 @@ export class SpawnManager {
       kick: 0,
       lastDamage: 0,
     });
-    a.ammo = WEAPONS.map((w) => ({ mag: w.magazine, reserve: w.reserve }));
+    // Keep stable global ammo indices, but unassigned weapons receive no usable ammunition.
+    a.ammo = WEAPONS.map((w, index) => ({ mag: canEquip(a,index) ? w.magazine : 0, reserve: canEquip(a,index) ? w.reserve : 0 }));
     a.brain.path = [];
     a.brain.target = null;
     a.brain.state = "Patrol";
@@ -167,9 +182,11 @@ export class SpawnManager {
   }
 }
 export class DamageSystem {
+  // Use the owning simulation for world queries and match-level bookkeeping.
   constructor(game) {
     this.game = game;
   }
+  // Reject invalid damage before mutating HP; one lethal hit produces one death and score event.
   apply(target, amount, attacker) {
     const g = this.game;
     if (
@@ -189,6 +206,7 @@ export class DamageSystem {
       g.hurt = 0.4;
       g.audio.play("hurt", 0.4);
     }
+    // Mark dead before emitting events so additional hits cannot count the kill again.
     if (target.hp === 0) {
       target.alive = false;
       target.sliding = target.sprinting = false;
@@ -215,6 +233,7 @@ export class DamageSystem {
 }
 // Compact transport boundary for a future server-authoritative implementation.
 // OfflineSimulation owns damage, ammo, spawning and scoring; UI only submits input.
+// Quantize positions and angles to integer arrays for a possible future transport layer.
 export function snapshot(game) {
   return {
     time: Math.round(game.match.remaining * 100),
