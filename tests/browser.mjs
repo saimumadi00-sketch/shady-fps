@@ -24,7 +24,7 @@ page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => {
   if (m.type() === "error") errors.push(m.text());
 });
-await page.goto(base + "/?debug=1");
+await page.goto(base + "/arena.html?debug=1");
 await page.waitForFunction(
   () => window.__arena && document.querySelector("#play").disabled === false,
 );
@@ -226,7 +226,7 @@ const mobile = await browser.newContext({
   }),
   mp = await mobile.newPage();
 mp.on("pageerror", (e) => errors.push(e.message));
-await mp.goto(base + "/?debug=1");
+await mp.goto(base + "/arena.html?debug=1");
 await mp.waitForFunction(() => !!window.__arena);
 assert.equal(await mp.evaluate(() => __arena.input.touch), true);
 await mp.locator("#play").tap();

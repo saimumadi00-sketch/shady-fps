@@ -1,12 +1,16 @@
 {
-  "version": "9e38b5c1b238",
+  "version": "1e979829e2da",
   "files": [
     "index.html",
+    "arena.html",
     "game.js",
     "style.css",
+    "lobby.js",
+    "lobby.css",
+    "assets/orbital-hangar.png",
     "sw.js"
   ],
-  "rawBytes": 73929,
-  "gzipBytes": 26574,
-  "brotliBytes": 22981
+  "rawBytes": 3310674,
+  "gzipBytes": 2793582,
+  "brotliBytes": 2752835
 }

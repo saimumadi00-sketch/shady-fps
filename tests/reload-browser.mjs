@@ -13,7 +13,7 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(
-    (process.env.TEST_URL || "http://localhost:8080") + "/?debug=1",
+    (process.env.TEST_URL || "http://localhost:8080") + "/arena.html?debug=1",
   );
   await page.click("#play");
   await page.evaluate(() => {

@@ -8,6 +8,7 @@ const CACHE_NAME = PREFIX + CACHE;
 const FILES = [
   "./",
   "./index.html",
+  "./arena.html",
   "./style.css",
   "./src/main.js",
   "./src/math.js",

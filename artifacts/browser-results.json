@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-28T14:10:24.946Z",
+  "date": "2026-09-29T16:15:29.347Z",
   "results": [
     "Desktop Play obtains pointer lock",
     "Desktop movement and automatic fire",
@@ -18,17 +18,17 @@
   "errors": [],
   "performance": {
     "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
-    "frames": 182,
+    "frames": 181,
     "meanFps": 60,
     "p95FrameMs": 16.700000000000728,
     "drawCalls": 3,
     "renderScale": 0.9,
     "geometryBoxes": 133,
     "navigationNodes": 326,
-    "pathCache": 3,
+    "pathCache": 9,
     "heap": {
-      "used": 6262972,
-      "total": 11043272
+      "used": 6212156,
+      "total": 10781128
     }
   },
   "caveat": "Headless Chromium with SwiftShader; mobile emulation is not a physical Android performance measurement."

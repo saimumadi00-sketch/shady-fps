@@ -25,7 +25,7 @@ try {
       if (mode === "missing")
         HTMLCanvasElement.prototype.requestPointerLock = undefined;
     }, mode);
-    await page.goto(base + "/?debug=1");
+    await page.goto(base + "/arena.html?debug=1");
     await page.click("#play");
     await page.evaluate(() => {
       __arena.game.bots.update = () => {};

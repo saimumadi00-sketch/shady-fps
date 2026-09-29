@@ -9,7 +9,7 @@ try {
   const p = await b.newPage();
   await p.goto(
     (process.env.TEST_URL || "http://localhost:8080").replace(/\/$/, "") +
-      "/?debug=1",
+      "/arena.html?debug=1",
   );
   await p.waitForFunction(() => !!window.__arena);
   await p.selectOption("#loadoutClass", "support");

@@ -1,331 +1,220 @@
 <!doctype html>
 <html lang="en">
-  <!-- Document metadata and shared stylesheet; all assets use relative paths for nested hosting. -->
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width,initial-scale=1,viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#10282c" />
-    <meta
-      name="description"
-      content="Crosscurrent: a lightweight, offline 5v5 browser FPS."
-    />
-    <title>Crosscurrent — Yard 07</title>
-    <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./style.css" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Crosscurrent · Orbital Command</title>
+    <link rel="stylesheet" href="./lobby.css" />
   </head>
   <body>
-    <main id="game">
-      <!-- WebGL scene surface. DOM overlays provide menus and accessible gameplay information. -->
-      <canvas id="canvas" aria-label="First-person game view"></canvas>
-      <!-- Live match HUD; JavaScript reads simulation state and updates these stable element IDs. -->
-      <div id="hud" hidden>
-        <div class="topline">
-          <div class="map-label">
-            <b>YARD 07</b><span>TEAM DEATHMATCH</span>
-          </div>
-          <div class="scoreboard">
-            <b class="cyan" id="scoreA">0</b>
-            <div>
-              <span id="scoreTarget">FIRST TO 30</span
-              ><strong id="timer">07:00</strong>
-            </div>
-            <b class="orange" id="scoreB">0</b>
-          </div>
-          <button id="pauseButton" class="quiet" aria-label="Pause game">
-            Ⅱ
-          </button>
+    <main class="lobby">
+      <header>
+        <a class="brand" href="./"
+          ><b>⟐</b
+          ><span
+            >CROSSCURRENT<small>ORBITAL COMMAND / UES AURORA</small></span
+          ></a
+        >
+        <nav>
+          <button data-view="lobby" class="active">LOBBY</button
+          ><button data-view="armory">ARMORY</button
+          ><button data-view="operations">OPERATIONS</button>
+        </nav>
+        <span class="simulation">● LOCAL SIMULATION</span
+        ><button id="sound">SOUND OFF</button
+        ><button id="settings" aria-label="Settings">⚙</button>
+      </header>
+      <section class="panel deployment">
+        <div class="map-thumb"></div>
+        <div>
+          <small>NEXT DEPLOYMENT</small><strong>KEPLER · ORBITAL FRONT</strong
+          ><span id="deployment-mode">CONQUEST / DEMO OPERATION</span>
         </div>
-        <div id="feed" aria-live="polite"></div>
-        <div id="crosshair"><i></i><i></i><i></i><i></i></div>
-        <div id="hitmarker">×</div>
-        <div id="damage"></div>
-        <div id="notice" aria-live="polite"></div>
-        <div class="bottomline">
-          <div class="health">
-            <span>VITALS</span
-            ><strong><b id="health">100</b><small> HP</small></strong>
-            <div class="health-track"><i id="healthBar"></i></div>
-          </div>
-          <div id="hint">MOUSE AIM · SHIFT + C SLIDE · SPACE CANCEL</div>
-          <div class="ammo">
-            <span id="weaponName">AR / ASSAULT RIFLE</span
-            ><strong
-              ><b id="ammo">30</b><small id="reserve"> / 120</small></strong
-            ><span id="reloadState">1 PRIMARY / 3 PISTOL</span>
-          </div>
-        </div>
-        <div id="stats"></div>
-      </div>
-      <!-- Independent pointer targets allow movement, aiming, and firing at the same time. -->
-      <div id="touch" hidden>
-        <div id="lookZone" aria-label="Drag to look"></div>
-        <div id="joystick" aria-label="Movement joystick"><i></i></div>
-        <button data-action="fire" id="fire">FIRE</button
-        ><button data-action="aim" id="aim">ADS</button
-        ><button data-action="reload" id="reload">RLD</button
-        ><button data-action="jump" id="jump">JUMP</button
-        ><button data-action="crouch" id="crouch">SLIDE</button
-        ><button data-action="switch" id="switch">SWAP</button>
-      </div>
-      <!-- Start menu and saved setup controls. Gameplay begins only after explicit Play interaction. -->
-      <section id="menu" class="overlay">
-        <div class="menu-shell">
-          <div class="eyebrow">
-            <span class="signal"></span> OFFLINE ARENA / BROWSER EDITION
-            <span class="version">01.00</span>
-          </div>
-          <div class="menu-body">
-            <div class="intro">
-              <p class="kicker">SMALL FOOTPRINT. FULL CONTACT.</p>
-              <h1>CROSS<br /><em>CURRENT</em><span>↗</span></h1>
-              <p class="tagline">
-                Three lanes. Ten contenders.<br />One yard to control.
-              </p>
-              <!-- Canvas preview reuses the procedural weapon mesh with the chosen finish and sight. -->
-              <div class="armory-preview">
-                <span class="kicker">YOUR LOADOUT / LIVE PREVIEW</span
-                ><canvas
-                  id="weaponPreview"
-                  width="720"
-                  height="300"
-                  aria-label="Selected weapon preview"
-                ></canvas
-                ><span class="preview-note"
-                  >Original low-poly weapon models</span
-                >
-              </div>
-              <div class="chips">
-                <span>5 VS 5</span><span>NO SIGN-IN</span><span>BOT MATCH</span>
-              </div>
-            </div>
-            <div class="brief">
-              <div class="map-art">
-                <svg
-                  viewBox="0 0 300 160"
-                  role="img"
-                  aria-label="Three-route schematic of Yard 07"
-                >
-                  <path d="M15 30H285V130H15Z M15 80H285" />
-                  <path
-                    class="cover"
-                    d="M65 44H110V65H65Z M190 95H235V116H190Z M133 60H167V100H133Z M65 95H100V116H65Z M200 44H235V65H200Z"
-                  />
-                  <circle cx="30" cy="80" r="8" />
-                  <circle class="enemy" cx="270" cy="80" r="8" />
-                  <path class="dashes" d="M35 20H270 M35 140H270" /></svg
-                ><span>TACTICAL OVERVIEW / 07</span>
-              </div>
-              <div class="brief-title">
-                <h2>YARD 07</h2>
-                <span>TEAM DEATHMATCH</span>
-              </div>
-              <p>
-                A sunlit freight terminal. Take a flank, hold the crossing, and
-                keep your team ahead.
-              </p>
-              <div class="rules">
-                <div><b id="ruleTarget">30</b><span>KILLS TO WIN</span></div>
-                <div>
-                  <b id="ruleDuration">07:00</b><span>MATCH LIMIT</span>
-                </div>
-                <div><b>03s</b><span>RESPAWN</span></div>
-              </div>
-              <!-- Class selection controls the permitted primary and shared sidearm. -->
-              <div class="settings">
-                <label class="weapon-choice"
-                  >LOADOUT CLASS<select
-                    id="loadoutClass"
-                    aria-describedby="classInfo"
-                  ></select
-                ></label>
-              </div>
-              <p id="classInfo" class="weapon-info" aria-live="polite"></p>
-              <div class="settings">
-                <label class="weapon-choice"
-                  >STARTING WEAPON
-                  <select
-                    id="startingWeapon"
-                    aria-describedby="startingWeaponInfo"
-                  ></select>
-                </label>
-              </div>
-              <p
-                id="startingWeaponInfo"
-                class="weapon-info"
-                aria-live="polite"
-              ></p>
-              <div class="settings">
-                <label
-                  >BOT DIFFICULTY<select id="difficulty">
-                    <option value="easy">Easy</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="hard">Hard</option>
-                  </select></label
-                ><label
-                  >GRAPHICS<select id="quality">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                  </select></label
-                >
-              </div>
-              <!-- General preferences persist separately from weapon and cosmetic selections. -->
-              <div class="settings secondary">
-                <label
-                  >SENSITIVITY<input
-                    id="sensitivity"
-                    type="range"
-                    min="0.4"
-                    max="2"
-                    value="1"
-                    step="0.1" /></label
-                ><label class="check"
-                  ><input id="sound" type="checkbox" checked /> SOUND</label
-                ><label class="check"
-                  ><input id="autoQuality" type="checkbox" checked /> AUTO
-                  SCALE</label
-                >
-              </div>
-              <!-- Cosmetics and camera options apply immediately to the preview; choices are stored locally. -->
-              <details class="custom-panel" open>
-                <summary>PERSONALIZE YOUR LOADOUT</summary>
-                <div class="settings">
-                  <label
-                    >WEAPON FINISH<select id="finish">
-                      <option value="graphite">Graphite</option>
-                      <option value="sand">Desert sand</option>
-                      <option value="olive">Olive drab</option>
-                    </select></label
-                  >
-                  <label
-                    >SIGHT STYLE<select id="optic">
-                      <option value="iron">Factory sights</option>
-                      <option value="reflex">Reflex sight</option>
-                      <option value="scope">Scope</option>
-                    </select></label
-                  >
-                </div>
-                <p class="custom-note">
-                  Cosmetic choices. The marksman rifle always includes a scope.
-                </p>
-                <div class="settings">
-                  <label
-                    >CALLSIGN<input
-                      id="callsign"
-                      maxlength="16"
-                      value="You"
-                      autocomplete="off" /></label
-                  ><label
-                    >CROSSHAIR<select id="crosshairColor">
-                      <option value="#a7ead4">Mint</option>
-                      <option value="#ffffff">White</option>
-                      <option value="#ffbf69">Amber</option>
-                      <option value="#ff6b9d">Pink</option>
-                    </select></label
-                  >
-                </div>
-                <label class="fov-label"
-                  >FIELD OF VIEW <output id="fovValue">83?</output
-                  ><input id="fov" type="range" min="65" max="105" value="83"
-                /></label>
-              </details>
-              <!-- Score and time limits are copied into match rules on start/restart, not mid-match. -->
-              <details class="custom-panel">
-                <summary>MATCH RULES</summary>
-                <div class="settings">
-                  <label
-                    >SCORE LIMIT<select id="target">
-                      <option value="15">15 kills / quick</option>
-                      <option value="30" selected>30 kills / standard</option>
-                      <option value="50">50 kills / extended</option>
-                    </select></label
-                  ><label
-                    >TIME LIMIT<select id="duration">
-                      <option value="180">3 minutes</option>
-                      <option value="420" selected>7 minutes</option>
-                      <option value="600">10 minutes</option>
-                    </select></label
-                  >
-                </div>
-              </details>
-              <button id="play" class="primary" disabled>
-                LOADING <span id="progress">0%</span>
-              </button>
-              <p id="status">Preparing the arena…</p>
-            </div>
-          </div>
-          <footer>
-            <span id="controlsHelp"
-              >WASD move · Mouse aim · Click fire · R reload · Space jump<br />Shift
-              sprint · C / Ctrl crouch or slide · Right click ADS · class
-              primary key / 3 pistol · Esc pause</span
-            ><span
-              >BUILT FOR THE EVERYDAY DEVICE<br /><b
-                >WEBGL 2 · NO ASSET DOWNLOADS</b
-              ></span
-            >
-          </footer>
+        <div class="region">
+          <label for="region">REGION</label
+          ><select id="region">
+            <option>ASIA PACIFIC</option>
+            <option>EUROPE</option>
+            <option>NORTH AMERICA</option></select
+          ><span id="squad-status">SQUAD 03/04 READY</span>
         </div>
       </section>
-      <!-- Pause releases pointer capture so the player can select a weapon or return to setup. -->
-      <section id="pause" class="overlay" hidden>
-        <div class="dialog">
-          <p class="kicker">CROSSCURRENT / TIME OUT</p>
-          <h2>TAKE A BREATHER.</h2>
-          <p id="pauseReason">Combat is paused.</p>
-          <div class="settings">
-            <label class="weapon-choice"
-              >EQUIP WEAPON
-              <select
-                id="pauseWeapon"
-                aria-describedby="pauseWeaponInfo"
-              ></select>
-            </label>
-          </div>
-          <p id="pauseWeaponInfo" class="weapon-info" aria-live="polite"></p>
-          <button id="resume" class="primary">RESUME MATCH ↗</button
-          ><button id="back" class="secondary-button">RETURN TO MENU</button>
+      <section class="stage" aria-label="Animated four-person squad">
+        <canvas id="squad-canvas"></canvas>
+        <div class="stage-caption">
+          <small>STRIKE TEAM 07 / STANDING BY</small>
+          <h1>THE NEXT FRONTIER.</h1>
+          <p>Four specialists. One objective.</p>
+        </div>
+        <div class="operator-label">
+          <small>01 / YOUR OPERATOR</small
+          ><strong id="operator-class">ASSAULT</strong
+          ><span id="operator-role">Versatile rifleman</span
+          ><button id="ready" aria-pressed="false">◇ MARK READY</button>
         </div>
       </section>
-      <!-- End-of-match results are populated once when the simulation reaches an end condition. -->
-      <section id="end" class="overlay" hidden>
-        <div class="dialog">
-          <p class="kicker">MATCH COMPLETE</p>
-          <h2 id="winner">CYAN WINS</h2>
-          <div id="finalScore">30 : 24</div>
-          <p id="personalStats"></p>
+      <aside class="left-column">
+        <section class="panel">
+          <div class="heading">
+            <h2>STRIKE TEAM</h2>
+            <span>04 / 04</span>
+          </div>
           <div id="roster"></div>
-          <button id="restart" class="primary">PLAY AGAIN ↗</button
-          ><button id="endMenu" class="secondary-button">RETURN TO MENU</button>
+          <div class="roster-footer">
+            ◈ PRIVATE SQUAD <span>SIMULATED</span>
+          </div>
+        </section>
+        <section class="panel chat">
+          <div class="heading">
+            <h2>SQUAD COMMS</h2>
+            <span>●</span>
+          </div>
+          <div id="chat-log" role="log" aria-live="polite">
+            <p class="muted">Local squad simulation initialized.</p>
+            <p><b>GHOST</b> Eyes on the horizon. Ready when you are.</p>
+          </div>
+          <form id="chat-form">
+            <input
+              id="chat-input"
+              aria-label="Squad message"
+              placeholder="Message your squad…"
+              maxlength="180"
+              autocomplete="off"
+            /><button aria-label="Send message">↗</button>
+          </form>
+        </section>
+      </aside>
+      <section class="panel armory" id="armory">
+        <div class="heading">
+          <h2>FIELD LOADOUT</h2>
+          <span id="weapon-category">ASSAULT RIFLE</span>
+        </div>
+        <div class="class-tabs" aria-label="Operator class"></div>
+        <div class="weapon-row">
+          <div>
+            <small>PRIMARY WEAPON</small
+            ><select id="weapon" aria-label="Primary weapon"></select
+            ><span id="weapon-description" class="muted"></span>
+          </div>
+          <canvas
+            id="weapon-canvas"
+            tabindex="0"
+            aria-label="3D weapon preview. Drag or use arrow keys to rotate."
+          ></canvas>
+        </div>
+        <div class="armory-tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="configure">
+            CONFIGURE</button
+          ><button role="tab" aria-selected="false" data-tab="stats">
+            STATISTICS</button
+          ><button role="tab" aria-selected="false" data-tab="saved">
+            LOADOUTS</button
+          ><span>DRAG TO INSPECT ↔</span>
+        </div>
+        <div id="configure" class="tab-content">
+          <label
+            >OPTIC<select id="optic">
+              <option value="iron">Iron sights</option>
+              <option value="reflex">Holo reflex</option>
+              <option value="scope">Precision 4×</option>
+            </select></label
+          ><label
+            >BARREL<select id="barrel">
+              <option value="standard">Standard</option>
+              <option value="compensator">Compensator</option>
+              <option value="suppressor">Suppressor</option>
+            </select></label
+          >
+          <div class="skin-picker">
+            <span>FINISH</span
+            ><button
+              data-skin="graphite"
+              aria-label="Graphite finish"
+              class="swatch graphite selected"
+            ></button
+            ><button
+              data-skin="sand"
+              aria-label="Sand finish"
+              class="swatch sand"
+            ></button
+            ><button
+              data-skin="olive"
+              aria-label="Olive finish"
+              class="swatch olive"
+            ></button>
+          </div>
+        </div>
+        <div id="stats" class="tab-content" hidden></div>
+        <div id="saved" class="tab-content" hidden>
+          <label
+            >SLOT<select id="slot">
+              <option value="0">01 / ALPHA</option>
+              <option value="1">02 / BRAVO</option>
+              <option value="2">03 / CHARLIE</option>
+            </select></label
+          ><button id="save">SAVE</button><button id="load">EQUIP SAVED</button>
         </div>
       </section>
-      <!-- Respawn countdown is separate from pause and menu overlays. -->
-      <div id="death" hidden>
-        <p>BACK IN THE FIGHT IN</p>
-        <strong id="countdown">3</strong
-        ><span>Unlimited respawns. Keep pushing.</span>
-      </div>
-      <!-- Touch gameplay pauses in portrait until there is enough horizontal room for controls. -->
-      <div id="rotate" class="overlay" hidden>
-        <div class="dialog">
-          <div class="rotate-icon">↻</div>
-          <h2>ROTATE DEVICE</h2>
-          <p>Turn your phone or tablet sideways to play.</p>
-        </div>
-      </div>
-      <!-- Recoverable startup failure display; textContent is used for error messages. -->
-      <div id="fatal" class="overlay" hidden>
-        <div class="dialog">
-          <h2>CAN’T START THE ARENA</h2>
-          <p id="fatalText"></p>
-          <button onclick="location.reload()" class="primary">TRY AGAIN</button>
-        </div>
-      </div>
+      <aside class="right-column">
+        <section class="panel season">
+          <div class="heading">
+            <h2>SEASON 04</h2>
+            <span>FRONTIER</span>
+          </div>
+          <div class="rank">
+            <b>⟐</b>
+            <div>
+              <small>YOUR SEASON RANK</small><strong>PLATINUM III</strong
+              ><span class="muted">2,480 RP · Demo ranking</span>
+            </div>
+          </div>
+          <button class="text-button" id="rankings">
+            VIEW SEASON STANDINGS ↗
+          </button>
+          <div class="progress-heading">
+            <span>OPERATOR LEVEL <b id="level">24</b></span
+            ><span id="xp-text">2,450 / 4,000 XP</span>
+          </div>
+          <div class="progress"><i id="xp-bar"></i></div>
+          <span class="muted">Local progression · saved on this device</span>
+        </section>
+        <section class="panel matchmaking">
+          <div class="heading">
+            <h2>DEPLOYMENT</h2>
+            <span id="ping">32 MS*</span>
+          </div>
+          <label for="mode">SELECT OPERATION</label
+          ><select id="mode">
+            <option>Conquest</option>
+            <option>Domination</option>
+            <option>Team Deathmatch</option>
+          </select>
+          <p id="mode-description">Capture sectors. Control the battlefield.</p>
+          <div id="match-status" aria-live="polite">● SYSTEM READY</div>
+          <button id="find-match" class="primary">
+            FIND MATCH <span>→</span></button
+          ><small>SIMULATED MATCHMAKING · *DEMO PING</small
+          ><a class="training" href="./arena.html">ENTER OFFLINE TRAINING ↗</a>
+        </section>
+        <section class="panel challenges">
+          <div class="heading">
+            <h2>DAILY DRILLS</h2>
+            <span>LOCAL</span>
+          </div>
+          <div id="challenges"></div>
+          <p class="muted">Complete lobby actions to earn demo XP.</p>
+        </section>
+      </aside>
+      <footer>
+        <span>● AURORA UPLINK <b>LOCAL PROTOTYPE</b></span
+        ><span>NO ONLINE SERVER CONNECTED / BUILD 0.4.07</span>
+      </footer>
     </main>
-    <!-- The build script replaces this development module entry with the production bundle. -->
-    <script type="module" src="./game.js"></script>
+    <div id="toast" role="status"></div>
+    <dialog id="modal">
+      <button id="close-modal" aria-label="Close dialog">×</button>
+      <div id="modal-content"></div>
+    </dialog>
+    <script type="module" src="./lobby.js"></script>
   </body>
 </html>

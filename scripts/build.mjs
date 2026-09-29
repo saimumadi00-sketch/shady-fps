@@ -1,5 +1,5 @@
 // Builds the self-contained deployment directory; run from the repository root.
-import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rm, cp } from "node:fs/promises";
 import { gzipSync, brotliCompressSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { build, transform } from "esbuild";
@@ -24,12 +24,47 @@ const css = await transform(await readFile("style.css", "utf8"), {
 });
 await writeFile("dist/style.css", css.code);
 // Point production HTML at the bundle while preserving relative subdirectory-safe URLs.
-const html = (await readFile("index.html", "utf8")).replace(
+const html = (await readFile("arena.html", "utf8")).replace(
   "./src/main.js",
   "./game.js",
 );
-await writeFile("dist/index.html", html);
-const files = ["index.html", "game.js", "style.css"];
+await writeFile("dist/arena.html", html);
+// Bundle the interactive lobby, keeping every runtime asset local for offline deployments.
+await build({
+  entryPoints: ["src/lobby.js"],
+  bundle: true,
+  minify: true,
+  target: ["chrome90", "firefox90", "safari15"],
+  format: "esm",
+  outfile: "dist/lobby.js",
+  legalComments: "none",
+});
+await writeFile(
+  "dist/lobby.css",
+  (
+    await transform(await readFile("lobby.css", "utf8"), {
+      loader: "css",
+      minify: true,
+    })
+  ).code,
+);
+await writeFile(
+  "dist/index.html",
+  (await readFile("index.html", "utf8"))
+    .replace("./src/lobby.js", "./lobby.js")
+    .replace(/[ \t]*<script type="importmap">[\s\S]*?<\/script>\s*\n/, ""),
+);
+await cp("assets", "dist/assets", { recursive: true });
+await cp("THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
+const files = [
+  "index.html",
+  "arena.html",
+  "game.js",
+  "style.css",
+  "lobby.js",
+  "lobby.css",
+  "assets/orbital-hangar.png",
+];
 // Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.
 const hash = createHash("sha256");
 for (const file of files) hash.update(await readFile("dist/" + file));
@@ -42,7 +77,7 @@ sw = sw
   .replace("const VERSIONED = false;", "const VERSIONED = true;")
   .replace(
     /const FILES = \[[\s\S]*?\];/,
-    `const FILES = ["./", "./index.html", "./game.js", "./style.css"];`,
+    `const FILES = ${JSON.stringify(["./", ...files.map((file) => "./" + file)])};`,
   );
 await writeFile(
   "dist/sw.js",

@@ -1,6 +1,14 @@
 # Crosscurrent — Yard 07
 
-A complete, original offline browser FPS prototype. One human joins four Cyan bots against five Ember bots. No account, runtime dependency, external font, texture, model, or audio download is required.
+A cinematic orbital lobby and original offline browser FPS prototype. The lobby uses bundled Three.js, original procedural armored characters, and a locally packaged generated hangar image. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
+
+## Orbital lobby
+
+The root page opens the new responsive command deck. Choose Assault, Engineer, Support, or Recon; inspect weapons by dragging, scrolling, or using arrow keys on the focused preview; customize optics, barrels, and finishes; and save three loadouts. Roster readiness, local chat with simulated replies, mode selection, cancelable matchmaking, daily drills, demo XP, audio, and reduced-motion preferences are interactive. Progress and loadouts persist on this browser.
+
+All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. Conquest and Domination configure the demo queue; **Enter Offline Training** opens the existing Team Deathmatch bot arena at `arena.html`. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original procedural geometry, not scanned or licensed AAA character assets.
+
+Run `npm run test:lobby` against the preview server to exercise the new interface. Generated backdrop provenance and its exact prompt are in [assets/README.md](assets/README.md).
 
 ## Play locally
 
@@ -9,7 +17,7 @@ A complete, original offline browser FPS prototype. One human joins four Cyan bo
 - If port 8080 is occupied, use `python main.py --port 8081` or `PORT=8081 npm run preview` (PowerShell: `$env:PORT=8081; npm run preview`).
 - A `file://` URL is not supported. Use any ordinary static HTTP server.
 
-Press **Play Match**. Desktop play captures the mouse; Escape pauses and releases it. Touch controls are detected automatically. Rotate phones/tablets into landscape.
+Choose **Enter Offline Training**, then **Play Match**. Desktop play captures the mouse; Escape pauses and releases it. Touch controls are detected automatically. Rotate phones/tablets into landscape for training; the lobby also supports portrait.
 
 ## Controls
 

@@ -16,7 +16,7 @@ try {
     viewport: { width: 1280, height: 720 },
   });
   await page.goto(
-    (process.env.TEST_URL || "http://localhost:8080") + "/?debug=1",
+    (process.env.TEST_URL || "http://localhost:8080") + "/arena.html?debug=1",
   );
   await page.waitForFunction(() => !!window.__arena);
   const cdp = await page.context().newCDPSession(page);

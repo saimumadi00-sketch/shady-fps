@@ -23,7 +23,7 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(base + "/?debug=1");
+    await page.goto(base + "/arena.html?debug=1");
     assert.equal(await page.locator("#loadoutClass option").count(), 4);
     // Each class exposes exactly its primary and the shared pistol in both selectors.
     for (const [classId, primary] of [

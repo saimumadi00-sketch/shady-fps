@@ -12,6 +12,7 @@ const types = {
   ".css": "text/css",
   ".json": "application/json",
   ".svg": "image/svg+xml",
+  ".png": "image/png",
 };
 http
   .createServer(async (req, res) => {

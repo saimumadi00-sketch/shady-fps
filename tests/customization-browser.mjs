@@ -13,7 +13,7 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(
-    (process.env.TEST_URL || "http://localhost:8080") + "/?debug=1",
+    (process.env.TEST_URL || "http://localhost:8080") + "/arena.html?debug=1",
   );
   await page.waitForFunction(() => !!window.__arena);
   await page.selectOption("#finish", "sand");
@@ -72,7 +72,7 @@ try {
     isMobile: true,
   });
   await mobile.goto(
-    (process.env.TEST_URL || "http://localhost:8080") + "/?debug=1",
+    (process.env.TEST_URL || "http://localhost:8080") + "/arena.html?debug=1",
   );
   await mobile.selectOption("#finish", "olive");
   await mobile.locator("#play").tap();

@@ -18,7 +18,7 @@ try {
     }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(base + "/?debug=1");
+  await page.goto(base + "/arena.html?debug=1");
   await page.waitForFunction(() => !!window.__arena);
   await page.click("#play");
   await page.waitForFunction(() => !!document.pointerLockElement);
