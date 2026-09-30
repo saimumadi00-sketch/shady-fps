@@ -1,16 +1,73 @@
 // Procedural arena geometry doubles as collision data; navigation uses a coarse walkable graph.
 import { rayBox } from "./math.js";
+import { FREEDM_MAP } from "./maps/freedm-dm01.js";
 export const TEAM_COLORS = [
   [0.25, 0.78, 0.72],
   [0.96, 0.38, 0.19],
 ];
 export class Arena {
   // Build visual boxes, collidable solids, and team spawn lists once.
-  constructor() {
+  constructor(mode = "tdm") {
     this.boxes = [];
     this.solids = [];
     this.spawns = [[], []];
-    this.build();
+    this.name = mode === "conquest" ? FREEDM_MAP.name : "Yard 07";
+    if (mode === "conquest") this.buildConquest();
+    else this.build();
+  }
+  // The actual FreeDM MAP01 footprint is sampled at import time, then flattened
+  // into this engine's box geometry. Row runs keep collision and GPU cost low.
+  buildConquest() {
+    const { rows, cellSize: cell } = FREEDM_MAP;
+    const width = rows[0].length,
+      height = rows.length;
+    const point = (x, z) => ({
+      x: (x - (width - 1) / 2) * cell,
+      z: (z - (height - 1) / 2) * cell,
+    });
+    this.map = FREEDM_MAP;
+    this.navStep = cell;
+    this.navigationPoints = [];
+    this.box(0, -0.22, 0, width * cell, 0.4, height * cell, [0.34, 0.4, 0.4]);
+    for (let z = 0; z < height; z++) {
+      for (let x = 0; x < width;) {
+        if (rows[z][x] === ".") {
+          this.navigationPoints.push(point(x, z));
+          x++;
+          continue;
+        }
+        const start = x;
+        while (x < width && rows[z][x] === "#") x++;
+        const p = point((start + x - 1) / 2, z);
+        this.box(p.x, 1.8, p.z, (x - start) * cell, 3.6, cell, [
+          0.5 + (z % 3) * 0.03,
+          0.57,
+          0.56,
+        ]);
+        this.box(
+          p.x,
+          3.64,
+          p.z,
+          (x - start) * cell,
+          0.08,
+          cell,
+          [0.2, 0.3, 0.31],
+          false,
+        );
+      }
+    }
+    this.sectors = [
+      { id: "A", name: "West Depot", ...point(8, 20), radius: 3.2 },
+      { id: "B", name: "Central Yard", ...point(28, 15), radius: 3.2 },
+      { id: "C", name: "East Relay", ...point(45, 24), radius: 3.2 },
+    ];
+    this.spawns = [
+      [14, 16, 20, 24, 26].map((z) => point(5, z)),
+      [12, 16, 18, 26, 28].map((z) => point(46, z)),
+    ];
+    for (let team = 0; team < 2; team++)
+      for (const p of this.spawns[team])
+        this.box(p.x, 0.005, p.z, 1.25, 0.02, 1.25, TEAM_COLORS[team], false);
   }
   box(x, y, z, w, h, d, color, solid = true) {
     const b = { x, y, z, w, h, d, color };
@@ -151,17 +208,24 @@ export class NavigationSystem {
     this.arena = arena;
     this.nodes = [];
     this.cache = new Map();
-    for (let z = -16; z <= 16; z += 2)
-      for (let x = -22; x <= 22; x += 2)
-        if (!arena.blocked(x, z, 0.6)) this.nodes.push({ x, z, links: [] });
-    for (let i = 0; i < this.nodes.length; i++)
-      for (let j = i + 1; j < this.nodes.length; j++) {
-        let a = this.nodes[i],
-          b = this.nodes[j];
-        if (Math.hypot(a.x - b.x, a.z - b.z) <= 2.01) {
-          a.links.push(j);
-          b.links.push(i);
-        }
+    const points = arena.navigationPoints || [];
+    if (!arena.navigationPoints)
+      for (let z = -16; z <= 16; z += 2)
+        for (let x = -22; x <= 22; x += 2)
+          if (!arena.blocked(x, z, 0.6)) points.push({ x, z });
+    this.nodes = points.map((p) => ({ ...p, links: [] }));
+    const step = arena.navStep || 2;
+    const key = (x, z) => `${Math.round(x / step)}:${Math.round(z / step)}`;
+    const indices = new Map(this.nodes.map((n, i) => [key(n.x, n.z), i]));
+    for (const n of this.nodes)
+      for (const [dx, dz] of [
+        [-step, 0],
+        [step, 0],
+        [0, -step],
+        [0, step],
+      ]) {
+        const neighbor = indices.get(key(n.x + dx, n.z + dz));
+        if (neighbor !== undefined) n.links.push(neighbor);
       }
   }
   // Use squared distance to map an arbitrary actor position onto a graph node.

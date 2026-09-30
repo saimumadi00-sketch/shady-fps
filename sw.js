@@ -13,6 +13,8 @@ const FILES = [
   "./src/main.js",
   "./src/math.js",
   "./src/world.js",
+  "./src/conquest.js",
+  "./src/maps/freedm-dm01.js",
   "./src/renderer.js",
   "./src/weapon-models.js",
   "./src/reload-animation.js",

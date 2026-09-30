@@ -70,7 +70,56 @@ try {
     audio = new AudioManager(settings);
   input = new InputManager($("canvas"), pause, controls);
   $("progress").textContent = "30%";
-  game = new OfflineSimulation(input, audio);
+  const params = new URLSearchParams(location.search);
+  game = new OfflineSimulation(input, audio, Math.random, {
+    mode: params.get("mode"),
+  });
+  $("matchMode").value = game.mode;
+  $("matchMode").addEventListener("change", () => {
+    params.set("mode", $("matchMode").value);
+    location.search = params.toString();
+  });
+  if (game.mode === "conquest") {
+    document.title = "Crosscurrent — Conquest / FreeDM Outpost";
+    $("mapName").textContent = $("briefMapName").textContent =
+      game.arena.name.toUpperCase();
+    $("modeLabel").textContent = $("briefMode").textContent = "CONQUEST · 5v5";
+    $("briefDescription").textContent =
+      "Capture A, B and C. Hold more sectors to drain enemy tickets. Every death costs a ticket; the team with tickets remaining wins.";
+    $("tagline").textContent = "Three sectors. Two teams. Control the outpost.";
+    $("ruleTargetLabel").textContent = "TEAM TICKETS";
+    $("target").disabled = true;
+    $("target").hidden = true;
+    $("scoreLimitLabel").textContent = "TICKETS: 150 PER TEAM";
+    const { rows, cellSize } = game.arena.map;
+    const svg = $("mapOverview");
+    svg.setAttribute("viewBox", `0 0 ${rows[0].length} ${rows.length}`);
+    svg.setAttribute(
+      "aria-label",
+      "FreeDM Outpost layout with three Conquest sectors",
+    );
+    svg.innerHTML =
+      rows
+        .map((row, z) =>
+          [...row]
+            .map((cell, x) =>
+              cell === "."
+                ? `<rect x="${x}" y="${z}" width="1" height="1" fill="#387576" stroke="none"/>`
+                : "",
+            )
+            .join(""),
+        )
+        .join("") +
+      game.arena.sectors
+        .map((s) => {
+          const x = s.x / cellSize + (rows[0].length - 1) / 2 + 0.5;
+          const z = s.z / cellSize + (rows.length - 1) / 2 + 0.5;
+          return `<circle cx="${x}" cy="${z}" r="2" fill="#efbd63"/><text x="${x}" y="${z + 1}" text-anchor="middle" fill="#122a30" stroke="none" font-size="3" font-weight="bold">${s.id}</text>`;
+        })
+        .join("");
+    $("mapCredit").textContent = "MAP: FREEDOOM / BSD-3-CLAUSE";
+    $("objectives").hidden = false;
+  }
   renderer = new Renderer($("canvas"), game.arena);
   const hud = new HUDController();
   // Restore only a valid arsenal index; unavailable storage must not block play.

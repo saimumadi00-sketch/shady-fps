@@ -70,7 +70,10 @@ export class Customization {
       v.crosshair,
     );
     document.getElementById("fovValue").textContent = v.fov + "°";
-    document.getElementById("ruleTarget").textContent = v.target;
+    const conquest = document.getElementById("matchMode")?.value === "conquest";
+    document.getElementById("ruleTarget").textContent = conquest
+      ? 150
+      : v.target;
     document.getElementById("ruleDuration").textContent =
       String(v.duration / 60).padStart(2, "0") + ":00";
     previewWeapon(
@@ -85,10 +88,12 @@ export class Customization {
     game.player.name = this.values.callsign;
     game.match.rules = {
       ...game.match.rules,
-      target: this.values.target,
+      ...(game.mode === "conquest" ? {} : { target: this.values.target }),
       duration: this.values.duration,
     };
     document.getElementById("scoreTarget").textContent =
-      "FIRST TO " + this.values.target;
+      game.mode === "conquest"
+        ? "TICKETS · HOLD SECTORS"
+        : "FIRST TO " + this.values.target;
   }
 }

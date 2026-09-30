@@ -11,14 +11,19 @@ import {
 import { WeaponController, EffectPool, WEAPONS } from "./weapons.js";
 import { BotController } from "./bots.js";
 import { PlayerController } from "./player.js";
+import { ConquestMatch } from "./conquest.js";
 export class OfflineSimulation {
   // Inject input, sound, and randomness so the same simulation can run in deterministic tests.
-  constructor(input, audio, random = Math.random) {
+  constructor(input, audio, random = Math.random, options = {}) {
     this.random = random;
     this.audio = audio;
-    this.arena = new Arena();
+    this.mode = options.mode === "conquest" ? "conquest" : "tdm";
+    this.arena = new Arena(this.mode);
     this.nav = new NavigationSystem(this.arena);
-    this.match = new MatchManager();
+    this.match =
+      this.mode === "conquest"
+        ? new ConquestMatch(this.arena.sectors)
+        : new MatchManager();
     this.actors = TeamManager.createActors();
     this.player = this.actors[0];
     this.effects = new EffectPool();
@@ -90,6 +95,8 @@ export class OfflineSimulation {
       if (a === this.player) this.controller.update(dt, sensitivity);
       else this.bots.update(a, dt);
     }
+    if (this.mode === "conquest")
+      this.match.updateObjectives(dt, this.actors, this.arena);
   }
   // Expose compact read-only transport data without giving rendering authority over combat.
   snapshot() {

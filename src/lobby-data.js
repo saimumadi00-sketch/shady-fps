@@ -86,7 +86,8 @@ export const classes = {
   },
 };
 export const modes = {
-  Conquest: "Capture sectors. Control the battlefield.",
+  Conquest:
+    "Playable offline: capture A, B and C on FreeDM Outpost. Hold more sectors to drain enemy tickets.",
   Domination: "Close quarters. Three objectives. No retreat.",
   "Team Deathmatch": "Squad against squad. Every elimination counts.",
 };

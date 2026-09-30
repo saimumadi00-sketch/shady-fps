@@ -6,9 +6,11 @@ A cinematic orbital lobby and original offline browser FPS prototype. The lobby 
 
 The root page opens the new responsive command deck. Choose Assault, Engineer, Support, or Recon; inspect weapons by dragging, scrolling, or using arrow keys on the focused preview; customize optics, barrels, and finishes; and save three loadouts. Roster readiness, local chat with simulated replies, mode selection, cancelable matchmaking, daily drills, demo XP, audio, and reduced-motion preferences are interactive. Progress and loadouts persist on this browser.
 
-All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. Conquest and Domination configure the demo queue; **Enter Offline Training** opens the existing Team Deathmatch bot arena at `arena.html`. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original procedural geometry, not scanned or licensed AAA character assets.
+All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. **Conquest** is playable offline on FreeDM Outpost, an adaptation of the BSD-licensed FreeDM MAP01 layout downloaded from the internet. **Team Deathmatch** remains playable on Yard 07. Domination is a lobby preview; matchmaking stays simulated. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original procedural geometry, not scanned or licensed AAA character assets.
 
 Run `npm run test:lobby` against the preview server to exercise the new interface. Generated backdrop provenance and its exact prompt are in [assets/README.md](assets/README.md).
+
+The lobby skips rendering offscreen 3D canvases. With reduced motion enabled in Operator Settings (or your system preferences), static previews render only after changes, including dragging, zooming, model selection, and resizing. This also avoids repeated shadow-map calculations while idle. Run `npm run test:lobby-performance` against the preview server to verify these paths.
 
 ## Play locally
 
@@ -17,7 +19,20 @@ Run `npm run test:lobby` against the preview server to exercise the new interfac
 - If port 8080 is occupied, use `python main.py --port 8081` or `PORT=8081 npm run preview` (PowerShell: `$env:PORT=8081; npm run preview`).
 - A `file://` URL is not supported. Use any ordinary static HTTP server.
 
-Choose **Enter Offline Training**, then **Play Match**. Desktop play captures the mouse; Escape pauses and releases it. Touch controls are detected automatically. Rotate phones/tablets into landscape for training; the lobby also supports portrait.
+Choose Conquest in the lobby and click **Play Offline Conquest**, then **Play Match**. For Team Deathmatch, choose that mode or switch modes in the arena setup. Desktop play captures the mouse; Escape pauses and releases it. Touch controls are detected automatically. Rotate phones/tablets into landscape for training; the lobby also supports portrait.
+
+## Conquest
+
+Play `arena.html?mode=conquest` directly or select Conquest in the lobby. Both the direct play button and simulated queue launch the selected playable mode. The arena mode selector also switches between Conquest and Team Deathmatch.
+
+- Offline 5v5: you and four Cyan bots against five Ember bots.
+- Three sectors, A / West Depot, B / Central Yard, and C / East Relay. Stay within 3.2 meters with line of sight to the flag to capture. Dead actors and actors above the capture zone cannot capture.
+- A neutral flag takes 8 seconds. An enemy flag takes 5 seconds to neutralize, then 8 seconds to capture. Both teams present means contested: progress stops. Unopposed defenders or an empty zone slowly erase unfinished progress.
+- Each team starts with 150 tickets. Every death consumes one ticket. Every two seconds, the team holding fewer sectors loses tickets equal to the ownership difference. Contested flags retain their existing owner until neutralized.
+- Zero tickets ends the match. At the selected time limit, the team with more tickets wins; equal tickets draw. Restart resets tickets, ownership, progress, and actors. Respawn remains three seconds.
+- Bots choose capture and defense objectives, navigate the map, and fight while advancing. HUD cards show owner, contested/capture progress, distance, and direction; colored world flags show the capture area.
+
+Map provenance, the original WAD, BSD license, and credits are in `assets/maps/freedm/`. This adaptation retains the sampled layout, flattens heights and opens doors for the lightweight box renderer; original Doom textures/mechanics are not imported. The map is bundled locally and works offline. Reproduce it with `npm run import:conquest-map`; verify with `npm run test:conquest`.
 
 ## Controls
 
@@ -124,12 +139,12 @@ The simulation owns ammo, damage, scores and respawns; rendering never decides h
 ## Performance choices
 
 - WebGL 2 baseline; no WebGPU requirement. One simple directional-light term plus ambient shading, fog, no textures, no postprocessing, no shadow maps, no anti-aliasing, no physics engine.
-- Shared cube mesh for instanced environment and actors, plus a dedicated triangle mesh for each first-person weapon: one environment draw, one actor/effect draw, one viewmodel draw. 133 static instances. GPU clipping plus conservative CPU culling of characters behind the view.
+- Shared cube mesh for instanced environment and actors, plus a dedicated triangle mesh for each first-person weapon: one environment draw, one actor/effect draw, one viewmodel draw. 133 static instances on Yard 07; 245 on FreeDM Outpost. GPU clipping plus conservative CPU culling of characters behind the view.
 - Low/Medium/High use 65% / 90% / 115% CSS-pixel render scale. Device pixel ratio is deliberately not multiplied in, avoiding excessive rendering on high-DPI phones.
 - Low omits character ground shadows; Medium/High use inexpensive stylized ground shadow geometry. These are not physically accurate shadow maps. High also raises effect capacity. Texture/filtering presets are unnecessary because there are no textures.
 - Auto quality responds to sustained slow samples by reducing scale and effect count, then ground shadows. It recovers slowly with sustained headroom. Minimum scale: 45% / 55% / 60%.
 - Gameplay always uses 1/60-second simulation steps, independent of resolution. Long browser stalls are capped at 250 ms of catch-up to avoid an unbounded spiral; this is an offline prototype, so extreme stalls can slow match time relative to wall time.
-- Navigation has 326 nodes, a 256-entry cache bound and staggered perception. Effects use 48 reused slots. Dynamic instance buffers are reused. Short-lived audio voices are capped at 12 and disconnected on completion.
+- Navigation has 326 nodes on Yard 07 and 1,015 on FreeDM Outpost, a 256-entry cache bound and staggered perception. Neighbor lookup uses a coordinate index instead of comparing every pair of nodes. Effects use 48 reused slots. Dynamic instance buffers are reused. Short-lived audio voices are capped at 12 and disconnected on completion.
 - HUD updates at 20 Hz. Menus render at 10 Hz. Hidden tabs stop simulation and rendering; focus loss pauses the match.
 
 ## Verification
