@@ -11,6 +11,7 @@ const FILES = [
   "./arena.html",
   "./style.css",
   "./src/main.js",
+  "./src/network.js",
   "./src/math.js",
   "./src/world.js",
   "./src/conquest.js",
@@ -53,6 +54,7 @@ self.addEventListener("activate", (e) =>
 // Leave non-GET and cross-origin traffic to the browser.
 self.addEventListener("fetch", (e) => {
   if (
+    new URL(e.request.url).pathname.startsWith("/api/") ||
     e.request.method !== "GET" ||
     new URL(e.request.url).origin !== location.origin
   )

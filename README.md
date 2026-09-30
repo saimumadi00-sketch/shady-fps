@@ -1,6 +1,6 @@
 # Crosscurrent — Yard 07
 
-A cinematic orbital lobby and original offline browser FPS prototype. The lobby uses bundled Three.js, original procedural armored characters, and a locally packaged generated hangar image. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
+A cinematic orbital lobby and browser FPS with offline training and private multiplayer. The lobby uses bundled Three.js, original procedural armored characters, and a locally packaged generated hangar image. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
 
 ## Orbital lobby
 
@@ -20,6 +20,30 @@ The lobby skips rendering offscreen 3D canvases. With reduced motion enabled in 
 - A `file://` URL is not supported. Use any ordinary static HTTP server.
 
 Choose Conquest in the lobby and click **Play Offline Conquest**, then **Play Match**. For Team Deathmatch, choose that mode or switch modes in the arena setup. Desktop play captures the mouse; Escape pauses and releases it. Touch controls are detected automatically. Rotate phones/tablets into landscape for training; the lobby also supports portrait.
+
+## Play with friends (private multiplayer)
+
+The **Play with Friends** link opens real multiplayer for **Conquest** and **Team Deathmatch**. Rooms support up to **10 humans**, five per team; bots fill empty slots. The server runs movement, shooting, ammo, damage, respawns, scores and capture rules. Choose your callsign, class, starting weapon and team before joining. Room hosts start/restart matches; hosting transfers to a remaining player if the host leaves. Escape opens your personal menu while everyone else's match continues. Leaving a room restores a bot; empty rooms are removed.
+
+### Free hosting on your computer / same Wi-Fi
+
+1. Download or clone this repository and install **Node.js 20 or newer**. Run the next command from the repository folder. The checked-in production build and server require no npm package installation.
+2. Run `npm run multiplayer` (Windows PowerShell: `npm.cmd run multiplayer`). Keep that terminal and computer running.
+3. Open `http://localhost:8080`, click **Play with Friends**, choose a mode and loadout, then **Create Room**.
+4. Friends on the same network open the **Friends on your Wi-Fi** address printed by the server, for example `http://192.168.1.20:8080`. If the server cannot list interfaces, find your computer's local IPv4 address in network settings. Allow Node through your firewall for the local network if necessary.
+5. Send friends your room code. They choose Cyan or Ember and click **Join Room**. A full team requires choosing the other team. The host clicks **Start Shared Match**, then everyone clicks **Enter Shared Match**.
+
+You do not need a paid server for LAN play. A link containing `localhost` works only on the hosting computer; send friends the link from the LAN address instead. Clipboard copying on plain LAN HTTP may be unavailable, so the copy button displays the full invite URL as a fallback. Browser mouse capture also has drag-aim fallback; touch controls work in landscape.
+
+Use `PORT=8081 npm run multiplayer` to change the port (PowerShell: `$env:PORT=8081; npm.cmd run multiplayer`). `HOST=127.0.0.1` restricts access to this computer; the default is `0.0.0.0` for LAN access. `main.py` and `npm run preview` remain static/offline servers and cannot run multiplayer.
+
+### Friends outside your Wi-Fi
+
+Run this same Node server on a computer reachable by your friends, or a Node-capable host. Serve the game and `/api/` on the **same origin**; static-only hosting, including GitHub Pages, cannot run the match server. An internet deployment should use HTTPS through a reverse proxy, with response buffering disabled for `/api/events` (`proxy_buffering off` in nginx), because it streams snapshots continuously. A private VPN connecting friends to your computer is another way to reach a self-hosted server. Keep the host running throughout the match. Hosting costs depend on the service you choose; the game itself has no multiplayer subscription.
+
+This first multiplayer version uses 60 Hz server simulation, 20 Hz snapshots, and up to 30 input requests per second over persistent HTTP connections. Sessions are random credentials held in memory, controls stop after 350 ms without input, and the client disconnects if snapshots stop. Room codes are invitation codes, not user accounts or password-protected lobbies. Rooms vanish when empty or when the server restarts. There is no cross-server room discovery, voice chat, persistence, client prediction or lag compensation; low-latency LAN play is the intended first use. Multiplayer requires a live server; offline training remains available separately.
+
+After source changes, run `npm ci` and `npm run build` before restarting the server. `npm test` includes shared-match and HTTP transport regressions. `npm run test:multiplayer` starts its own test server and exercises two browser clients plus touch TDM (requires Playwright Chromium).
 
 ## Conquest
 

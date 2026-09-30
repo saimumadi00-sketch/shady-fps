@@ -1,4 +1,5 @@
 // Application entry point: connects DOM menus, input, simulation, rendering, and offline installation.
+import { NetworkClient } from "./network.js";
 import { InputManager } from "./input.js";
 import { SettingsManager, QualityManager, AudioManager } from "./settings.js";
 import { OfflineSimulation } from "./game.js";
@@ -8,6 +9,8 @@ import { Customization } from "./customization.js";
 import { CLASS_IDS, LOADOUTS, loadout, classForWeapon } from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
 const $ = (id) => document.getElementById(id);
+let network,
+  localPaused = false;
 let game,
   renderer,
   input,
@@ -22,12 +25,17 @@ function fatal(error) {
 // Freeze gameplay and clear held controls before releasing pointer capture.
 function pause(reason = "Combat is paused.") {
   if (!game || game.match.state !== "playing") return;
-  game.match.state = "paused";
+  if (network && !input.active) return;
+  if (network) localPaused = true;
+  else game.match.state = "paused";
   input.active = false;
   input.clear();
   if (document.pointerLockElement) document.exitPointerLock();
-  $("pauseReason").textContent =
-    typeof reason === "string" ? reason : "Combat is paused.";
+  $("pauseReason").textContent = network
+    ? "Your controls are stopped. The shared match continues."
+    : typeof reason === "string"
+      ? reason
+      : "Combat is paused.";
   $("pause").hidden = false;
   $("pauseWeapon").value = String(game.player.weapon);
   weaponInfo("pauseWeapon", "pauseWeaponInfo");
@@ -171,7 +179,10 @@ try {
       $("startingWeapon").value = String(selectedWeapon);
       weaponInfo("startingWeapon", "startingWeaponInfo");
       weaponInfo(id, infoId);
-      if (id === "pauseWeapon") game.weapons.equip(game.player, selectedWeapon);
+      if (id === "pauseWeapon") {
+        if (network) input.actions.add("Digit" + (selectedWeapon + 1));
+        else game.weapons.equip(game.player, selectedWeapon);
+      }
       try {
         // Persist the inferred class too, so legacy primary saves retain their class after selecting a pistol.
         localStorage.setItem("crosscurrent-class", selectedClass);
@@ -195,9 +206,13 @@ try {
   // Resume from a user gesture so the browser can grant pointer lock and audio access.
   async function resume() {
     if (contextLost) return;
-    game.match.state = "playing";
+    if (network && (!network.ready || game.match.state !== "playing")) return;
+    if (!network) game.match.state = "playing";
+    localPaused = false;
     input.clear();
     input.active = true;
+    if (network && selectedWeapon !== game.player.weapon)
+      input.actions.add("Digit" + (selectedWeapon + 1));
     $("pause").hidden = true;
     $("menu").hidden = true;
     $("end").hidden = true;
@@ -208,6 +223,13 @@ try {
   }
   // Apply saved match rules before resetting scores, actors, and timers.
   function start() {
+    if (network) {
+      if (network.ready) {
+        quality.configure();
+        resume();
+      }
+      return;
+    }
     customization.apply(game);
     game.start(settings.values.difficulty, selectedWeapon, selectedClass);
     quality.configure();
@@ -215,6 +237,10 @@ try {
   }
   // Return to setup and refresh the preview after in-match weapon changes.
   function menu() {
+    if (network) {
+      network.leave().then(() => location.reload());
+      return;
+    }
     game.match.state = "menu";
     input.active = false;
     input.clear();
@@ -233,6 +259,160 @@ try {
   $("back").onclick = menu;
   $("endMenu").onclick = menu;
   $("pauseButton").onclick = () => pause();
+  if (params.has("online")) {
+    $("roomPanel").hidden = false;
+    $("arenaEdition").textContent = "PRIVATE MULTIPLAYER / BROWSER EDITION";
+    customization.values.duration = 420;
+    customization.values.target = 30;
+    customization.refresh();
+    $("duration").value = "420";
+    $("target").value = "30";
+    $("roomCode").value = params.get("room") || "";
+    $("roomTeam").value = params.get("team") === "1" ? "1" : "0";
+    $("play").disabled = true;
+    $("play").textContent = "WAITING FOR ROOM";
+    $("status").textContent = "PRIVATE MULTIPLAYER · UP TO 10 PLAYERS";
+    $("tagline").textContent = "Invite friends. Choose a team. Fight together.";
+    $("scoreTarget").textContent =
+      game.mode === "conquest" ? "TICKETS · HOLD SECTORS" : "FIRST TO 30";
+    $("duration").disabled =
+      $("target").disabled =
+      $("difficulty").disabled =
+        true;
+    network = new NetworkClient(game, input, {
+      sensitivity: () => settings.values.sensitivity,
+      onState(packet) {
+        $("matchMode").disabled = true;
+        $("roomCode").value = packet.code;
+        $("roomMessage").textContent =
+          `ROOM ${packet.code} · ${packet.host ? "YOU ARE HOST" : "HOST CONTROLS START"} · ${packet.match.state === "menu" ? "WAITING" : packet.match.state.toUpperCase()}`;
+        $("roomRoster").textContent = packet.players
+          .map(
+            (p) =>
+              `${p.name} / ${p.team ? "Ember" : "Cyan"}${p.host ? " (host)" : ""}`,
+          )
+          .join(" · ");
+        $("createRoom").disabled =
+          $("joinRoom").disabled =
+          $("roomTeam").disabled =
+          $("loadoutClass").disabled =
+          $("startingWeapon").disabled =
+          $("callsign").disabled =
+            true;
+        $("copyRoom").hidden = $("leaveRoom").hidden = false;
+        $("startRoom").hidden = !packet.host;
+        $("startRoom").disabled = packet.match.state === "playing";
+        $("startRoom").textContent =
+          packet.match.state === "ended"
+            ? "RESTART SHARED MATCH"
+            : "START SHARED MATCH";
+        $("play").disabled = packet.match.state !== "playing";
+        $("play").textContent = "ENTER SHARED MATCH ↗";
+        $("restart").disabled = !packet.host;
+        $("restart").textContent = packet.host
+          ? "RESTART SHARED MATCH ↗"
+          : "WAITING FOR HOST";
+        game.networkLabel = `ROOM ${packet.code} · ${network.ping}ms`;
+        if (
+          packet.match.state === "playing" &&
+          !input.active &&
+          !localPaused &&
+          $("menu").hidden &&
+          $("end").hidden === false
+        ) {
+          $("end").hidden = true;
+          $("menu").hidden = false;
+        }
+      },
+      onDisconnect(reason) {
+        if (document.pointerLockElement) document.exitPointerLock();
+        $("pause").hidden =
+          $("end").hidden =
+          $("touch").hidden =
+          $("hud").hidden =
+            true;
+        $("menu").hidden = false;
+        $("roomMessage").textContent = reason || "Left the room.";
+        $("play").disabled = true;
+        for (const id of [
+          "createRoom",
+          "joinRoom",
+          "roomTeam",
+          "loadoutClass",
+          "startingWeapon",
+          "callsign",
+          "matchMode",
+        ])
+          $(id).disabled = false;
+        $("copyRoom").hidden =
+          $("startRoom").hidden =
+          $("leaveRoom").hidden =
+            true;
+      },
+    });
+    async function joinRoom(create) {
+      localPaused = false;
+      $("createRoom").disabled = $("joinRoom").disabled = true;
+      try {
+        await network.join(
+          {
+            code: $("roomCode").value.trim(),
+            mode: game.mode,
+            team: Number($("roomTeam").value),
+            name: $("callsign").value,
+            classId: selectedClass,
+            weapon: selectedWeapon,
+          },
+          create,
+        );
+      } catch (error) {
+        $("roomMessage").textContent = error.message;
+        $("createRoom").disabled = $("joinRoom").disabled = false;
+      }
+    }
+    $("leaveRoom").onclick = menu;
+    $("createRoom").onclick = () => joinRoom(true);
+    $("joinRoom").onclick = () => joinRoom(false);
+    async function startShared() {
+      try {
+        await network.request("start");
+      } catch (error) {
+        $("roomMessage").textContent = error.message;
+      }
+    }
+    $("startRoom").onclick = startShared;
+    $("restart").onclick = async () => {
+      await startShared();
+      $("end").hidden = true;
+      $("menu").hidden = false;
+      localPaused = false;
+    };
+    $("back").textContent = $("endMenu").textContent = "LEAVE ROOM";
+    $("copyRoom").onclick = async () => {
+      const url = new URL(location.href);
+      url.searchParams.set("room", network.code);
+      url.searchParams.delete("debug");
+      try {
+        await navigator.clipboard.writeText(url.href);
+        $("roomMessage").textContent = "Invite link copied.";
+      } catch {
+        $("roomMessage").textContent = `Send friends this link: ${url.href}`;
+      }
+    };
+    setInterval(() => network.send(), 1000 / 30);
+    window.addEventListener("pagehide", () => {
+      if (network.token)
+        fetch("/api/leave", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + network.token,
+          },
+          body: "{}",
+          keepalive: true,
+        }).catch(() => {});
+    });
+  }
   controls();
   window.addEventListener("resize", orientation);
   window.addEventListener("orientationchange", orientation);
@@ -270,20 +450,24 @@ try {
       accumulator += Math.min(raw, 0.25);
       // Catch up simulation ticks without tying movement speed to monitor refresh rate.
       while (accumulator >= fixed) {
-        game.update(fixed, settings.values.sensitivity);
+        if (!network) game.update(fixed, settings.values.sensitivity);
+        else {
+          game.hit = Math.max(0, game.hit - fixed);
+          game.hurt = Math.max(0, game.hurt - fixed);
+        }
         accumulator -= fixed;
       }
-      // Release controls once and populate results when a simulation tick finishes the match.
-      if (game.match.state === "ended") {
-        input.active = false;
-        input.clear();
-        if (document.pointerLockElement) document.exitPointerLock();
-        $("touch").hidden = true;
-        $("pause").hidden = true;
-        $("end").hidden = false;
-        hud.end(game);
-      }
     } else accumulator = 0;
+    // Online end snapshots arrive asynchronously, outside the local tick loop.
+    if (game.match.state === "ended" && $("menu").hidden && $("end").hidden) {
+      input.active = false;
+      input.clear();
+      if (document.pointerLockElement) document.exitPointerLock();
+      $("touch").hidden = $("pause").hidden = true;
+      $("end").hidden = false;
+      localPaused = false;
+      hud.end(game);
+    }
     // Static menus do not need a full-rate GPU loop.
     idleRenderTime += raw;
     if (game.match.state === "playing" || idleRenderTime >= 0.1) {
@@ -302,6 +486,7 @@ try {
   if (new URLSearchParams(location.search).has("debug"))
     window.__arena = {
       game,
+      network,
       input,
       renderer,
       quality,
