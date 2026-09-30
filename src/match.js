@@ -12,6 +12,7 @@ export class MatchManager {
   // Accept alternate rules while keeping per-match score and time state separate.
   constructor(rules = TDM_RULES) {
     this.rules = rules;
+    this.mode = "tdm";
     this.state = "menu";
     this.scores = [0, 0];
     this.remaining = rules.duration;
@@ -239,6 +240,13 @@ export class DamageSystem {
 // Quantize positions and angles to integer arrays for a possible future transport layer.
 export function snapshot(game) {
   return {
+    mode: game.mode,
+    sectors: game.match.sectors?.map((s) => ({
+      id: s.id,
+      owner: s.owner,
+      progress: Math.round(s.progress * 100),
+      contested: s.contested,
+    })),
     time: Math.round(game.match.remaining * 100),
     scores: [...game.match.scores],
     actors: game.actors.map((a) => [
