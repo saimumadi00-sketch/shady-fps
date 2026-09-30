@@ -10,6 +10,7 @@
     "test": "node --test tests/game.test.mjs tests/sw.test.mjs tests/settings.test.mjs tests/reload.test.mjs",
     "test:browser": "node scripts/run-browser.mjs tests/browser.mjs tests/tactical-browser.mjs tests/mouse-browser.mjs tests/weapons-browser.mjs tests/customization-browser.mjs tests/preview-browser.mjs tests/reload-browser.mjs",
     "test:lobby": "node scripts/run-browser.mjs tests/lobby-browser.mjs",
+    "test:lobby-performance": "node scripts/run-browser.mjs tests/lobby-performance-browser.mjs",
     "test:tactical": "node scripts/run-browser.mjs tests/tactical-browser.mjs",
     "profile": "node scripts/run-browser.mjs tests/profile.mjs",
     "format": "prettier --write src scripts tests index.html style.css sw.js package.json"

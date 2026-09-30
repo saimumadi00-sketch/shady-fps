@@ -10,6 +10,8 @@ All squadmates, rankings, matchmaking, ping, and progression are explicitly simu
 
 Run `npm run test:lobby` against the preview server to exercise the new interface. Generated backdrop provenance and its exact prompt are in [assets/README.md](assets/README.md).
 
+The lobby skips rendering offscreen 3D canvases. With reduced motion enabled in Operator Settings (or your system preferences), static previews render only after changes, including dragging, zooming, model selection, and resizing. This also avoids repeated shadow-map calculations while idle. Run `npm run test:lobby-performance` against the preview server to verify these paths.
+
 ## Play locally
 
 - **PyCharm:** run `main.py`. It serves the production build and opens the browser. No Python packages are needed.

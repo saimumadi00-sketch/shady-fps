@@ -4,7 +4,6 @@ import { classes } from "./lobby-data.js";
 
 // Both canvases are real-time, locally rendered scenes with no remote model dependencies.
 export function createLobbyScene(squadCanvas, weaponCanvas) {
-  const renderers = [];
   // A deterministic surface texture adds subtle wear without downloading texture assets.
   const surface = document.createElement("canvas");
   surface.width = surface.height = 128;
@@ -70,11 +69,15 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     const warm = new THREE.DirectionalLight(0xffc68d, 1);
     warm.position.set(5, 2, 2);
     scene.add(warm);
-    renderers.push(renderer);
-    return { renderer, scene, camera, canvas };
+    return { renderer, scene, camera, canvas, visible: true, dirty: true };
   }
   const squad = setup(squadCanvas),
     preview = setup(weaponCanvas);
+  const views = [squad, preview];
+  function invalidate(view) {
+    view.dirty = true;
+    view.renderer.shadowMap.needsUpdate = true;
+  }
   squad.camera.position.set(0, 2.75, 9.4);
   squad.camera.lookAt(0, 1.15, 0);
   preview.camera.position.set(0, 0.2, 1.45);
@@ -429,6 +432,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     preview.scene.add(inspection);
     squadCanvas.dataset.class = type;
     weaponCanvas.dataset.weapon = config.name;
+    for (const view of views) invalidate(view);
   }
   // Pointer capture keeps dragging stable even when the cursor leaves the preview.
   let drag = null;
@@ -440,6 +444,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     if (!drag || !inspection) return;
     inspection.rotation.y += (e.clientX - drag.x) * 0.015;
     inspection.rotation.x += (e.clientY - drag.y) * 0.01;
+    invalidate(preview);
     drag = { x: e.clientX, y: e.clientY };
   });
   weaponCanvas.addEventListener("pointerup", () => (drag = null));
@@ -455,6 +460,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
       e.key === "ArrowLeft" ? -0.15 : e.key === "ArrowRight" ? 0.15 : 0;
     inspection.rotation.x +=
       e.key === "ArrowUp" ? -0.15 : e.key === "ArrowDown" ? 0.15 : 0;
+    invalidate(preview);
   });
   weaponCanvas.addEventListener(
     "wheel",
@@ -465,24 +471,43 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
         1.2,
         3.5,
       );
+      invalidate(preview);
     },
     { passive: false },
   );
   // Resize from CSS dimensions so the same scene fits both desktop and touch layouts.
   function resize() {
-    for (const view of [squad, preview]) {
+    for (const view of views) {
       const w = view.canvas.clientWidth,
         h = view.canvas.clientHeight;
       if (!w || !h) continue;
       view.renderer.setSize(w, h, false);
       view.camera.aspect = w / h;
       view.camera.updateProjectionMatrix();
+      invalidate(view);
     }
     squad.camera.position.z = squad.camera.aspect < 1.2 ? 11 : 9.4;
   }
   const observer = new ResizeObserver(resize);
   observer.observe(squadCanvas);
   observer.observe(weaponCanvas);
+  // Mobile layouts can scroll either preview out of view. Keep changes pending
+  // until it returns so the first visible frame is always current.
+  const visibility = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const view = views.find((view) => view.canvas === entry.target);
+      view.visible = entry.isIntersecting;
+      if (view.visible) invalidate(view);
+    }
+  });
+  for (const view of views) visibility.observe(view.canvas);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) for (const view of views) invalidate(view);
+  });
+  for (const view of views)
+    view.canvas.addEventListener("webglcontextrestored", () =>
+      invalidate(view),
+    );
   resize();
   let last = 0;
   function frame(now) {
@@ -490,10 +515,12 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     if (document.hidden || now - last < 32) return;
     last = now;
     const t = now * 0.001;
-    for (const [i, p] of [...people, selected].filter(Boolean).entries()) {
+    function animate(p, i) {
       p.userData.body.position.y = reduced ? 0 : Math.sin(t * 1.6 + i) * 0.009;
       p.userData.head.rotation.y = reduced ? 0 : Math.sin(t * 0.33 + i) * 0.07;
     }
+    people.forEach(animate);
+    if (selected) animate(selected, people.length);
     if (!reduced) {
       patrols.forEach(
         (ship, i) => (ship.position.x = Math.sin(t * 0.07 + i * 2.5) * 4),
@@ -501,14 +528,20 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
       dust.rotation.y = t * 0.015;
     }
     if (inspection && !drag && !reduced) inspection.rotation.y += 0.003;
-    for (const view of [squad, preview])
+    for (const view of views) {
+      if (!view.visible || (reduced && !view.dirty)) continue;
+      view.renderer.shadowMap.autoUpdate = !reduced;
       view.renderer.render(view.scene, view.camera);
+      view.dirty = false;
+    }
   }
   requestAnimationFrame(frame);
   return {
     update,
     setReducedMotion(value) {
+      if (reduced === value) return;
       reduced = value;
+      for (const view of views) invalidate(view);
     },
   };
 }
