@@ -126,7 +126,7 @@ export class HUDController {
       );
       this.lastFeed = key;
     }
-    n.stats.textContent = `${quality.fps} FPS · ${Math.round(quality.scale * 100)}% SCALE · ${renderer.drawCalls} DRAWS · OFFLINE`;
+    n.stats.textContent = `${quality.fps} FPS · ${Math.round(quality.scale * 100)}% SCALE · ${renderer.drawCalls} DRAWS · ${game.online ? game.networkLabel || "CONNECTING" : "OFFLINE"}`;
   }
   // Build a safely escaped scoreboard sorted by team and eliminations.
   end(game) {
