@@ -12,6 +12,7 @@ const FILES = [
   "./style.css",
   "./src/main.js",
   "./src/network.js",
+  "./src/network-interpolation.js",
   "./src/math.js",
   "./src/world.js",
   "./src/conquest.js",

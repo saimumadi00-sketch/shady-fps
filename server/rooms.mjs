@@ -67,9 +67,16 @@ export class NetworkInput {
   }
 }
 export class RoomService {
-  constructor({ now = Date.now, maxRooms = 20 } = {}) {
+  constructor({
+    now = Date.now,
+    maxRooms = 20,
+    idleTimeoutMs = 5 * 60 * 1000,
+  } = {}) {
+    if (!Number.isFinite(idleTimeoutMs) || idleTimeoutMs <= 0)
+      throw new Error("idleTimeoutMs must be a positive number.");
     this.now = now;
     this.maxRooms = maxRooms;
+    this.idleTimeoutMs = idleTimeoutMs;
     this.rooms = new Map();
     this.sessions = new Map();
   }
@@ -115,6 +122,7 @@ export class RoomService {
         ? data.weapon
         : loadout(classId).primary,
       lastInput: this.now(),
+      lastActivity: this.now(),
       created: this.now(),
       stream: null,
       rateAt: this.now(),
@@ -144,6 +152,7 @@ export class RoomService {
       throw new Error("Only the room host can start or restart.");
     if (room.game.match.state === "playing")
       throw new Error("The match is already playing.");
+    client.lastActivity = this.now();
     room.game.start("normal");
     for (const c of room.clients.values()) {
       c.input.clear();
@@ -159,7 +168,24 @@ export class RoomService {
       client.requests = 0;
     }
     if (++client.requests > 90) throw new Error("Too many input requests.");
-    if (client.input.accept(data)) client.lastInput = now;
+    if (client.input.accept(data)) {
+      client.lastInput = now;
+      const input = client.input;
+      // Neutral heartbeat requests keep transport alive, but do not count as play.
+      if (
+        input.keys.size ||
+        (Array.isArray(data.actions) &&
+          data.actions.some((a) => ACTIONS.has(a))) ||
+        finite(data.dx, 1200) ||
+        finite(data.dy, 1200) ||
+        input.moveX ||
+        input.moveY ||
+        input.fire ||
+        input.aim ||
+        input.touchCrouch
+      )
+        client.lastActivity = now;
+    }
   }
   leave(client) {
     if (!this.sessions.has(client.token)) return;
@@ -176,6 +202,10 @@ export class RoomService {
   }
   tick(dt) {
     for (const c of this.sessions.values()) {
+      if (this.now() - c.lastActivity >= this.idleTimeoutMs) {
+        this.leave(c);
+        continue;
+      }
       if (this.now() - c.lastInput > 350) c.input.clear();
       if (!c.stream && this.now() - c.created > 10000) this.leave(c);
     }

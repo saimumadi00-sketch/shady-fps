@@ -170,7 +170,11 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const { server, close } = createMultiplayerServer();
+  const { server, close } = createMultiplayerServer({
+    service: new RoomService({
+      idleTimeoutMs: Number(process.env.IDLE_TIMEOUT_MS || 5 * 60 * 1000),
+    }),
+  });
   const port = Number(process.env.PORT || 8080);
   server.listen(port, process.env.HOST || "0.0.0.0", () => {
     console.log(

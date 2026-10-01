@@ -1,3 +1,4 @@
+import { SnapshotInterpolator } from "./network-interpolation.js";
 // Shared matches use authenticated HTTP input and a continuous snapshot stream.
 export class NetworkClient {
   constructor(
@@ -17,6 +18,7 @@ export class NetworkClient {
     this.host = false;
     this.ready = false;
     this.ping = 0;
+    this.interpolation = new SnapshotInterpolator();
     game.online = true;
   }
   async request(path, data = {}) {
@@ -98,6 +100,7 @@ export class NetworkClient {
     }
   }
   apply(packet) {
+    this.interpolation.push(packet, performance.now());
     const g = this.game,
       old = g.player,
       oldWeapon = old.weapon,
@@ -160,6 +163,13 @@ export class NetworkClient {
       this.busy = false;
     }
   }
+  renderActors(now) {
+    this.game.renderActors = this.interpolation.sample(
+      this.game.actors,
+      this.game.player.id,
+      now,
+    );
+  }
   async leave() {
     if (this.token) await this.request("leave").catch(() => {});
     this.disconnect();
@@ -170,6 +180,8 @@ export class NetworkClient {
     this.ready = false;
     this.abort?.abort();
     clearInterval(this.watchdog);
+    this.interpolation.clear();
+    this.game.renderActors = null;
     this.input.active = false;
     this.input.clear();
     this.onDisconnect(reason);

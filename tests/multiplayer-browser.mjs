@@ -139,11 +139,12 @@ try {
   mobile.on("pageerror", (e) => errors.push(e.message));
   await mobile.goto(base + "/arena.html?online=1&mode=tdm&debug=1");
   await mobile.waitForFunction(() => !!window.__arena);
-  await mobile.click("#createRoom");
+  await mobile.tap("#createRoom");
   await mobile.waitForFunction(() => __arena.network.ready);
-  await mobile.click("#startRoom");
+  await mobile.tap("#startRoom");
   await mobile.waitForFunction(() => !document.querySelector("#play").disabled);
-  await mobile.click("#play");
+  await mobile.tap("#play");
+  assert.equal(await mobile.evaluate(() => __arena.input.touch), true);
   await mobile.waitForSelector("#touch:not([hidden])");
   assert.equal(await mobile.evaluate(() => __arena.game.mode), "tdm");
   await mobile.screenshot({ path: "artifacts/multiplayer-touch.png" });

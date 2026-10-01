@@ -56,6 +56,8 @@ await writeFile(
 );
 await mkdir("dist/assets", { recursive: true });
 await cp("assets/yard-map.svg", "dist/assets/yard-map.svg");
+await mkdir("dist/assets/maps", { recursive: true });
+await cp("assets/maps/freedm", "dist/assets/maps/freedm", { recursive: true });
 await cp("THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
 const files = [
   "index.html",

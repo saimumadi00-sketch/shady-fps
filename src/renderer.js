@@ -254,7 +254,7 @@ export class Renderer {
         add(s.x, 0.01, s.z + sign * s.radius, diameter, 0.03, 0.08, color);
       }
     }
-    for (const a of game.actors) {
+    for (const a of game.renderActors || game.actors) {
       if (!a.alive || (a === p && inGame)) continue;
       const dx = a.x - cam.x,
         dz = a.z - cam.z; // Cheap conservative horizontal view culling.

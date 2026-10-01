@@ -357,3 +357,105 @@ test("abandoned reservations expire and API snapshot streams bypass the offline 
     },
   });
 });
+
+test("idle clients expire despite neutral heartbeats, transfer hosting and release capacity", () => {
+  let now = 0;
+  const service = new RoomService({
+    now: () => now,
+    maxRooms: 1,
+    idleTimeoutMs: 1000,
+  });
+  const host = service.join({}, true);
+  const friend = service.join({ code: host.room.code, team: 1 });
+  let closed = 0;
+  host.stream = friend.stream = {
+    end() {
+      closed++;
+    },
+  };
+  now = 900;
+  service.input(host, { seq: 0, keys: [], actions: [], dx: 0, dy: 0 });
+  service.input(friend, { seq: 0, keys: ["KeyW"] });
+  now = 1000;
+  service.tick(1 / 60);
+  assert.equal(service.sessions.has(host.token), false);
+  assert.equal(service.sessions.has(friend.token), true);
+  assert.equal(friend.room.host, friend.token);
+  assert.equal(friend.room.controllers.has(host.actor.id), false);
+  assert.equal(closed, 1);
+  now = 1900;
+  service.tick(1 / 60);
+  assert.equal(service.rooms.size, 0);
+  assert.equal(service.sessions.size, 0);
+  assert.equal(closed, 2);
+  assert.ok(service.join({}, true));
+});
+
+test("idle timeout is renewed by valid activity and host start, not stale input", () => {
+  let now = 0;
+  const service = new RoomService({ now: () => now, idleTimeoutMs: 1000 });
+  const host = service.join({}, true);
+  host.stream = { end() {} };
+  now = 500;
+  service.start(host);
+  now = 1400;
+  service.tick(1 / 60);
+  assert.equal(service.sessions.size, 1);
+  service.input(host, { seq: 1, dx: 2 });
+  now = 2200;
+  service.input(host, { seq: 1, keys: ["KeyW"] });
+  service.tick(1 / 60);
+  assert.equal(service.sessions.size, 1);
+  now = 2400;
+  service.tick(1 / 60);
+  assert.equal(service.sessions.size, 0);
+});
+
+test("remote presentation interpolates poses and wrapped angles without changing authority", async () => {
+  const { SnapshotInterpolator } =
+    await import("../src/network-interpolation.js");
+  const buffer = new SnapshotInterpolator({ delayMs: 100 });
+  const actor = {
+    id: 1,
+    x: 0,
+    y: 0,
+    z: 0,
+    eye: 1.5,
+    pitch: 0,
+    yaw: Math.PI - 0.1,
+    alive: true,
+    shield: 0,
+  };
+  const packet = (a, time = 1, state = "playing") => ({
+    code: "ROOM",
+    playerId: 0,
+    time,
+    match: { state },
+    actors: [{ ...a }],
+  });
+  buffer.push(packet(actor), 0);
+  const latest = { ...actor, x: 1, yaw: -Math.PI + 0.1 };
+  buffer.push(packet(latest, 1.05), 50);
+  const local = { ...actor, id: 0, x: 8 };
+  const poses = buffer.sample([local, latest], 0, 125);
+  assert.equal(poses[0], local);
+  assert.equal(poses[1].x, 0.5);
+  assert.ok(Math.abs(poses[1].yaw - Math.PI) < 1e-9);
+  assert.equal(latest.x, 1);
+  assert.equal(buffer.sample([latest], 0, 1000)[0].x, 1);
+  assert.equal(
+    buffer.sample([{ ...latest, alive: false }], 0, 125)[0].alive,
+    false,
+  );
+  assert.equal(buffer.sample([{ ...latest, x: 20 }], 0, 125)[0].x, 20);
+  assert.equal(buffer.sample([{ ...latest, shield: 2 }], 0, 125)[0].x, 1);
+  buffer.push(packet({ ...latest, x: 10 }, 0), 100);
+  assert.equal(buffer.sample([{ ...latest, x: 10 }], 0, 150)[0].x, 10);
+  buffer.push(packet({ ...latest, x: 12 }, 0, "menu"), 150);
+  assert.equal(buffer.frames.length, 1);
+  for (let i = 0; i < 50; i++)
+    buffer.push(packet(latest, i, "menu"), 200 + i * 50);
+  assert.ok(buffer.frames.length <= 12);
+  buffer.clear();
+  assert.equal(buffer.sample([local], 0, 5000)[0], local);
+});

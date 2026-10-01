@@ -471,6 +471,7 @@ try {
     // Static menus do not need a full-rate GPU loop.
     idleRenderTime += raw;
     if (game.match.state === "playing" || idleRenderTime >= 0.1) {
+      network?.renderActors(now);
       renderer.render(game, quality, game.time);
       idleRenderTime = 0;
     }
