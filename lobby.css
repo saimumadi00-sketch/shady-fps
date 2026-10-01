@@ -1,15 +1,12 @@
 /* Cinematic scene with compact glass interfaces anchored around its edges. */
 :root {
   color-scheme: dark;
-  --cyan: #85dfed;
-  --muted: #8a9eaa;
-  --line: #80c8dd30;
-  font:
-    12px Bahnschrift,
-    "Segoe UI",
-    sans-serif;
-  color: #e3edf1;
-  background: #080f17;
+  --cyan: #a7ead4;
+  --muted: #a5beb9;
+  --line: #afc4be35;
+  font: 12px Arial, Helvetica, sans-serif;
+  color: #e8f0e9;
+  background: #10282c;
 }
 * {
   box-sizing: border-box;
@@ -50,7 +47,7 @@ a {
 }
 select {
   border: 1px solid var(--line);
-  background: #101d29;
+  background: #122b30;
   padding: 9px;
   width: 100%;
 }
@@ -97,7 +94,7 @@ small {
       #07111ccc
     ),
     linear-gradient(0deg, #080e19 1%, transparent 50%, #050d179c),
-    url("./assets/orbital-hangar.png") center/cover;
+    linear-gradient(135deg, #456862, #203d3e) center/cover;
 }
 header {
   position: relative;
@@ -157,7 +154,7 @@ header > button {
 }
 .panel {
   padding: 19px;
-  background: linear-gradient(135deg, #101d29eb, #0a121dd9);
+  background: linear-gradient(135deg, #122b30eb, #102329d9);
   border: 1px solid var(--line);
   box-shadow: 0 12px 35px #0002;
   backdrop-filter: blur(14px);
@@ -291,7 +288,7 @@ header > button {
 .map-thumb {
   width: 65px;
   height: 60px;
-  background: url("./assets/orbital-hangar.png") 65% 38%/300%;
+  background: linear-gradient(135deg, #456862, #203d3e) 65% 38%/300%;
   border: 1px solid #92dfee63;
   flex-shrink: 0;
 }
@@ -368,7 +365,7 @@ header > button {
   flex-direction: column;
   align-items: center;
   padding: 8px 16px;
-  background: radial-gradient(ellipse, #081622bd, transparent 72%);
+  background: radial-gradient(ellipse, #10282cd9, transparent 72%);
 }
 .operator-label strong {
   font-size: 20px;
@@ -615,18 +612,18 @@ header > button {
   margin-bottom: 12px;
 }
 .primary {
-  background: linear-gradient(110deg, #f6c57c, #dfa350);
+  background: linear-gradient(110deg, #f29a66, #e28b59);
   color: #1b1b1d;
   font-size: 15px;
   letter-spacing: 2px;
   font-weight: 700;
   width: 100%;
   padding: 17px;
-  border-color: #ffd693;
+  border-color: #f29a66;
   box-shadow: 0 0 23px #ffa82510;
 }
 .primary:hover {
-  background: #ffd59a;
+  background: #ffb387;
   border-color: white;
 }
 .primary span {
@@ -753,7 +750,7 @@ dialog td {
   border-bottom: 1px solid var(--line);
 }
 .armory.highlight {
-  box-shadow: 0 0 35px #85dfed35;
+  box-shadow: 0 0 35px #a7ead435;
   border-color: var(--cyan);
 }
 /* Reflow panels on tablets and phones without shrinking controls below usability. */
@@ -1058,5 +1055,94 @@ dialog td {
   *:after {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Share Yard 07's flat industrial art direction with the playable arena. */
+.lobby {
+  background: #10282c;
+  isolation: isolate;
+}
+.yard-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.48;
+  z-index: -1;
+  pointer-events: none;
+}
+.stage {
+  z-index: 0;
+}
+.panel {
+  background: linear-gradient(125deg, #122b30f2, #102329eb);
+  border-color: #afc4be35;
+  backdrop-filter: blur(8px);
+}
+.panel:before {
+  background: #a7ead4;
+}
+.map-thumb {
+  background: #536e66 url("./assets/yard-map.svg") center/cover;
+}
+.brand {
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.brand > b {
+  color: #f29a66;
+}
+.stage-caption h1 {
+  font-size: clamp(18px, 1.6vw, 30px);
+  font-weight: 900;
+  letter-spacing: -1px;
+  max-width: 440px;
+}
+.stage-caption small {
+  color: #b5d3c7;
+}
+.rank > b {
+  text-shadow: none;
+  color: #a7ead4;
+}
+.primary {
+  box-shadow: none;
+}
+.progress i {
+  background: #a7ead4;
+}
+.class-tabs .selected {
+  background: #a7ead41a;
+  border-color: #a7ead4;
+  color: #a7ead4;
+}
+.avatar {
+  background: #234342;
+  border-color: #afc4be35;
+  color: #a7ead4;
+  clip-path: none;
+}
+.operator-label {
+  background: radial-gradient(ellipse, #10282ce8, transparent 72%);
+}
+.operator-label strong {
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+.operator-label button {
+  background: #122b30;
+  border-color: #afc4be70;
+}
+@media (max-width: 620px) {
+  .stage-caption h1 {
+    max-width: 270px;
+    font-size: 22px;
+  }
+  .yard-background {
+    max-height: 800px;
+  }
+  .deployment strong {
+    font-size: 8px;
   }
 }

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+<!-- Diagram of Yard 07's freight stacks and three cross-yard routes. -->
+<rect width="200" height="140" fill="#728176"/><rect x="7" y="7" width="186" height="126" fill="none" stroke="#b0b59e" stroke-width="5"/>
+<path d="M15 28H185M15 70H185M15 112H185" stroke="#cfc17a" stroke-width="2" stroke-dasharray="7 7"/>
+<path d="M13 15V125" stroke="#40c7b8" stroke-width="7"/><path d="M187 15V125" stroke="#f56130" stroke-width="7"/>
+<g stroke="#304b48" stroke-width="3"><path fill="#a85c3d" d="M35 38h40v17H35zM125 85h40v17h-40z"/><path fill="#306e6e" d="M125 38h40v17h-40zM35 85h40v17H35z"/><path fill="#b0b59e" d="M92 58h16v25H92z"/></g></svg>

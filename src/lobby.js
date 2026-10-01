@@ -423,7 +423,7 @@ function renderProgress() {
 }
 $("rankings").onclick = () =>
   modal(
-    "<small>SEASON 04 / SIMULATED STANDINGS</small><h2>FRONTIER DIVISION</h2><p>Illustrative rankings. No live leaderboard is connected.</p><table><tr><td>01</td><td>GHOST</td><td>3,120 RP</td></tr><tr><td>02</td><td>ROOK</td><td>2,760 RP</td></tr><tr><td>03</td><td>YOU</td><td>2,480 RP</td></tr><tr><td>04</td><td>HEX</td><td>2,240 RP</td></tr></table>",
+    "<small>SEASON 04 / SIMULATED STANDINGS</small><h2>YARD CIRCUIT DIVISION</h2><p>Illustrative rankings. No live leaderboard is connected.</p><table><tr><td>01</td><td>GHOST</td><td>3,120 RP</td></tr><tr><td>02</td><td>ROOK</td><td>2,760 RP</td></tr><tr><td>03</td><td>YOU</td><td>2,480 RP</td></tr><tr><td>04</td><td>HEX</td><td>2,240 RP</td></tr></table>",
   );
 $("sound").onclick = () => {
   state.sound = !state.sound;
@@ -464,7 +464,7 @@ document.querySelectorAll("[data-view]").forEach(
       }
       if (b.dataset.view === "operations") {
         modal(
-          "<small>ORBITAL OPERATIONS / LOCAL PREVIEW</small><h2>CHOOSE YOUR FRONT.</h2><p>These modes configure the simulated queue. Offline training remains the playable bot arena.</p>" +
+          "<small>YARD OPERATIONS / LOCAL PREVIEW</small><h2>CHOOSE YOUR FRONT.</h2><p>These modes configure the simulated queue. Offline training remains the playable bot arena.</p>" +
             Object.keys(modes)
               .map(
                 (m) =>

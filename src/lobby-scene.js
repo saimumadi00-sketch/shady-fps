@@ -1,36 +1,14 @@
 import * as THREE from "three";
 import { weaponMesh } from "./weapon-models.js";
 import { classes } from "./lobby-data.js";
+import { drawCharacter } from "./characters.js";
+import { Arena } from "./world.js";
 
-// Both canvases are real-time, locally rendered scenes with no remote model dependencies.
+// Arena, squad and weapon canvases share the game's geometry with no remote model dependencies.
 export function createLobbyScene(squadCanvas, weaponCanvas) {
   const renderers = [];
-  // A deterministic surface texture adds subtle wear without downloading texture assets.
-  const surface = document.createElement("canvas");
-  surface.width = surface.height = 128;
-  const ctx = surface.getContext("2d");
-  ctx.fillStyle = "#b9b9b9";
-  ctx.fillRect(0, 0, 128, 128);
-  let seed = 71;
-  for (let i = 0; i < 3200; i++) {
-    seed = (seed * 16807) % 2147483647;
-    const x = seed % 128;
-    seed = (seed * 16807) % 2147483647;
-    const y = seed % 128;
-    ctx.fillStyle = i % 3 ? "#a5a5a5" : "#d0d0d0";
-    ctx.fillRect(x, y, i % 50 === 0 ? 8 : 1, 1);
-  }
-  const wear = new THREE.CanvasTexture(surface);
-  wear.wrapS = wear.wrapT = THREE.RepeatWrapping;
-  const material = (color, metalness = 0.35, roughness = 0.65) =>
-    new THREE.MeshStandardMaterial({
-      color,
-      metalness,
-      roughness,
-      map: wear,
-      bumpMap: wear,
-      bumpScale: 0.002,
-    });
+  const material = (color, metalness = 0, roughness = 1) =>
+    new THREE.MeshStandardMaterial({ color, metalness, roughness });
   const dark = material(0x15202b),
     joint = material(0x101820, 0.1, 0.85),
     steel = material(0x4a606d);
@@ -53,8 +31,8 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     renderer.toneMappingExposure = 1.1;
     const scene = new THREE.Scene(),
       camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-    scene.add(new THREE.HemisphereLight(0xb9d6ef, 0x26333f, 1.6));
-    const key = new THREE.DirectionalLight(0xe5f4ff, 3);
+    scene.add(new THREE.HemisphereLight(0xe8f0e9, 0x526662, 0.8));
+    const key = new THREE.DirectionalLight(0xe8f0e9, 1.5);
     key.position.set(-3, 6, 5);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
@@ -64,10 +42,10 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     key.shadow.camera.bottom = -5;
     key.shadow.bias = -0.001;
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x52bfe9, 3);
+    const rim = new THREE.DirectionalLight(0xa7ead4, 0.25);
     rim.position.set(2, 3, -3);
     scene.add(rim);
-    const warm = new THREE.DirectionalLight(0xffc68d, 1);
+    const warm = new THREE.DirectionalLight(0xf29a66, 0.25);
     warm.position.set(5, 2, 2);
     scene.add(warm);
     renderers.push(renderer);
@@ -87,58 +65,8 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     parent.add(m);
     return m;
   }
-  // Chamfered hard-surface plates avoid spherical toy-like armor while preserving joint articulation.
-  function plate(parent, x, y, z, w, h, d, mat) {
-    const shape = new THREE.Shape(),
-      cut = Math.min(w, h) * 0.18;
-    const points = [
-      [-w / 2 + cut, -h / 2],
-      [w / 2 - cut, -h / 2],
-      [w / 2, -h / 2 + cut],
-      [w / 2, h / 2 - cut],
-      [w / 2 - cut, h / 2],
-      [-w / 2 + cut, h / 2],
-      [-w / 2, h / 2 - cut],
-      [-w / 2, -h / 2 + cut],
-    ];
-    shape.moveTo(...points[0]);
-    for (const p of points.slice(1)) shape.lineTo(...p);
-    shape.closePath();
-    const bevel = Math.min(w, h, d) * 0.12;
-    const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: Math.max(0.001, d - 2 * bevel),
-      bevelEnabled: true,
-      bevelSize: bevel,
-      bevelThickness: bevel,
-      bevelSegments: 3,
-      steps: 1,
-    });
-    geometry.translate(0, 0, -d / 2 + bevel);
-    return mesh(parent, geometry, mat, x, y, z);
-  }
   function box(parent, x, y, z, w, h, d, mat) {
     return mesh(parent, new THREE.BoxGeometry(w, h, d), mat, x, y, z);
-  }
-  function limb(parent, a, b, r, mat) {
-    const start = new THREE.Vector3(...a),
-      end = new THREE.Vector3(...b),
-      delta = end.clone().sub(start);
-    const m = mesh(
-      parent,
-      new THREE.CapsuleGeometry(
-        r,
-        Math.max(0.01, delta.length() - r * 2),
-        5,
-        10,
-      ),
-      mat,
-    );
-    m.position.copy(start.add(end).multiplyScalar(0.5));
-    m.quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      delta.normalize(),
-    );
-    return m;
   }
   function gun(config) {
     const data = weaponMesh(
@@ -196,202 +124,87 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     if (config.model === 3) group.scale.x = 1.2;
     return group;
   }
+  // Reuse the actual arena character builder, including team colors and cubic proportions.
   function soldier(type, config) {
     const root = new THREE.Group(),
-      body = new THREE.Group();
+      body = new THREE.Group(),
+      head = new THREE.Group();
     root.add(body);
-    root.userData.body = body;
-    const armor = material(classes[type].color),
-      heavy = type === "support" ? 1.16 : 1;
-    // Feet, shin plates, knee guards and segmented thigh armor establish human proportions.
-    for (const side of [-1, 1]) {
-      const x = side * 0.17;
-      limb(body, [x, 0.2, 0], [x, 0.95, 0], 0.115, joint);
-      plate(body, x, 0.37, 0.025, 0.24, 0.42, 0.28, armor);
-      plate(body, x, 0.65, 0.09, 0.25, 0.22, 0.27, steel);
-      plate(body, x, 0.85, 0, 0.29, 0.4, 0.3, armor);
-      box(body, x, 0.11, 0.065, 0.24, 0.19, 0.4, dark);
-      box(body, x, 0.39, 0.17, 0.08, 0.19, 0.035, dark);
-    }
-    plate(body, 0, 1.08, 0, 0.52, 0.34, 0.34, dark);
-    plate(body, 0, 1.4, 0, 0.62 * heavy, 0.65, 0.4, joint);
-    plate(body, 0, 1.48, 0.13, 0.59 * heavy, 0.43, 0.23, armor);
-    // Split breastplates and inset fasteners give the armored suit a manufactured construction.
-    for (const side of [-1, 1]) {
-      const chest = plate(
-        body,
-        side * 0.15,
-        1.5,
-        0.267,
-        0.26,
-        0.27,
-        0.045,
-        steel,
-      );
-      chest.rotation.z = side * -0.1;
-      box(body, side * 0.25, 1.6, 0.295, 0.025, 0.025, 0.014, dark);
-    }
-    plate(body, 0, 1.25, 0.15, 0.47, 0.2, 0.22, steel);
-    box(body, 0, 1.51, 0.3, 0.1, 0.012, 0.025, glow);
-    // Utility pouches, backpack, communications aerial and class-specific equipment.
-    for (const x of [-0.2, -0.07, 0.07, 0.2])
-      box(body, x, 1.14, 0.21, 0.105, 0.14, 0.1, dark);
-    box(body, 0, 1.45, -0.24, 0.41, 0.48, 0.2, armor);
-    limb(body, [0.18, 1.5, -0.25], [0.18, 2.02, -0.25], 0.012, steel);
-    for (const side of [-1, 1]) {
-      plate(body, side * 0.36, 1.57, 0, 0.3 * heavy, 0.32, 0.36, armor);
-      const elbow = [side * 0.4, 1.26, 0.1],
-        hand = [side * 0.2, 1.28, 0.38];
-      limb(body, [side * 0.34, 1.52, 0], elbow, 0.1, joint);
-      plate(body, side * 0.4, 1.37, 0.04, 0.23, 0.3, 0.25, armor);
-      limb(body, elbow, hand, 0.085, armor);
-      plate(body, ...hand, 0.15, 0.16, 0.16, dark);
-    }
-    limb(body, [0, 1.64, 0], [0, 1.82, 0], 0.1, joint);
-    const head = new THREE.Group();
-    head.position.y = 1.89;
     body.add(head);
+    root.userData.body = body;
     root.userData.head = head;
-    const helmet = mesh(head, new THREE.SphereGeometry(1, 24, 16), armor);
-    helmet.scale.set(0.165, 0.19, 0.175);
-    plate(head, 0, 0.11, 0.04, 0.29, 0.08, 0.29, armor);
-    plate(
-      head,
+    const id = Object.keys(classes).indexOf(type);
+    drawCharacter(
+      (x, y, z, w, h, d, color, angle) => {
+        // Replace only the gameplay placeholder gun with the shared detailed primary mesh.
+        if (w === 0.13 && h === 0.13 && d === 0.65) return;
+        const mat = new THREE.MeshLambertMaterial({
+          color: new THREE.Color(...color),
+        });
+        const part = box(y > 1.23 ? head : body, x, y, z, w, h, d, mat);
+        part.rotation.y = angle;
+      },
+      {
+        id,
+        team: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        yaw: Math.PI,
+        crouched: false,
+        moving: false,
+        shield: 0,
+      },
       0,
-      0.035,
-      0.17,
-      0.285,
-      0.1,
-      0.035,
-      material(0x071c27, 0.7, 0.2),
+      false,
     );
-    box(head, 0, 0.065, 0.197, 0.23, 0.009, 0.012, glow);
-    plate(head, 0, -0.1, 0.14, 0.23, 0.15, 0.17, dark);
-    box(head, 0, -0.075, 0.235, 0.12, 0.045, 0.028, steel);
-    for (const s of [-1, 1]) plate(head, s * 0.17, 0, 0, 0.08, 0.21, 0.2, dark);
-    if (type === "recon") {
-      plate(body, 0, 1.68, -0.07, 0.55, 0.22, 0.48, armor);
-      const cape = mesh(
-        body,
-        new THREE.ConeGeometry(0.39, 0.87, 6, 1, true),
-        new THREE.MeshStandardMaterial({
-          color: 0x283c48,
-          side: THREE.DoubleSide,
-          roughness: 1,
-        }),
-        0,
-        1.2,
-        -0.26,
-      );
-      cape.scale.z = 0.35;
-    }
-    if (type === "support") {
-      for (let i = 0; i < 7; i++)
-        box(
-          body,
-          -0.24 + i * 0.075,
-          1.39 - i * 0.045,
-          0.295,
-          0.045,
-          0.1,
-          0.045,
-          material(0xab9565),
-        );
-    }
-    if (type === "engineer") {
-      box(body, 0.31, 1.03, 0, 0.13, 0.27, 0.15, armor);
-      box(body, 0.32, 1.09, 0.085, 0.05, 0.08, 0.02, glow);
-    }
     const weapon = gun(config);
     weapon.scale.setScalar(0.8);
-    weapon.position.set(0.04, 1.3, 0.39);
-    weapon.rotation.z = -0.18;
+    weapon.position.set(0, 1.0, 0.35);
+    weapon.rotation.z = -0.12;
     body.add(weapon);
     return root;
   }
-  // Illuminated low-profile platform receives real shadows from the squad.
-  mesh(
-    squad.scene,
-    new THREE.CylinderGeometry(2.7, 2.85, 0.12, 96),
-    material(0x17242d, 0.75, 0.45),
-    0,
-    -0.09,
-    0,
-  );
-  const ring = mesh(
-    squad.scene,
-    new THREE.TorusGeometry(2.69, 0.012, 8, 120),
-    glow,
-    0,
-    -0.018,
-    0,
-  );
-  ring.rotation.x = Math.PI / 2;
-  const inner = mesh(
-    squad.scene,
-    new THREE.TorusGeometry(2.5, 0.007, 8, 120),
-    glow,
-    0,
-    -0.01,
-    0,
-  );
-  inner.rotation.x = Math.PI / 2;
-  for (let i = 0; i < 48; i++) {
-    const a = (i / 48) * Math.PI * 2;
-    const tick = box(
+  // A painted concrete muster pad replaces the orbital display platform.
+  box(squad.scene, 0, -0.1, 0, 5.8, 0.18, 3.8, material(0x727e72, 0, 1));
+  for (const x of [-2.65, 2.65])
+    box(squad.scene, x, 0.001, 0, 0.07, 0.012, 3.4, material(0xa7ead4, 0, 1));
+  for (let x = -2.4; x < 2.5; x += 0.45)
+    box(
       squad.scene,
-      Math.sin(a) * 2.6,
-      -0.012,
-      Math.cos(a) * 2.6,
-      0.025,
-      0.007,
-      0.09,
-      i % 4 === 0 ? glow : steel,
+      x,
+      0.002,
+      1.72,
+      0.23,
+      0.013,
+      0.1,
+      material(0xcfbf7b, 0, 1),
     );
-    tick.rotation.y = a;
-  }
+  // Render the same world boxes as the playable arena behind the interface.
+  const yardCanvas = document.createElement("canvas");
+  yardCanvas.className = "yard-background";
+  yardCanvas.setAttribute("aria-hidden", "true");
+  document.querySelector(".lobby").prepend(yardCanvas);
+  const yard = setup(yardCanvas);
+  yard.scene.background = new THREE.Color(0x91a5a6);
+  yard.scene.fog = new THREE.Fog(0x91a5a6, 35, 90);
+  yard.camera.position.set(23, 13, 26);
+  yard.camera.lookAt(0, 0, 0);
+  for (const b of new Arena().boxes)
+    box(
+      yard.scene,
+      b.x,
+      b.y,
+      b.z,
+      b.w,
+      b.h,
+      b.d,
+      new THREE.MeshLambertMaterial({ color: new THREE.Color(...b.color) }),
+    );
   const people = [];
   let selected = null,
     inspection = null,
     reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Distant patrol craft and sparse floating dust add motion without competing with the squad.
-  const patrols = [];
-  for (let i = 0; i < 2; i++) {
-    const ship = new THREE.Group();
-    box(ship, 0, 0, 0, 0.16, 0.06, 0.42, steel);
-    const wings = mesh(ship, new THREE.ConeGeometry(0.3, 0.035, 3), dark);
-    wings.rotation.x = Math.PI / 2;
-    box(ship, 0, 0, 0.22, 0.075, 0.022, 0.025, glow);
-    ship.position.set(i ? 3 : -3, 3.15 + i * 0.38, -5);
-    ship.rotation.y = -0.8;
-    ship.scale.setScalar(0.45);
-    wings.rotation.x = 0;
-    squad.scene.add(ship);
-    patrols.push(ship);
-  }
-  const dustPositions = [];
-  for (let i = 0; i < 55; i++)
-    dustPositions.push(
-      Math.sin(i * 17.4) * 4,
-      Math.abs(Math.cos(i * 9.3)) * 3,
-      Math.sin(i * 4.1) * 3,
-    );
-  const dustGeometry = new THREE.BufferGeometry();
-  dustGeometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(dustPositions, 3),
-  );
-  const dust = new THREE.Points(
-    dustGeometry,
-    new THREE.PointsMaterial({
-      color: 0x9ed3e9,
-      size: 0.012,
-      transparent: true,
-      opacity: 0.3,
-      depthWrite: false,
-    }),
-  );
-  squad.scene.add(dust);
   const squadTypes = ["engineer", "support", "recon"];
   [
     [-1.7, 0, -0.4],
@@ -470,7 +283,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
   );
   // Resize from CSS dimensions so the same scene fits both desktop and touch layouts.
   function resize() {
-    for (const view of [squad, preview]) {
+    for (const view of [squad, preview, yard]) {
       const w = view.canvas.clientWidth,
         h = view.canvas.clientHeight;
       if (!w || !h) continue;
@@ -483,6 +296,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
   const observer = new ResizeObserver(resize);
   observer.observe(squadCanvas);
   observer.observe(weaponCanvas);
+  observer.observe(yardCanvas);
   resize();
   let last = 0;
   function frame(now) {
@@ -494,14 +308,8 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
       p.userData.body.position.y = reduced ? 0 : Math.sin(t * 1.6 + i) * 0.009;
       p.userData.head.rotation.y = reduced ? 0 : Math.sin(t * 0.33 + i) * 0.07;
     }
-    if (!reduced) {
-      patrols.forEach(
-        (ship, i) => (ship.position.x = Math.sin(t * 0.07 + i * 2.5) * 4),
-      );
-      dust.rotation.y = t * 0.015;
-    }
     if (inspection && !drag && !reduced) inspection.rotation.y += 0.003;
-    for (const view of [squad, preview])
+    for (const view of [squad, preview, yard])
       view.renderer.render(view.scene, view.camera);
   }
   requestAnimationFrame(frame);

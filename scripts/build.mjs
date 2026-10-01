@@ -54,7 +54,8 @@ await writeFile(
     .replace("./src/lobby.js", "./lobby.js")
     .replace(/[ \t]*<script type="importmap">[\s\S]*?<\/script>\s*\n/, ""),
 );
-await cp("assets", "dist/assets", { recursive: true });
+await mkdir("dist/assets", { recursive: true });
+await cp("assets/yard-map.svg", "dist/assets/yard-map.svg");
 await cp("THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
 const files = [
   "index.html",
@@ -63,7 +64,7 @@ const files = [
   "style.css",
   "lobby.js",
   "lobby.css",
-  "assets/orbital-hangar.png",
+  "assets/yard-map.svg",
 ];
 // Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.
 const hash = createHash("sha256");

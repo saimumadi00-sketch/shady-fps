@@ -1,5 +1,5 @@
 {
-  "version": "1e979829e2da",
+  "version": "d784f307b6bf",
   "files": [
     "index.html",
     "arena.html",
@@ -7,10 +7,10 @@
     "style.css",
     "lobby.js",
     "lobby.css",
-    "assets/orbital-hangar.png",
+    "assets/yard-map.svg",
     "sw.js"
   ],
-  "rawBytes": 3310674,
-  "gzipBytes": 2793582,
-  "brotliBytes": 2752835
+  "rawBytes": 662468,
+  "gzipBytes": 179669,
+  "brotliBytes": 149398
 }

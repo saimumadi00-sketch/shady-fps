@@ -1,14 +1,14 @@
 # Crosscurrent — Yard 07
 
-A cinematic orbital lobby and original offline browser FPS prototype. The lobby uses bundled Three.js, original procedural armored characters, and a locally packaged generated hangar image. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
+A Yard 07 squad lobby and original offline browser FPS prototype. The lobby reuses the game's actual voxel character builder and industrial arena geometry through bundled Three.js, with the same teal, mint and orange menu palette. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
 
-## Orbital lobby
+## Squad lobby
 
 The root page opens the new responsive command deck. Choose Assault, Engineer, Support, or Recon; inspect weapons by dragging, scrolling, or using arrow keys on the focused preview; customize optics, barrels, and finishes; and save three loadouts. Roster readiness, local chat with simulated replies, mode selection, cancelable matchmaking, daily drills, demo XP, audio, and reduced-motion preferences are interactive. Progress and loadouts persist on this browser.
 
 All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. Conquest and Domination configure the demo queue; **Enter Offline Training** opens the existing Team Deathmatch bot arena at `arena.html`. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original procedural geometry, not scanned or licensed AAA character assets.
 
-Run `npm run test:lobby` against the preview server to exercise the new interface. Generated backdrop provenance and its exact prompt are in [assets/README.md](assets/README.md).
+Run `npm run test:lobby` against the preview server to exercise the interface. The yard backdrop is rendered from `src/world.js`; squad characters come from `src/characters.js`. The earlier generated space backdrop is retained in source assets for reference but is no longer displayed or included in the deployment.
 
 ## Play locally
 
