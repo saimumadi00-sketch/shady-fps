@@ -1146,3 +1146,12 @@ dialog td {
     font-size: 8px;
   }
 }
+
+.friends-link {
+  display: block;
+  margin-top: 12px;
+  color: #85dfed;
+  text-align: center;
+  font: 700 12px system-ui;
+  text-decoration: none;
+}

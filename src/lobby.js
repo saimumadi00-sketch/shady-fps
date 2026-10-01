@@ -307,6 +307,9 @@ function renderMode() {
   $("deployment-mode").textContent =
     state.mode.toUpperCase() +
     (state.mode === "Domination" ? " / PREVIEW" : " / OFFLINE 5v5");
+  document.querySelector(".friends-link").href =
+    "./arena.html?online=1&mode=" +
+    (state.mode === "Conquest" ? "conquest" : "tdm");
   const training = document.querySelector(".training");
   training.textContent =
     state.mode === "Conquest"

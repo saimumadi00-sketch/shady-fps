@@ -76,7 +76,8 @@
       <section id="menu" class="overlay">
         <div class="menu-shell">
           <div class="eyebrow">
-            <span class="signal"></span> OFFLINE ARENA / BROWSER EDITION
+            <span class="signal"></span>
+            <span id="arenaEdition">OFFLINE ARENA / BROWSER EDITION</span>
             <span class="version">01.00</span>
             <a href="./" style="margin-left: auto; color: #85dfed">SQUAD LOBBY ↗</a>
           </div>
@@ -245,6 +246,46 @@
                   ><input id="fov" type="range" min="65" max="105" value="83"
                 /></label>
               </details>
+              <div id="roomPanel" class="custom-panel" hidden>
+                <p class="kicker">PLAY WITH FRIENDS / PRIVATE ROOM</p>
+                <div class="settings">
+                  <label
+                    >YOUR TEAM<select id="roomTeam">
+                      <option value="0">Cyan</option>
+                      <option value="1">Ember</option>
+                    </select></label
+                  >
+                  <label
+                    >ROOM CODE<input
+                      id="roomCode"
+                      maxlength="8"
+                      autocomplete="off"
+                      placeholder="8-character code"
+                  /></label>
+                </div>
+                <div class="settings">
+                  <button id="createRoom" class="secondary-button">
+                    CREATE ROOM
+                  </button>
+                  <button id="joinRoom" class="secondary-button">
+                    JOIN ROOM
+                  </button>
+                </div>
+                <p id="roomMessage" aria-live="polite">
+                  Open this page from your multiplayer server. Bots fill vacant
+                  slots.
+                </p>
+                <p id="roomRoster"></p>
+                <button id="copyRoom" class="secondary-button" hidden>
+                  COPY INVITE LINK
+                </button>
+                <button id="startRoom" class="secondary-button" hidden>
+                  START SHARED MATCH
+                </button>
+              </div>
+              <button id="leaveRoom" class="secondary-button" hidden>
+                LEAVE ROOM
+              </button>
               <!-- Score and time limits are copied into match rules on start/restart, not mid-match. -->
               <details class="custom-panel">
                 <summary>MATCH RULES</summary>

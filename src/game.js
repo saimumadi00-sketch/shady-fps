@@ -32,6 +32,8 @@ export class OfflineSimulation {
     this.weapons = new WeaponController(this);
     this.bots = new BotController(this);
     this.controller = new PlayerController(this, input);
+    // A server supplies one controller per human; vacant slots retain bot AI.
+    this.humanControllers = options.humanControllers || null;
     this.events = [];
     this.time = 0;
     this.hit = 0;
@@ -82,7 +84,12 @@ export class OfflineSimulation {
       if (this.match.state !== "playing") break;
       // Discard dead-player input before respawning, preventing buffered shots or reloads.
       if (!a.alive) {
-        if (a === this.player) this.controller.input.clear();
+        const controller = this.humanControllers
+          ? this.humanControllers.get(a.id)
+          : a === this.player
+            ? this.controller
+            : null;
+        controller?.input.clear();
         a.respawn -= dt;
         if (a.respawn <= 0) this.spawns.spawn(a);
         continue;
@@ -92,7 +99,12 @@ export class OfflineSimulation {
       a.lastDamage += dt;
       if (a.lastDamage > 6) a.hp = Math.min(100, a.hp + 8 * dt);
       this.weapons.update(a, dt);
-      if (a === this.player) this.controller.update(dt, sensitivity);
+      const controller = this.humanControllers
+        ? this.humanControllers.get(a.id)
+        : a === this.player
+          ? this.controller
+          : null;
+      if (controller) controller.update(dt, sensitivity);
       else this.bots.update(a, dt);
     }
     if (this.mode === "conquest")

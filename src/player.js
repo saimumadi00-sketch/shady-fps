@@ -5,15 +5,16 @@ import { TacticalMovement } from "./movement.js";
 import { WEAPONS } from "./weapons.js";
 export class PlayerController {
   // Keep movement state handling separate from camera and weapon decisions.
-  constructor(game, input) {
+  constructor(game, input, actor = null) {
     this.game = game;
     this.input = input;
+    this.actor = actor;
     this.movement = new TacticalMovement();
   }
   // Consume input once per simulation tick; dead players cannot issue actions.
   update(dt, sensitivity) {
     const g = this.game,
-      a = g.player,
+      a = this.actor || g.player,
       i = this.input;
     if (!a.alive) {
       i.clear();

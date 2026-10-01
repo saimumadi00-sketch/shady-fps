@@ -222,7 +222,7 @@ export class WeaponController {
       const damage = w.damage * (length > w.range * 0.65 ? 0.72 : 1);
       game.damage.apply(victim, damage, a);
     }
-    if (a === game.player) {
+    if (a === game.player || game.humanControllers?.has(a.id)) {
       a.pitch = Math.min(1.45, a.pitch + w.recoil * (a.aim ? 0.6 : 1));
       game.audio.play("shot", 1, a.weapon);
     } else if (Math.hypot(a.x - game.player.x, a.z - game.player.z) < 28)

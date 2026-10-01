@@ -100,6 +100,10 @@ export class TeamManager {
       moving: false,
       aim: false,
       lastDamage: 0,
+      hitUntil: 0,
+      hurtUntil: 0,
+      noticeUntil: 0,
+      networkNotice: "",
       brain: {
         think: id * 0.033,
         path: [],
@@ -172,6 +176,10 @@ export class SpawnManager {
       flash: 0,
       kick: 0,
       lastDamage: 0,
+      hitUntil: 0,
+      hurtUntil: 0,
+      noticeUntil: 0,
+      networkNotice: "",
     });
     // Keep stable global ammo indices, but unassigned weapons receive no usable ammunition.
     a.ammo = WEAPONS.map((w, index) => ({
@@ -202,6 +210,10 @@ export class DamageSystem {
       return false;
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamage = 0;
+    if (g.humanControllers) {
+      attacker.hitUntil = g.time + 0.13;
+      target.hurtUntil = g.time + 0.4;
+    }
     if (attacker === g.player) {
       g.hit = 0.13;
       g.audio.play("hit", 0.35);
@@ -218,6 +230,10 @@ export class DamageSystem {
       target.respawn = g.match.rules.respawn;
       target.brain.state = "Dead";
       attacker.kills++;
+      if (g.humanControllers) {
+        attacker.networkNotice = "ELIMINATED " + target.name.toUpperCase();
+        attacker.noticeUntil = g.time + 2;
+      }
       g.match.kill(attacker.team);
       g.events.push({
         killer: attacker.name,
