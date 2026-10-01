@@ -25,6 +25,8 @@ export class HUDController {
     ])
       this.nodes[id] = document.getElementById(id);
     this.lastFeed = "";
+    this.objectives = document.getElementById("objectives");
+    this.sectorNodes = [];
   }
   // Refresh score, ammo, health, notices, and death countdown from the current snapshot of state.
   update(game, quality, renderer) {
@@ -36,6 +38,47 @@ export class HUDController {
       seconds = Math.ceil(m.remaining);
     n.scoreA.textContent = m.scores[0];
     n.scoreB.textContent = m.scores[1];
+    if (m.mode === "conquest") {
+      if (this.sectorNodes.length === 0) {
+        this.sectorNodes = m.sectors.map(() => {
+          const node = document.createElement("div");
+          const title = document.createElement("strong"),
+            status = document.createElement("small"),
+            progress = document.createElement("progress");
+          progress.max = 1;
+          node.append(title, status, progress);
+          this.objectives.append(node);
+          return { node, title, status, progress };
+        });
+      }
+      m.sectors.forEach((s, i) => {
+        const { node, title, status, progress } = this.sectorNodes[i];
+        node.dataset.owner =
+          s.owner === null ? "neutral" : s.owner === 0 ? "cyan" : "ember";
+        node.dataset.contested = String(s.contested);
+        const angle = Math.atan2(s.x - a.x, -(s.z - a.z)) - a.yaw;
+        const bearing = Math.atan2(Math.sin(angle), Math.cos(angle));
+        const arrow =
+          Math.abs(bearing) < 0.45
+            ? "↑"
+            : Math.abs(bearing) > 2.6
+              ? "↓"
+              : bearing < 0
+                ? "←"
+                : "→";
+        title.textContent = `${s.id} · ${s.name} ${arrow} ${Math.round(Math.hypot(s.x - a.x, s.z - a.z))}m`;
+        status.textContent = s.contested
+          ? "CONTESTED"
+          : s.capturing !== null
+            ? `${s.owner === null ? "CAPTURING" : "NEUTRALIZING"} · ${s.capturing === 0 ? "CYAN" : "EMBER"} ${Math.floor(s.progress * 100)}%`
+            : s.owner === null
+              ? "NEUTRAL"
+              : s.owner === 0
+                ? "CYAN CONTROL"
+                : "EMBER CONTROL";
+        progress.value = s.progress;
+      });
+    }
     n.timer.textContent =
       Math.floor(seconds / 60)
         .toString()

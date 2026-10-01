@@ -238,6 +238,22 @@ export class Renderer {
     this.draw(this.staticBatch, this.arena.boxes.length);
     let n = 0;
     const add = (...args) => this.write(this.dynamic, n++, ...args);
+    for (const s of game.match.sectors || []) {
+      const color = s.contested
+        ? [1, 0.85, 0.3]
+        : s.owner === 0
+          ? [0.25, 0.78, 0.72]
+          : s.owner === 1
+            ? [0.96, 0.38, 0.19]
+            : [0.84, 0.85, 0.7];
+      add(s.x, 1.7, s.z, 0.09, 3.4, 0.09, [0.22, 0.3, 0.31]);
+      add(s.x + 0.6, 2.9, s.z, 1.15, 0.65, 0.07, color);
+      const diameter = s.radius * 2;
+      for (const sign of [-1, 1]) {
+        add(s.x + sign * s.radius, 0.01, s.z, 0.08, 0.03, diameter, color);
+        add(s.x, 0.01, s.z + sign * s.radius, diameter, 0.03, 0.08, color);
+      }
+    }
     for (const a of game.actors) {
       if (!a.alive || (a === p && inGame)) continue;
       const dx = a.x - cam.x,

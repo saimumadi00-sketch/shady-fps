@@ -305,7 +305,15 @@ $("chat-form").onsubmit = (e) => {
 function renderMode() {
   $("mode").value = state.mode;
   $("deployment-mode").textContent =
-    state.mode.toUpperCase() + " / DEMO OPERATION";
+    state.mode.toUpperCase() +
+    (state.mode === "Domination" ? " / PREVIEW" : " / OFFLINE 5v5");
+  const training = document.querySelector(".training");
+  training.textContent =
+    state.mode === "Conquest"
+      ? "PLAY OFFLINE CONQUEST ↗"
+      : "ENTER OFFLINE TRAINING ↗";
+  training.href =
+    state.mode === "Conquest" ? "./arena.html?mode=conquest" : "./arena.html";
   $("mode-description").textContent = modes[state.mode];
   $("region").value = state.region;
   $("ping").textContent =
@@ -368,7 +376,7 @@ $("find-match").onclick = () => {
       );
       renderProgress();
       modal(
-        '<small>LOCAL MATCHMAKING SIMULATION</small><h2>SQUAD ASSEMBLED.</h2><p>Your demo operation is ready. The existing playable arena is offline Team Deathmatch against bots; Conquest and Domination are lobby previews.</p><button class="primary" id="launch">ENTER OFFLINE TRAINING ↗</button><button id="return-lobby" style="width:100%;margin-top:12px">RETURN TO LOBBY</button>',
+        `<small>LOCAL MATCHMAKING SIMULATION</small><h2>SQUAD ASSEMBLED.</h2><p>${state.mode === "Conquest" ? "Conquest is ready on FreeDM Outpost. Capture three sectors and drain enemy tickets in an offline 5v5 bot match." : state.mode === "Domination" ? "Domination remains a lobby preview. Continue to the playable offline Team Deathmatch arena." : "Offline Team Deathmatch is ready on Yard 07."}</p><button class="primary" id="launch">PLAY ${state.mode === "Conquest" ? "CONQUEST" : "TEAM DEATHMATCH"} ↗</button><button id="return-lobby" style="width:100%;margin-top:12px">RETURN TO LOBBY</button>`,
       );
       $("launch").onclick = launchTraining;
       $("return-lobby").onclick = () => $("modal").close();
@@ -464,7 +472,7 @@ document.querySelectorAll("[data-view]").forEach(
       }
       if (b.dataset.view === "operations") {
         modal(
-          "<small>YARD OPERATIONS / LOCAL PREVIEW</small><h2>CHOOSE YOUR FRONT.</h2><p>These modes configure the simulated queue. Offline training remains the playable bot arena.</p>" +
+          "<small>YARD OPERATIONS / LOCAL PREVIEW</small><h2>CHOOSE YOUR FRONT.</h2><p>Conquest and Team Deathmatch are playable offline against bots. Domination is a lobby preview. Matchmaking is simulated.</p>" +
             Object.keys(modes)
               .map(
                 (m) =>
@@ -501,7 +509,8 @@ function launchTraining() {
       String({ assault: 0, engineer: 1, support: 4, recon: 3 }[state.class]),
     );
   } catch {}
-  location.href = "./arena.html";
+  location.href =
+    state.mode === "Conquest" ? "./arena.html?mode=conquest" : "./arena.html";
 }
 document.querySelector(".training").onclick = (e) => {
   e.preventDefault();

@@ -24,7 +24,8 @@
       <div id="hud" hidden>
         <div class="topline">
           <div class="map-label">
-            <b>YARD 07</b><span>TEAM DEATHMATCH</span>
+            <b id="mapName">YARD 07</b
+            ><span id="modeLabel">TEAM DEATHMATCH</span>
           </div>
           <div class="scoreboard">
             <b class="cyan" id="scoreA">0</b>
@@ -38,6 +39,7 @@
             Ⅱ
           </button>
         </div>
+        <div id="objectives" hidden aria-label="Conquest sector status"></div>
         <div id="feed" aria-live="polite"></div>
         <div id="crosshair"><i></i><i></i><i></i><i></i></div>
         <div id="hitmarker">×</div>
@@ -82,7 +84,7 @@
             <div class="intro">
               <p class="kicker">SMALL FOOTPRINT. FULL CONTACT.</p>
               <h1>CROSS<br /><em>CURRENT</em><span>↗</span></h1>
-              <p class="tagline">
+              <p class="tagline" id="tagline">
                 Three lanes. Ten contenders.<br />One yard to control.
               </p>
               <!-- Canvas preview reuses the procedural weapon mesh with the chosen finish and sight. -->
@@ -105,6 +107,7 @@
             <div class="brief">
               <div class="map-art">
                 <svg
+                  id="mapOverview"
                   viewBox="0 0 300 160"
                   role="img"
                   aria-label="Three-route schematic of Yard 07"
@@ -117,23 +120,32 @@
                   <circle cx="30" cy="80" r="8" />
                   <circle class="enemy" cx="270" cy="80" r="8" />
                   <path class="dashes" d="M35 20H270 M35 140H270" /></svg
-                ><span>TACTICAL OVERVIEW / 07</span>
+                ><span id="mapCredit">TACTICAL OVERVIEW / 07</span>
               </div>
               <div class="brief-title">
-                <h2>YARD 07</h2>
-                <span>TEAM DEATHMATCH</span>
+                <h2 id="briefMapName">YARD 07</h2>
+                <span id="briefMode">TEAM DEATHMATCH</span>
               </div>
-              <p>
+              <p id="briefDescription">
                 A sunlit freight terminal. Take a flank, hold the crossing, and
                 keep your team ahead.
               </p>
               <div class="rules">
-                <div><b id="ruleTarget">30</b><span>KILLS TO WIN</span></div>
+                <div>
+                  <b id="ruleTarget">30</b
+                  ><span id="ruleTargetLabel">KILLS TO WIN</span>
+                </div>
                 <div>
                   <b id="ruleDuration">07:00</b><span>MATCH LIMIT</span>
                 </div>
                 <div><b>03s</b><span>RESPAWN</span></div>
               </div>
+              <label
+                >GAME MODE<select id="matchMode">
+                  <option value="tdm">Team Deathmatch / Yard 07</option>
+                  <option value="conquest">Conquest / FreeDM Outpost</option>
+                </select></label
+              >
               <!-- Class selection controls the permitted primary and shared sidearm. -->
               <div class="settings">
                 <label class="weapon-choice"
@@ -238,7 +250,8 @@
                 <summary>MATCH RULES</summary>
                 <div class="settings">
                   <label
-                    >SCORE LIMIT<select id="target">
+                    ><span id="scoreLimitLabel">SCORE LIMIT</span
+                    ><select id="target">
                       <option value="15">15 kills / quick</option>
                       <option value="30" selected>30 kills / standard</option>
                       <option value="50">50 kills / extended</option>

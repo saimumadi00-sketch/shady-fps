@@ -42,8 +42,17 @@ export class BotController {
       if (enemy !== b.target) b.reaction = d.reaction;
       b.target = enemy;
       b.state = enemy ? (a.hp < 28 ? "SeekCover" : "Attack") : "MoveToTarget";
+      if (g.mode === "conquest" && b.repath <= 0) {
+        b.objective = g.match.objectiveFor(a);
+        b.path = g.nav.path(a, b.objective);
+        b.step = 0;
+        b.repath = 1 + g.random() * 0.5;
+        if (!enemy)
+          b.state =
+            b.objective.owner === a.team ? "DefendSector" : "CaptureSector";
+      }
       // When sight is lost, periodically route toward an opponent rather than recomputing every frame.
-      if (!enemy && b.repath <= 0) {
+      if (g.mode !== "conquest" && !enemy && b.repath <= 0) {
         let target = null,
           l = Infinity;
         for (const e of g.actors)
@@ -62,6 +71,22 @@ export class BotController {
       }
     }
     a.moving = false;
+    const movePath = (keepAim = false) => {
+      if (b.step >= b.path.length) return;
+      const n = b.path[b.step],
+        dx = n.x - a.x,
+        dz = n.z - a.z;
+      const l = Math.hypot(dx, dz);
+      if (l < 0.4) b.step++;
+      else {
+        if (!keepAim) {
+          a.yaw = Math.atan2(dx, -dz);
+          a.pitch = 0;
+        }
+        g.arena.move(a, (dx / l) * d.speed * dt, (dz / l) * d.speed * dt);
+        a.moving = true;
+      }
+    };
     // Aim toward the target torso and strafe while maintaining a useful combat distance.
     if (enemy && enemy.alive) {
       const dx = enemy.x - a.x,
@@ -79,25 +104,19 @@ export class BotController {
       const phase = Math.sin(g.time * 1.4 + a.id * 2),
         forward = l > 14 ? 0.7 : l < 5 ? -0.5 : 0,
         side = phase * 0.6;
-      g.arena.move(
-        a,
-        (Math.sin(a.yaw) * forward + Math.cos(a.yaw) * side) * d.speed * dt,
-        (-Math.cos(a.yaw) * forward + Math.sin(a.yaw) * side) * d.speed * dt,
-      );
-      a.moving = true;
-      // Walk the cached path one waypoint at a time, using arena collision for actual movement.
-    } else if (b.step < b.path.length) {
-      const n = b.path[b.step],
-        dx = n.x - a.x,
-        dz = n.z - a.z,
-        l = Math.hypot(dx, dz);
-      if (l < 0.4) b.step++;
-      else {
-        a.yaw = Math.atan2(dx, -dz);
-        a.pitch = 0;
-        g.arena.move(a, (dx / l) * d.speed * dt, (dz / l) * d.speed * dt);
+      if (g.mode === "conquest" && b.objective && a.hp >= 28 && l > 4) {
+        if (distance(a, b.objective) > b.objective.radius * 0.6) movePath(true);
+      } else {
+        g.arena.move(
+          a,
+          (Math.sin(a.yaw) * forward + Math.cos(a.yaw) * side) * d.speed * dt,
+          (-Math.cos(a.yaw) * forward + Math.sin(a.yaw) * side) * d.speed * dt,
+        );
         a.moving = true;
       }
+      // Walk the cached path one waypoint at a time, using arena collision for actual movement.
+    } else if (b.step < b.path.length) {
+      movePath();
     }
     // Reload while reserves remain; otherwise switch to a weapon with ammunition.
     if (a.ammo[a.weapon].mag === 0) {
