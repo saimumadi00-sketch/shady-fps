@@ -1,5 +1,5 @@
 {
-  "version": "9b28780591d5",
+  "version": "52415bb6102d",
   "files": [
     "index.html",
     "arena.html",
@@ -10,7 +10,7 @@
     "assets/yard-map.svg",
     "sw.js"
   ],
-  "rawBytes": 689099,
-  "gzipBytes": 187896,
-  "brotliBytes": 156501
+  "rawBytes": 696950,
+  "gzipBytes": 191244,
+  "brotliBytes": 159491
 }

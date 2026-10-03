@@ -3,6 +3,7 @@ import { drawCharacter } from "./characters.js";
 import { cameraMatrix, direction } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
+import { viewmodelPose } from "./viewmodel.js";
 // The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
 precision highp float;
@@ -13,13 +14,30 @@ layout(location=3) in vec3 size;
 layout(location=4) in vec3 color;
 layout(location=5) in float angle;
 uniform mat4 vp;uniform vec3 eye;
-out vec3 tint;out float dist;
-void main(){float c=cos(angle),s=sin(angle);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c);vec3 world=rot*(vertex*size)+offset;vec3 n=rot*normal;float light=.58+.42*max(0.,dot(n,normalize(vec3(-.4,.85,.3))));tint=color*light;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
+out vec3 tint;out float dist;out vec3 surfacePosition;out vec3 surfaceNormal;
+void main(){float c=cos(angle),s=sin(angle);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c);vec3 world=rot*(vertex*size)+offset;vec3 n=normalize(rot*normal);tint=color;surfacePosition=world;surfaceNormal=n;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
 // Distance fog blends distant geometry into the sky color without textures or postprocessing.
 const FS = `#version 300 es
-precision mediump float;
-in vec3 tint;in float dist;out vec4 pixel;
-void main(){float fog=smoothstep(25.,100.,dist);pixel=vec4(mix(tint,vec3(.53,.66,.67),fog*.8),1.);}`;
+precision highp float;
+in vec3 tint;in float dist;in vec3 surfacePosition;in vec3 surfaceNormal;
+uniform float surfaceDetail;uniform float firstPerson;out vec4 pixel;
+void main(){
+  vec3 n=normalize(surfaceNormal);
+  float sun=max(0.,dot(n,normalize(vec3(-.4,.85,.3))));
+  float sky=.5+.5*n.y;
+  vec3 lighting=mix(vec3(.33,.35,.33),vec3(.52,.57,.60),sky)+vec3(.63,.59,.51)*sun;
+  // World-space mottling and fine grain are generated locally, with no texture downloads.
+  float broad=sin(surfacePosition.x*2.3+surfacePosition.z*.7)*sin(surfacePosition.y*3.7+surfacePosition.z*1.9);
+  float grain=fract(sin(dot(floor(surfacePosition*95.),vec3(12.9898,78.233,39.425)))*43758.5453)-.5;
+  float variation=1.+surfaceDetail*(broad*.045+grain*.045);
+  // Fade the grain at distance to avoid sparkling on low-resolution displays.
+  variation=mix(1.,variation,1.-smoothstep(8.,35.,dist));
+  float baseShade=mix(.83,1.,smoothstep(0.,.7,surfacePosition.y));
+  baseShade=mix(baseShade,1.,max(firstPerson,abs(n.y)));
+  vec3 shaded=tint*lighting*variation*baseShade;
+  float fog=smoothstep(20.,90.,dist)*(1.-firstPerson);
+  pixel=vec4(mix(shaded,vec3(.57,.64,.65),fog*.72),1.);
+}`;
 export class Renderer {
   // Allocate reusable CPU buffers before creating GPU resources.
   constructor(canvas, arena) {
@@ -66,6 +84,8 @@ export class Renderer {
     gl.useProgram(this.program);
     this.vp = gl.getUniformLocation(this.program, "vp");
     this.eye = gl.getUniformLocation(this.program, "eye");
+    this.surfaceDetail = gl.getUniformLocation(this.program, "surfaceDetail");
+    this.firstPerson = gl.getUniformLocation(this.program, "firstPerson");
     const vertices = [];
     // Describe the six cube faces once; indexed corner expansion emits two triangles per face.
     const faces = [
@@ -139,7 +159,7 @@ export class Renderer {
     this.weaponModels.clear();
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
-    gl.clearColor(0.53, 0.66, 0.67, 1);
+    gl.clearColor(0.57, 0.64, 0.65, 1);
   }
   // Create a VAO with shared cube vertices and per-instance position, size, color, and yaw.
   batch(data, usage) {
@@ -210,6 +230,8 @@ export class Renderer {
       p = game.player;
     this.resize(quality.scale);
     g.useProgram(this.program);
+    g.uniform1f(this.surfaceDetail, quality.shadows ? 1 : 0);
+    g.uniform1f(this.firstPerson, 0);
     g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
     this.drawCalls = 0;
     // Use the player camera during a match and an overview camera behind the start menu.
@@ -219,10 +241,17 @@ export class Renderer {
         : { x: -21, y: 12, z: 22, yaw: 0.72, pitch: -0.4 };
     // ADS narrows the world view; reloading temporarily returns to the normal field of view.
     const baseFov = this.customization?.fov || 83;
-    const fov =
-      ((p.aim && p.reload <= 0 && inGame ? baseFov * 0.69 : baseFov) *
-        Math.PI) /
-      180;
+    const now = performance.now();
+    const elapsed = Math.min((now - (this.viewTime ?? now)) / 1000, 0.05);
+    this.viewTime = now;
+    if (this.viewWeapon !== p.weapon || !inGame || !p.alive) {
+      this.aimBlend = 0;
+      this.viewWeapon = p.weapon;
+    }
+    const aimTarget = p.aim && p.reload <= 0 && inGame ? 1 : 0;
+    this.aimBlend +=
+      (aimTarget - (this.aimBlend || 0)) * (1 - Math.exp(-elapsed * 22));
+    const fov = (baseFov * (1 - 0.31 * this.aimBlend) * Math.PI) / 180;
     cameraMatrix(
       this.matrix,
       cam.x,
@@ -281,6 +310,7 @@ export class Renderer {
     if (inGame && p.alive && game.match.state !== "ended") {
       // Keep nearby world geometry from clipping through the first-person weapon.
       g.clear(g.DEPTH_BUFFER_BIT);
+      g.uniform1f(this.firstPerson, 1);
       cameraMatrix(
         this.matrix,
         0,
@@ -295,21 +325,19 @@ export class Renderer {
       g.uniform3f(this.eye, 0, 0, 0);
       // Derive visual reload motion from the authoritative remaining reload timer.
       const pose = reloadPose(p);
-      const aiming = p.aim && !pose.active;
       const sightHeight =
         p.weapon === 3 || this.customization?.optic === "scope"
           ? 0.218
           : this.customization?.optic === "reflex"
             ? 0.205
             : 0.16;
-      const x = (aiming ? 0 : 0.27) - pose.lift * 0.1,
-        bob = p.moving && !p.sliding ? Math.sin(time * 10) * 0.009 : 0,
-        y =
-          (aiming ? -sightHeight : -0.29) +
-          bob -
-          -pose.lift * 0.1 -
-          (p.sliding ? 0.08 : 0),
-        z = -0.8 + p.kick * 0.9;
+      const view = viewmodelPose(
+        p,
+        now / 1000,
+        this.aimBlend,
+        pose,
+        sightHeight,
+      );
       const finish = this.customization?.finish || "graphite";
       const optic = this.customization?.optic || "iron";
       // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
@@ -348,9 +376,9 @@ export class Renderer {
         0,
         animateWeapon(model.base, model.animated, pose),
       );
-      g.vertexAttrib3f(2, x, y, z);
+      g.vertexAttrib3f(2, view.x, view.y, view.z);
       g.vertexAttrib3f(3, 1, 1, 1);
-      g.vertexAttrib1f(5, aiming ? 0 : -0.1 + pose.lift * 0.18);
+      g.vertexAttrib1f(5, view.yaw);
       g.drawArrays(g.TRIANGLES, 0, model.count);
       this.drawCalls++;
     }

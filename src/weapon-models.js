@@ -58,12 +58,17 @@ export function weaponMesh(
   }
   // Reuse the profile extrusion helper for rectangular components.
   function box(x, y, z, w, h, d, col) {
+    const bevel = Math.min(w, h, d) * 0.12;
     profile(
       [
-        [z - d / 2, y - h / 2],
-        [z + d / 2, y - h / 2],
-        [z + d / 2, y + h / 2],
-        [z - d / 2, y + h / 2],
+        [z - d / 2 + bevel, y - h / 2],
+        [z + d / 2 - bevel, y - h / 2],
+        [z + d / 2, y - h / 2 + bevel],
+        [z + d / 2, y + h / 2 - bevel],
+        [z + d / 2 - bevel, y + h / 2],
+        [z - d / 2 + bevel, y + h / 2],
+        [z - d / 2, y + h / 2 - bevel],
+        [z - d / 2, y - h / 2 + bevel],
       ],
       w,
       col,
@@ -145,20 +150,23 @@ export function weaponMesh(
       0.072,
       rubber,
     );
-    tube(0, 0.034, 0.28, 0.027, 0.22, steel);
-    profile(
-      [
-        [0.23, 0.075],
-        [0.44, 0.065],
-        [0.46, -0.14],
-        [0.39, -0.15],
-        [0.29, -0.05],
-        [0.23, -0.04],
-      ],
-      0.087,
-      body,
-    );
-    box(0, -0.04, 0.455, 0.094, 0.22, 0.018, rubber);
+    // The shoulder stock sits outside the first-person camera; previews retain the full model.
+    if (!hands) {
+      tube(0, 0.034, 0.28, 0.027, 0.22, steel);
+      profile(
+        [
+          [0.23, 0.075],
+          [0.44, 0.065],
+          [0.46, -0.14],
+          [0.39, -0.15],
+          [0.29, -0.05],
+          [0.23, -0.04],
+        ],
+        0.087,
+        body,
+      );
+      box(0, -0.04, 0.455, 0.094, 0.22, 0.018, rubber);
+    }
     profile(
       [
         [front, -0.018],
@@ -260,23 +268,229 @@ export function weaponMesh(
   }
   // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
   if (hands) {
-    const glove = [0.22, 0.25, 0.2],
-      cuff = [0.13, 0.17, 0.15];
-    box(0.025, -0.12, 0.155, 0.11, 0.12, 0.1, glove);
-    box(0.045, -0.21, 0.24, 0.105, 0.18, 0.16, cuff);
-    part("support", () => {
-      box(-0.07, -0.11, pistol ? 0.1 : -0.29, 0.105, 0.105, 0.13, glove);
-      for (let i = 0; i < 4; i++)
-        box(
-          -0.035,
-          -0.075 - i * 0.02,
-          pistol ? 0.08 : -0.29,
-          0.07,
-          0.016,
-          0.085,
-          glove,
+    const glove = [0.4, 0.35, 0.27],
+      padding = [0.49, 0.43, 0.32],
+      seam = [0.12, 0.15, 0.16],
+      sleeve = [0.24, 0.29, 0.25];
+    // Rounded, tapered forms keep wrists and fingers distinct from weapon geometry.
+    function ellipsoid(center, radii, color) {
+      const start = out.length;
+      const small = Math.max(...radii) <= 0.02;
+      const latitudeSteps = small ? 4 : 6;
+      const segments = small ? 10 : 20;
+      const point = (latitude, longitude) => {
+        const a = (Math.PI * latitude) / latitudeSteps;
+        const b = (2 * Math.PI * longitude) / segments;
+        return [
+          center[0] + radii[0] * Math.sin(a) * Math.cos(b),
+          center[1] + radii[1] * Math.cos(a),
+          center[2] + radii[2] * Math.sin(a) * Math.sin(b),
+        ];
+      };
+      for (let i = 0; i < latitudeSteps; i++)
+        for (let j = 0; j < segments; j++) {
+          const a = point(i, j),
+            b = point(i + 1, j),
+            c = point(i + 1, j + 1),
+            d = point(i, j + 1);
+          if (i > 0) tri(a, b, d, color);
+          if (i < latitudeSteps - 1) tri(b, c, d, color);
+        }
+      // Smooth glove shading uses surface normals rather than triangle face normals.
+      for (let k = start; k < out.length; k += 9) {
+        const normal = radii.map((r, i) => (out[k + i] - center[i]) / (r * r));
+        const length = Math.hypot(...normal) || 1;
+        for (let i = 0; i < 3; i++) out[k + 3 + i] = normal[i] / length;
+      }
+    }
+    function tapered(a, b, radiusA, radiusB, color, flatten = 1) {
+      const axis = b.map((v, i) => v - a[i]);
+      const length = Math.hypot(...axis);
+      const n = axis.map((v) => v / length);
+      const reference = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+      let u = [
+        n[1] * reference[2] - n[2] * reference[1],
+        n[2] * reference[0] - n[0] * reference[2],
+        n[0] * reference[1] - n[1] * reference[0],
+      ];
+      const unit = Math.hypot(...u);
+      u = u.map((v) => v / unit);
+      const v = [
+        n[1] * u[2] - n[2] * u[1],
+        n[2] * u[0] - n[0] * u[2],
+        n[0] * u[1] - n[1] * u[0],
+      ];
+      const ring = (p, r, i) =>
+        p.map(
+          (x, k) =>
+            x +
+            r *
+              (Math.cos((i * Math.PI) / 6) * u[k] +
+                Math.sin((i * Math.PI) / 6) * v[k] * flatten),
         );
-      box(-0.1, -0.2, pistol ? 0.16 : -0.2, 0.09, 0.16, 0.13, cuff);
+      for (let i = 0; i < 12; i++) {
+        const p = ring(a, radiusA, i),
+          q = ring(a, radiusA, i + 1),
+          r = ring(b, radiusB, i + 1),
+          s = ring(b, radiusB, i);
+        tri(p, q, r, color);
+        tri(p, r, s, color);
+        tri(a, q, p, color);
+        tri(b, s, r, color);
+      }
+    }
+    function finger(points, radius = 0.012) {
+      for (let i = 0; i < points.length - 1; i++)
+        tapered(points[i], points[i + 1], radius, radius * 0.92, glove);
+      for (const point of points)
+        ellipsoid(point, [radius, radius, radius], glove);
+    }
+    function arm(wrist, elbow) {
+      const axis = elbow.map((v, i) => v - wrist[i]);
+      const length = Math.hypot(...axis);
+      const n = axis.map((v) => v / length);
+      const u0 = [n[2], 0, -n[0]],
+        ul = Math.hypot(...u0);
+      const u = u0.map((v) => v / ul);
+      const v = [
+        n[1] * u[2] - n[2] * u[1],
+        n[2] * u[0] - n[0] * u[2],
+        n[0] * u[1] - n[1] * u[0],
+      ];
+      const rings = [];
+      // Continuous rounded cross-sections follow a curved forearm with restrained fabric folds.
+      for (let j = 0; j <= 14; j++) {
+        const t = j / 14;
+        const center = wrist.map((x, i) => x + axis[i] * t);
+        center[1] += Math.sin(t * Math.PI) * 0.032;
+        const radius =
+          0.039 +
+          0.065 * Math.sin((t * Math.PI) / 2) +
+          0.0025 * Math.sin(t * 36) * Math.sin(t * Math.PI);
+        rings.push(
+          Array.from({ length: 20 }, (_, i) => {
+            const a = (i * Math.PI) / 10;
+            const normal = u.map(
+              (x, k) => x * Math.cos(a) + v[k] * Math.sin(a) * 0.86,
+            );
+            return { p: center.map((x, k) => x + radius * normal[k]), normal };
+          }),
+        );
+      }
+      const emit = (a, b, c, color) => {
+        const start = out.length;
+        tri(a.p, b.p, c.p, color);
+        [a, b, c].forEach((point, i) => {
+          const len = Math.hypot(...point.normal);
+          for (let k = 0; k < 3; k++)
+            out[start + i * 9 + 3 + k] = point.normal[k] / len;
+        });
+      };
+      for (let j = 0; j < 14; j++)
+        for (let i = 0; i < 20; i++) {
+          const next = (i + 1) % 20;
+          const color = j < 2 ? seam : sleeve;
+          emit(rings[j][i], rings[j][next], rings[j + 1][next], color);
+          emit(rings[j][i], rings[j + 1][next], rings[j + 1][i], color);
+        }
+    }
+    part("grip", () => {
+      // Palm sits against the right side of the pistol grip; curled fingers cross its front.
+      ellipsoid([0.057, -0.13, 0.16], [0.052, 0.074, 0.054], glove);
+      ellipsoid([0.087, -0.13, 0.16], [0.015, 0.046, 0.037], padding);
+      for (let i = 0; i < 3; i++) {
+        ellipsoid(
+          [0.101, -0.098 - i * 0.027, 0.143 + i * 0.011],
+          [0.009, 0.01, 0.02],
+          padding,
+        );
+        tapered(
+          [0.104, -0.095 - i * 0.027, 0.13],
+          [0.105, -0.095 - i * 0.027, 0.16],
+          0.002,
+          0.002,
+          seam,
+        );
+      }
+      for (let i = 0; i < 3; i++) {
+        const y = -0.105 - i * 0.027,
+          z = 0.09 + i * 0.012;
+        finger([
+          [0.068, y, z + 0.035],
+          [0.058, y, z],
+          [-0.028, y, z - 0.008],
+          [-0.044, y, z + 0.02],
+        ]);
+      }
+      // Index rests along the trigger guard, clear of the receiver and sightline.
+      finger(
+        [
+          [0.074, -0.08, 0.14],
+          [0.065, -0.065, 0.055],
+          [0.026, -0.06, 0.035],
+        ],
+        0.011,
+      );
+      finger(
+        [
+          [0.062, -0.07, 0.18],
+          [0.022, -0.042, 0.15],
+          [-0.022, -0.059, 0.13],
+        ],
+        0.014,
+      );
+      arm([0.067, -0.19, 0.2], [0.7, -0.44, 0.54]);
+    });
+    part("support", () => {
+      if (pistol) {
+        // A two-handed pistol grip cups the firing hand rather than the barrel.
+        ellipsoid([-0.055, -0.135, 0.13], [0.039, 0.061, 0.051], glove);
+        for (let i = 0; i < 3; i++) {
+          const y = -0.115 - i * 0.025;
+          finger(
+            [
+              [-0.069, y, 0.13],
+              [-0.047, y, 0.075],
+              [0.026, y, 0.071],
+            ],
+            0.011,
+          );
+        }
+        finger(
+          [
+            [-0.067, -0.075, 0.15],
+            [-0.054, -0.052, 0.075],
+            [-0.042, -0.045, 0.032],
+          ],
+          0.013,
+        );
+        arm([-0.068, -0.19, 0.19], [-0.67, -0.45, 0.52]);
+      } else {
+        const z = smg ? -0.235 : -0.31;
+        ellipsoid([-0.072, -0.04, z], [0.048, 0.06, 0.076], glove);
+        ellipsoid([-0.109, -0.033, z], [0.013, 0.033, 0.05], padding);
+        for (let i = 0; i < 4; i++) {
+          const fingerZ = z - 0.045 + i * 0.028;
+          finger(
+            [
+              [-0.073, -0.054, fingerZ],
+              [-0.041, -0.093, fingerZ],
+              [0.036, -0.082, fingerZ],
+              [0.057, -0.027, fingerZ],
+            ],
+            0.011,
+          );
+        }
+        finger(
+          [
+            [-0.093, -0.022, z + 0.045],
+            [-0.075, 0.062, z + 0.025],
+            [-0.025, 0.085, z - 0.045],
+          ],
+          0.014,
+        );
+        arm([-0.085, -0.115, z + 0.035], [-0.78, -0.46, 0.55]);
+      }
     });
   }
   const result = new Float32Array(out);
