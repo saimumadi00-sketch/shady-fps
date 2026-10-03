@@ -20,7 +20,7 @@ export function viewmodelPose(actor, seconds, aimBlend, reload, sightHeight) {
       reload.lift * 0.1 -
       sprint * 0.035 -
       (actor.sliding ? 0.045 * hip : 0),
-    z: -0.94 - aim * 0.06 + actor.kick * 0.7,
+    z: -0.77 - aim * 0.06 + actor.kick * 0.7,
     yaw:
       -0.075 * hip +
       reload.lift * 0.18 +

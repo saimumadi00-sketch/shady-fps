@@ -25,18 +25,23 @@ void main(){
   vec3 n=normalize(surfaceNormal);
   float sun=max(0.,dot(n,normalize(vec3(-.4,.85,.3))));
   float sky=.5+.5*n.y;
-  vec3 lighting=mix(vec3(.33,.35,.33),vec3(.52,.57,.60),sky)+vec3(.63,.59,.51)*sun;
-  // World-space mottling and fine grain are generated locally, with no texture downloads.
-  float broad=sin(surfacePosition.x*2.3+surfacePosition.z*.7)*sin(surfacePosition.y*3.7+surfacePosition.z*1.9);
+  vec3 lighting=mix(vec3(.28,.30,.29),vec3(.47,.51,.54),sky)+vec3(.72,.68,.60)*sun;
+  // Restrained grain avoids the previous cloudy concrete pattern.
   float grain=fract(sin(dot(floor(surfacePosition*95.),vec3(12.9898,78.233,39.425)))*43758.5453)-.5;
-  float variation=1.+surfaceDetail*(broad*.045+grain*.045);
+  float variation=1.+surfaceDetail*grain*.012;
   // Fade the grain at distance to avoid sparkling on low-resolution displays.
   variation=mix(1.,variation,1.-smoothstep(8.,35.,dist));
   float baseShade=mix(.83,1.,smoothstep(0.,.7,surfacePosition.y));
   baseShade=mix(baseShade,1.,max(firstPerson,abs(n.y)));
-  vec3 shaded=tint*lighting*variation*baseShade;
-  float fog=smoothstep(20.,90.,dist)*(1.-firstPerson);
-  pixel=vec4(mix(shaded,vec3(.57,.64,.65),fog*.72),1.);
+  float luminance=dot(tint,vec3(.2126,.7152,.0722));
+  vec3 material=mix(tint,vec3(luminance),.18*(1.-firstPerson));
+  vec3 shaded=material*lighting*variation*baseShade;
+  // A small steel highlight gives firearm edges definition without glossy gloves.
+  vec3 halfLight=normalize(normalize(vec3(-.4,.85,.3))+normalize(-surfacePosition));
+  float steel=firstPerson*(1.-step(.17,tint.r));
+  shaded+=vec3(.075)*steel*pow(max(0.,dot(n,halfLight)),24.);
+  float fog=smoothstep(28.,100.,dist)*(1.-firstPerson);
+  pixel=vec4(mix(shaded,vec3(.61,.66,.68),fog*.65),1.);
 }`;
 export class Renderer {
   // Allocate reusable CPU buffers before creating GPU resources.
@@ -159,7 +164,7 @@ export class Renderer {
     this.weaponModels.clear();
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
-    gl.clearColor(0.57, 0.64, 0.65, 1);
+    gl.clearColor(0.61, 0.66, 0.68, 1);
   }
   // Create a VAO with shared cube vertices and per-instance position, size, color, and yaw.
   batch(data, usage) {

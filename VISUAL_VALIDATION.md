@@ -10,17 +10,17 @@ runtime dependencies were added.
 - Smaller finger joints use fewer subdivisions to control mesh size.
 - Chamfered silhouettes for small box-shaped weapon components; collision geometry is unchanged.
 - Smooth aiming transitions, subtle breathing and walking offsets, sprint lowering and restrained visual recoil.
-- Directional sunlight and sky ambient lighting, procedural surface grain and mottling, wall-base shading and distance fog.
+- Directional sunlight and sky ambient lighting, restrained procedural surface grain, wall-base shading and distance fog.
 - Surface detail follows the existing adaptive shadow-quality flag and is visually disabled at low quality.
 
 ## Evidence
 
-Desktop and landscape-mobile captures are in `artifacts/visual-*.png` for hip fire,
+Latest desktop and landscape-mobile captures are in `artifacts/redo-*.png` for hip fire,
 aiming, reload and pistol poses. `artifacts/visual-baseline.json` records build size,
 draw calls, viewmodel vertex counts and CPU submission samples.
 
 The sampled scene uses three draw calls. Chromium SwiftShader samples averaged
-approximately 0.66 ms desktop and 0.33 ms mobile CPU submission time. These
+approximately 0.36 ms desktop and 0.25 ms mobile CPU submission time. These
 measure submission cost in the test scene, not real-device GPU time or a hardware
 frame-rate guarantee. Build metadata records approximately 697 KB raw deployed
 payload, 191 KB gzip and 159 KB Brotli, excluding map source/provenance files.
@@ -36,3 +36,7 @@ The scene remains procedural low-poly geometry. Wall-base shading is an inexpens
 depth cue, not a new real-time contact-shadow system. Real-device performance still
 needs hardware measurements. Major environment remodelling, detailed textures and
 skeletal character animation remain separate work.
+
+## Redo
+
+The latest pass removes broad cloudy mottling, neutralizes the world palette, adds restrained steel highlights, brings the weapon closer, reduces sleeve prominence and replaces the oval firing-hand palm with a tapered glove silhouette. Darker tactical gloves and smaller finger joints replace the earlier tan glove treatment.

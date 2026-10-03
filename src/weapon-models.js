@@ -268,10 +268,10 @@ export function weaponMesh(
   }
   // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
   if (hands) {
-    const glove = [0.4, 0.35, 0.27],
-      padding = [0.49, 0.43, 0.32],
+    const glove = [0.18, 0.2, 0.19],
+      padding = [0.28, 0.3, 0.28],
       seam = [0.12, 0.15, 0.16],
-      sleeve = [0.24, 0.29, 0.25];
+      sleeve = [0.31, 0.33, 0.29];
     // Rounded, tapered forms keep wrists and fingers distinct from weapon geometry.
     function ellipsoid(center, radii, color) {
       const start = out.length;
@@ -343,7 +343,7 @@ export function weaponMesh(
       for (let i = 0; i < points.length - 1; i++)
         tapered(points[i], points[i + 1], radius, radius * 0.92, glove);
       for (const point of points)
-        ellipsoid(point, [radius, radius, radius], glove);
+        ellipsoid(point, [radius * 0.85, radius * 0.85, radius * 0.85], glove);
     }
     function arm(wrist, elbow) {
       const axis = elbow.map((v, i) => v - wrist[i]);
@@ -364,8 +364,8 @@ export function weaponMesh(
         const center = wrist.map((x, i) => x + axis[i] * t);
         center[1] += Math.sin(t * Math.PI) * 0.032;
         const radius =
-          0.039 +
-          0.065 * Math.sin((t * Math.PI) / 2) +
+          0.036 +
+          0.04 * Math.sin((t * Math.PI) / 2) +
           0.0025 * Math.sin(t * 36) * Math.sin(t * Math.PI);
         rings.push(
           Array.from({ length: 20 }, (_, i) => {
@@ -396,8 +396,27 @@ export function weaponMesh(
     }
     part("grip", () => {
       // Palm sits against the right side of the pistol grip; curled fingers cross its front.
-      ellipsoid([0.057, -0.13, 0.16], [0.052, 0.074, 0.054], glove);
-      ellipsoid([0.087, -0.13, 0.16], [0.015, 0.046, 0.037], padding);
+      // A tapered dorsal silhouette reads as a hand rather than an oval mitten.
+      profile(
+        [
+          [0.115, -0.067],
+          [0.165, -0.063],
+          [0.19, -0.1],
+          [0.205, -0.162],
+          [0.181, -0.192],
+          [0.143, -0.183],
+          [0.111, -0.127],
+        ],
+        0.063,
+        glove,
+        0.06,
+      );
+      for (let i = 0; i < 3; i++)
+        ellipsoid(
+          [0.093, -0.094 - i * 0.026, 0.153 + i * 0.007],
+          [0.008, 0.01, 0.023],
+          padding,
+        );
       for (let i = 0; i < 3; i++) {
         ellipsoid(
           [0.101, -0.098 - i * 0.027, 0.143 + i * 0.011],
@@ -439,7 +458,7 @@ export function weaponMesh(
         ],
         0.014,
       );
-      arm([0.067, -0.19, 0.2], [0.7, -0.44, 0.54]);
+      arm([0.067, -0.19, 0.2], [0.3, -0.44, 0.44]);
     });
     part("support", () => {
       if (pistol) {
@@ -464,7 +483,7 @@ export function weaponMesh(
           ],
           0.013,
         );
-        arm([-0.068, -0.19, 0.19], [-0.67, -0.45, 0.52]);
+        arm([-0.068, -0.19, 0.19], [-0.3, -0.44, 0.44]);
       } else {
         const z = smg ? -0.235 : -0.31;
         ellipsoid([-0.072, -0.04, z], [0.048, 0.06, 0.076], glove);
@@ -489,7 +508,7 @@ export function weaponMesh(
           ],
           0.014,
         );
-        arm([-0.085, -0.115, z + 0.035], [-0.78, -0.46, 0.55]);
+        arm([-0.085, -0.115, z + 0.035], [-0.3, -0.43, 0.44]);
       }
     });
   }

@@ -3,31 +3,31 @@
   "views": [
     {
       "mobile": false,
-      "meanSubmissionMs": 0.6633333332836628,
-      "p95SubmissionMs": 2.799999998882413,
+      "meanSubmissionMs": 0.36333333334575096,
+      "p95SubmissionMs": 0.8000000007450581,
       "drawCalls": 3,
       "renderScale": 0.9,
       "glError": 0,
       "cachedViewmodelVertices": [
-        20916,
-        15960
+        21588,
+        16632
       ]
     },
     {
       "mobile": true,
-      "meanSubmissionMs": 0.3316666666728755,
-      "p95SubmissionMs": 0.5,
+      "meanSubmissionMs": 0.2466666666790843,
+      "p95SubmissionMs": 0.6999999992549419,
       "drawCalls": 3,
       "renderScale": 0.65,
       "glError": 0,
       "cachedViewmodelVertices": [
-        20916,
-        15960
+        21588,
+        16632
       ]
     }
   ],
   "build": {
-    "version": "52415bb6102d",
+    "version": "3161c3a4e387",
     "files": [
       "index.html",
       "arena.html",
@@ -38,8 +38,8 @@
       "assets/yard-map.svg",
       "sw.js"
     ],
-    "rawBytes": 696950,
-    "gzipBytes": 191244,
-    "brotliBytes": 159491
+    "rawBytes": 697420,
+    "gzipBytes": 191445,
+    "brotliBytes": 159472
   }
 }
