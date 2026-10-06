@@ -8,14 +8,7 @@ import { Arena } from "./world.js";
 export function createLobbyScene(squadCanvas, weaponCanvas) {
   const material = (color, metalness = 0, roughness = 1) =>
     new THREE.MeshStandardMaterial({ color, metalness, roughness });
-  const dark = material(0x15202b),
-    joint = material(0x101820, 0.1, 0.85),
-    steel = material(0x4a606d);
-  const glow = new THREE.MeshStandardMaterial({
-    color: 0x80e5fc,
-    emissive: 0x28b9e0,
-    emissiveIntensity: 2,
-  });
+  const dark = material(0x15202b);
   function setup(canvas) {
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -127,7 +120,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     if (config.model === 3) group.scale.x = 1.2;
     return group;
   }
-  // Reuse the actual arena character builder, including team colors and cubic proportions.
+  // Reuse the arena's anime-inspired character builder and readable team accents.
   function soldier(type, config) {
     const root = new THREE.Group(),
       body = new THREE.Group(),
@@ -138,17 +131,20 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     root.userData.head = head;
     const id = Object.keys(classes).indexOf(type);
     drawCharacter(
-      (x, y, z, w, h, d, color, angle) => {
+      (x, y, z, w, h, d, color, angle, pitch = 0) => {
         // Replace only the gameplay placeholder gun with the shared detailed primary mesh.
         if (w === 0.13 && h === 0.13 && d === 0.65) return;
         const mat = new THREE.MeshLambertMaterial({
           color: new THREE.Color(...color),
         });
         const part = box(y > 1.23 ? head : body, x, y, z, w, h, d, mat);
+        part.rotation.order = "YXZ";
         part.rotation.y = angle;
+        part.rotation.x = pitch;
       },
       {
         id,
+        classId: type,
         team: 0,
         x: 0,
         y: 0,
@@ -230,8 +226,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
   function dispose(group) {
     group.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material && ![dark, joint, steel, glow].includes(o.material))
-        o.material.dispose();
+      if (o.material && o.material !== dark) o.material.dispose();
     });
     group.removeFromParent();
   }

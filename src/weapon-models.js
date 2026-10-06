@@ -1,12 +1,14 @@
 // Procedural firearm-inspired triangle meshes; named part ranges allow animation without rebuilding topology.
 // Original low-poly firearm meshes. Dimensions are visual game units.
 // Generate packed position/normal/color vertices for one weapon and optional gameplay hands.
+import { characterStyle } from "./model-style.js";
 export function weaponMesh(
   index,
   finish = "graphite",
   optic = "iron",
   firing = false,
   hands = false,
+  classId = ["assault", "engineer", "assault", "scout", "support"][index],
 ) {
   const out = [],
     parts = [];
@@ -268,10 +270,11 @@ export function weaponMesh(
   }
   // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
   if (hands) {
-    const glove = [0.18, 0.2, 0.19],
-      padding = [0.28, 0.3, 0.28],
+    const outfit = characterStyle(classId);
+    const glove = outfit.cloth,
+      padding = outfit.accent,
       seam = [0.12, 0.15, 0.16],
-      sleeve = [0.31, 0.33, 0.29];
+      sleeve = outfit.cloth;
     // Rounded, tapered forms keep wrists and fingers distinct from weapon geometry.
     function ellipsoid(center, radii, color) {
       const start = out.length;

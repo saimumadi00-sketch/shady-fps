@@ -23,6 +23,8 @@ const FILES = [
   "./src/reload-animation.js",
   "./src/customization.js",
   "./src/characters.js",
+  "./src/character-gait.js",
+  "./src/model-style.js",
   "./src/input.js",
   "./src/weapons.js",
   "./src/loadouts.js",

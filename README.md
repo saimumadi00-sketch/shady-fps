@@ -1,14 +1,14 @@
 # Crosscurrent — Yard 07
 
-A Yard 07 squad lobby and browser FPS with offline training and private multiplayer. The lobby reuses the game's actual voxel character builder and industrial arena geometry through bundled Three.js, with the same teal, mint and orange menu palette. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
+A Yard 07 squad lobby and browser FPS with offline training and private multiplayer. The lobby reuses the game's shared anime-inspired character builder and industrial arena geometry through bundled Three.js, with the same teal, mint and orange menu palette. No account or remote asset download is required. Offline training puts one human and four Cyan bots against five Ember bots.
 
 ## Squad lobby
 
 The root page opens the new responsive command deck. Choose Assault, Engineer, Support, or Recon; inspect weapons by dragging, scrolling, or using arrow keys on the focused preview; customize optics, barrels, and finishes; and save three loadouts. Roster readiness, local chat with simulated replies, mode selection, cancelable matchmaking, daily drills, demo XP, audio, and reduced-motion preferences are interactive. Progress and loadouts persist on this browser.
 
-All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. **Conquest** is playable offline on FreeDM Outpost, an adaptation of the BSD-licensed FreeDM MAP01 layout downloaded from the internet. **Team Deathmatch** remains playable on Yard 07. Domination is a lobby preview; matchmaking stays simulated. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original procedural geometry, not scanned or licensed AAA character assets.
+All squadmates, rankings, matchmaking, ping, and progression are explicitly simulated. **Conquest** is playable offline on FreeDM Outpost, an adaptation of the BSD-licensed FreeDM MAP01 layout downloaded from the internet. **Team Deathmatch** remains playable on Yard 07. Domination is a lobby preview; matchmaking stays simulated. Recon maps to that arena's legacy Scout class. New weapon variants and attachment ratings are lobby previews, not new combat implementations. Models are original anime-inspired procedural geometry: expressive layered eyes, tapered faces, class-specific hair, fitted jackets and matching first-person gloves. Team-colored chest panels and sleeves preserve Cyan/Ember identification. Hitboxes and combat rules are unchanged.
 
-Run `npm run test:lobby` against the preview server to exercise the interface. The yard backdrop is rendered from `src/world.js`; squad characters come from `src/characters.js`. The earlier generated space backdrop is retained in source assets for reference but is no longer displayed or included in the deployment.
+Run `npm run test:lobby` against the preview server to exercise the interface. The yard backdrop is rendered from `src/world.js`; squad characters come from `src/characters.js`.
 
 The lobby skips rendering offscreen 3D canvases. With reduced motion enabled in Operator Settings (or your system preferences), static previews render only after changes, including dragging, zooming, model selection, and resizing. This also avoids repeated shadow-map calculations while idle. Run `npm run test:lobby-performance` against the preview server to verify these paths.
 

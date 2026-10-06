@@ -1,6 +1,6 @@
 // WebGL 2 renderer: instanced arena/actors plus a separate animated first-person triangle mesh.
 import { drawCharacter } from "./characters.js";
-import { cameraMatrix, direction } from "./math.js";
+import { cameraMatrix } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
 import { viewmodelPose } from "./viewmodel.js";
@@ -13,9 +13,10 @@ layout(location=2) in vec3 offset;
 layout(location=3) in vec3 size;
 layout(location=4) in vec3 color;
 layout(location=5) in float angle;
+layout(location=6) in float pitch;
 uniform mat4 vp;uniform vec3 eye;
 out vec3 tint;out float dist;out vec3 surfacePosition;out vec3 surfaceNormal;
-void main(){float c=cos(angle),s=sin(angle);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c);vec3 world=rot*(vertex*size)+offset;vec3 n=normalize(rot*normal);tint=color;surfacePosition=world;surfaceNormal=n;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
+void main(){float c=cos(angle),s=sin(angle);float cp=cos(pitch),sp=sin(pitch);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c)*mat3(1,0,0,0,cp,sp,0,-sp,cp);vec3 world=rot*(vertex*size)+offset;vec3 n=normalize(rot*normal);tint=color;surfacePosition=world;surfaceNormal=n;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
 // Distance fog blends distant geometry into the sky color without textures or postprocessing.
 const FS = `#version 300 es
 precision highp float;
@@ -49,7 +50,7 @@ export class Renderer {
     this.canvas = canvas;
     this.arena = arena;
     this.matrix = new Float32Array(16);
-    this.dynamic = new Float32Array(1024 * 10);
+    this.dynamic = new Float32Array(1024 * 11);
     this.weaponModels = new Map();
     this.drawCalls = 0;
     this.initialize();
@@ -155,7 +156,7 @@ export class Renderer {
     this.vertex = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    this.staticData = new Float32Array(this.arena.boxes.length * 10);
+    this.staticData = new Float32Array(this.arena.boxes.length * 11);
     this.arena.boxes.forEach((b, i) =>
       this.write(this.staticData, i, b.x, b.y, b.z, b.w, b.h, b.d, b.color, 0),
     );
@@ -179,23 +180,23 @@ export class Renderer {
     }
     g.bindBuffer(g.ARRAY_BUFFER, buffer);
     g.bufferData(g.ARRAY_BUFFER, data, usage);
-    for (let i = 2; i <= 5; i++) {
+    for (let i = 2; i <= 6; i++) {
       g.enableVertexAttribArray(i);
       g.vertexAttribPointer(
         i,
-        i === 5 ? 1 : 3,
+        i >= 5 ? 1 : 3,
         g.FLOAT,
         false,
-        40,
-        (i - 2) * 12,
+        44,
+        i < 5 ? (i - 2) * 12 : 36 + (i - 5) * 4,
       );
       g.vertexAttribDivisor(i, 1);
     }
     return { vao, buffer };
   }
-  // Pack one cube instance into ten floats, matching the attribute stride configured in batch().
-  write(array, i, x, y, z, w, h, d, color, angle = 0) {
-    const k = i * 10;
+  // Pack one cube instance into eleven floats, matching the attribute stride configured in batch().
+  write(array, i, x, y, z, w, h, d, color, angle = 0, pitch = 0) {
+    const k = i * 11;
     array[k] = x;
     array[k + 1] = y;
     array[k + 2] = z;
@@ -206,6 +207,7 @@ export class Renderer {
     array[k + 7] = color[1];
     array[k + 8] = color[2];
     array[k + 9] = angle;
+    array[k + 10] = pitch;
   }
   // Change framebuffer dimensions only when render scale or CSS viewport size changes.
   resize(scale) {
@@ -224,7 +226,7 @@ export class Renderer {
     g.bindVertexArray(batch.vao);
     if (data) {
       g.bindBuffer(g.ARRAY_BUFFER, batch.buffer);
-      g.bufferSubData(g.ARRAY_BUFFER, 0, data, 0, count * 10);
+      g.bufferSubData(g.ARRAY_BUFFER, 0, data, 0, count * 11);
     }
     g.drawArraysInstanced(g.TRIANGLES, 0, 36, count);
     this.drawCalls++;
@@ -346,11 +348,27 @@ export class Renderer {
       const finish = this.customization?.finish || "graphite";
       const optic = this.customization?.optic || "iron";
       // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
-      const key = p.weapon + ":" + finish + ":" + optic + ":" + (p.flash > 0);
+      const key =
+        p.weapon +
+        ":" +
+        finish +
+        ":" +
+        optic +
+        ":" +
+        (p.flash > 0) +
+        ":" +
+        p.classId;
       let model = this.weaponModels.get(key);
       // Build and upload each chosen weapon variant once; reuse its buffer on later frames.
       if (!model) {
-        const data = weaponMesh(p.weapon, finish, optic, p.flash > 0, true);
+        const data = weaponMesh(
+          p.weapon,
+          finish,
+          optic,
+          p.flash > 0,
+          true,
+          p.classId,
+        );
         const vao = g.createVertexArray(),
           buffer = g.createBuffer();
         g.bindVertexArray(vao);
@@ -384,6 +402,7 @@ export class Renderer {
       g.vertexAttrib3f(2, view.x, view.y, view.z);
       g.vertexAttrib3f(3, 1, 1, 1);
       g.vertexAttrib1f(5, view.yaw);
+      g.vertexAttrib1f(6, 0);
       g.drawArrays(g.TRIANGLES, 0, model.count);
       this.drawCalls++;
     }
