@@ -64,10 +64,13 @@ export class ConquestMatch extends MatchManager {
         if (s.progress === 0) s.capturing = null;
         continue;
       }
-      if (s.capturing !== team) {
-        s.progress = 0;
-        s.capturing = team;
+      // Opposing progress must be drained first, at the same rate it was built.
+      if (s.capturing !== null && s.capturing !== team) {
+        s.progress = Math.max(0, s.progress - dt / this.rules.captureTime);
+        if (s.progress === 0) s.capturing = null;
+        continue;
       }
+      s.capturing = team;
       s.progress +=
         dt /
         (s.owner === null ? this.rules.captureTime : this.rules.neutralizeTime);
@@ -104,7 +107,8 @@ export class ConquestMatch extends MatchManager {
       const score =
         Math.hypot(a.x - s.x, a.z - s.z) +
         (s.owner === a.team && !s.contested ? 35 : 0) +
-        (i === a.id % this.sectors.length ? -12 : 0);
+        // Spread attackers across targets; the bias never pins a bot to a quiet owned flag.
+        (i === a.id % this.sectors.length && s.owner !== a.team ? -12 : 0);
       if (score < cost) {
         best = s;
         cost = score;

@@ -14,9 +14,16 @@ export const MOVEMENT = Object.freeze({
 
 // Tactical movement is independent of camera aim: turning during a slide does
 // not redirect its initial momentum. Crouch edges prevent held-key slide spam.
+const DEFAULT_HANDLING = Object.freeze({
+  walk: 1,
+  sprint: 1,
+  adsMove: 0.65,
+  sprintToFire: MOVEMENT.sprintToFire,
+});
 export class TacticalMovement {
   // Resolve intent, slide transitions, horizontal collision, and vertical motion in that order.
-  update(a, i, arena, dt) {
+  // Handling supplies weapon-weight speed multipliers and the equipped gun's recovery time.
+  update(a, i, arena, dt, h = DEFAULT_HANDLING) {
     const k = i.keys;
     let forward = (k.has("KeyW") ? 1 : 0) - (k.has("KeyS") ? 1 : 0) + i.moveY;
     let side = (k.has("KeyD") ? 1 : 0) - (k.has("KeyA") ? 1 : 0) + i.moveX;
@@ -83,7 +90,7 @@ export class TacticalMovement {
     a.sprinting =
       wantsSprint && !a.crouched && !a.sliding && grounded && !cancelled;
     if (wasSprint && !a.sprinting)
-      a.fireDelay = Math.max(a.fireDelay, MOVEMENT.sprintToFire);
+      a.fireDelay = Math.max(a.fireDelay, h.sprintToFire);
     a.aim = i.aim && !a.sliding;
     // Interpolate slide speed over its lifetime and stop when collision blocks travel.
     if (a.sliding) {
@@ -99,13 +106,14 @@ export class TacticalMovement {
         stopSlide();
       a.moving = true;
     } else {
+      const walk = MOVEMENT.walk * h.walk;
       const speed = a.crouched
-        ? 2.2
+        ? 2.2 * h.walk
         : a.aim
-          ? 3
+          ? walk * h.adsMove
           : a.sprinting
-            ? MOVEMENT.sprint
-            : MOVEMENT.walk;
+            ? MOVEMENT.sprint * h.sprint
+            : walk;
       a.moving = Math.abs(forward) + Math.abs(side) > 0.05;
       arena.move(
         a,

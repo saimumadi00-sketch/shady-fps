@@ -2,7 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { OfflineSimulation } from "../src/game.js";
 import { PlayerController } from "../src/player.js";
-import { CLASS_IDS, loadout } from "../src/loadouts.js";
+import { CLASS_IDS, loadout, normalizeClass } from "../src/loadouts.js";
 const KEYS = new Set([
   "KeyW",
   "KeyA",
@@ -21,10 +21,30 @@ const ACTIONS = new Set([
   "switch",
   "Digit1",
   "Digit2",
-  "Digit3",
-  "Digit4",
-  "Digit5",
 ]);
+// The client sends input every 33 ms; allow bursts after stalls but reject floods.
+export const INPUT_LIMIT_PER_SECOND = 60;
+// Internal simulation fields that other players' clients never need.
+const PRIVATE_FIELDS = [
+  "ammo",
+  "slideX",
+  "slideZ",
+  "slideTime",
+  "slideCooldown",
+  "crouchHeld",
+  "ignoreCrouch",
+  "fireDelay",
+  "lastDamage",
+  "networkNotice",
+  "noticeUntil",
+  "hitUntil",
+  "hurtUntil",
+  "kick",
+  "vy",
+  "spawnSector",
+  "recoilPitch",
+  "recoilYaw",
+];
 const finite = (v, limit) =>
   typeof v === "number" && Number.isFinite(v)
     ? Math.max(-limit, Math.min(limit, v))
@@ -39,6 +59,8 @@ export class NetworkInput {
     this.actions = new Set();
     this.dx = this.dy = this.moveX = this.moveY = 0;
     this.fire = this.aim = this.touch = this.touchCrouch = false;
+    // Absolute client view angles; null means "hold the current facing".
+    this.view = null;
   }
   consume(key) {
     const value = this.actions.has(key);
@@ -57,8 +79,28 @@ export class NetworkInput {
       ? data.actions.slice(0, 16)
       : [])
       if (ACTIONS.has(k)) this.actions.add(k);
-    this.dx = finite(this.dx + finite(data.dx, 1200), 2400);
-    this.dy = finite(this.dy + finite(data.dy, 1200), 2400);
+    const v = data.view;
+    const before = this.view;
+    this.view =
+      v &&
+      typeof v === "object" &&
+      Number.isFinite(v.yaw) &&
+      Number.isFinite(v.pitch) &&
+      Number.isSafeInteger(v.spawnId)
+        ? {
+            yaw: finite(v.yaw, 1e6),
+            // Raw aim excludes server recoil, so it may sit past the view limit;
+            // PlayerController clamps the combined angle.
+            pitch: finite(v.pitch, 1e3),
+            spawnId: v.spawnId,
+          }
+        : null;
+    this.turned = Boolean(
+      this.view &&
+      (!before ||
+        before.yaw !== this.view.yaw ||
+        before.pitch !== this.view.pitch),
+    );
     this.moveX = finite(data.moveX, 1);
     this.moveY = finite(data.moveY, 1);
     for (const key of ["fire", "aim", "touch", "touchCrouch"])
@@ -109,7 +151,8 @@ export class RoomService {
       (a) => a.team === team && !room.controllers.has(a.id),
     );
     if (!actor) throw new Error("That team is full. Choose the other team.");
-    const classId = CLASS_IDS.includes(data.classId) ? data.classId : "assault";
+    const requested = normalizeClass(data.classId),
+      classId = CLASS_IDS.includes(requested) ? requested : "assault";
     const token = randomBytes(24).toString("hex");
     const input = new NetworkInput();
     const client = {
@@ -167,7 +210,8 @@ export class RoomService {
       client.rateAt = now;
       client.requests = 0;
     }
-    if (++client.requests > 90) throw new Error("Too many input requests.");
+    if (++client.requests > INPUT_LIMIT_PER_SECOND)
+      throw new Error("Too many input requests.");
     if (client.input.accept(data)) {
       client.lastInput = now;
       const input = client.input;
@@ -176,8 +220,7 @@ export class RoomService {
         input.keys.size ||
         (Array.isArray(data.actions) &&
           data.actions.some((a) => ACTIONS.has(a))) ||
-        finite(data.dx, 1200) ||
-        finite(data.dy, 1200) ||
+        input.turned ||
         input.moveX ||
         input.moveY ||
         input.fire ||
@@ -231,10 +274,14 @@ export class RoomService {
         scores: g.match.scores,
         remaining: g.match.remaining,
         winner: g.match.winner,
-        sectors: g.match.sectors,
+        // Static spawn-point lists stay server-side; clients only draw and label sectors.
+        sectors: g.match.sectors?.map(({ spawnPoints, ...s }) => s),
       },
       // Keep AI paths and targets out of the transport. These are presentation fields only.
-      actors: g.actors.map(({ brain, ...a }) => a),
+      actors: g.actors.map(({ brain, ...a }) => {
+        if (a.id !== actor.id) for (const key of PRIVATE_FIELDS) delete a[key];
+        return a;
+      }),
       effects: g.effects.items.filter((e) => e.life > 0),
       events: g.events.filter((e) => e.time > 0),
     };

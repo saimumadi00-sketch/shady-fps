@@ -5,3 +5,11 @@ __pycache__/
 .idea/
 test-results/
 playwright-report/
+artifacts/
+
+# Local AI tooling: installed skills, design-skill working files, browser CLI sessions
+.agents/
+.claude/skills/
+.taste-skill/
+.playwright-cli/
+skills-lock.json

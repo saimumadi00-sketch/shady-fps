@@ -5,12 +5,31 @@ export const TEAM_COLORS = [
   [0.25, 0.78, 0.72],
   [0.96, 0.38, 0.19],
 ];
+// Conquest layout in FreeDM map cells (column, row): shared by the arena and the lobby's map.
+export const CONQUEST_LAYOUT = Object.freeze({
+  sectors: Object.freeze([
+    Object.freeze({ id: "A", name: "West Depot", cell: [8, 20] }),
+    // Placed by simulation: across 48 bot-only matches this cell gives both teams an even share of
+    // wins and of time holding B. One cell west or east tips matches decisively to one side.
+    Object.freeze({ id: "B", name: "Central Yard", cell: [29, 16] }),
+    Object.freeze({ id: "C", name: "East Relay", cell: [45, 24] }),
+  ]),
+  // One spawn column per team: [column, rows].
+  bases: Object.freeze([
+    Object.freeze([5, Object.freeze([14, 16, 20, 24, 26])]),
+    Object.freeze([46, Object.freeze([12, 16, 18, 26, 28])]),
+  ]),
+});
+// Bodies are vertical cylinders: centres closer than this collide (about the hitbox width).
+export const BODY_GAP = 0.62;
 export class Arena {
   // Build visual boxes, collidable solids, and team spawn lists once.
   constructor(mode = "tdm") {
     this.boxes = [];
     this.solids = [];
     this.spawns = [[], []];
+    // Actors that block each other; the simulation assigns its roster.
+    this.bodies = null;
     this.name = mode === "conquest" ? FREEDM_MAP.name : "Yard 07";
     if (mode === "conquest") this.buildConquest();
     else this.build();
@@ -56,15 +75,26 @@ export class Arena {
         );
       }
     }
-    this.sectors = [
-      { id: "A", name: "West Depot", ...point(8, 20), radius: 3.2 },
-      { id: "B", name: "Central Yard", ...point(28, 15), radius: 3.2 },
-      { id: "C", name: "East Relay", ...point(45, 24), radius: 3.2 },
-    ];
-    this.spawns = [
-      [14, 16, 20, 24, 26].map((z) => point(5, z)),
-      [12, 16, 18, 26, 28].map((z) => point(46, z)),
-    ];
+    this.sectors = CONQUEST_LAYOUT.sectors.map(({ id, name, cell }) => ({
+      id,
+      name,
+      ...point(...cell),
+      radius: 3.2,
+    }));
+    // Forward deployment points sit just outside each capture radius on open floor cells.
+    for (const s of this.sectors) {
+      const ring = this.navigationPoints.filter((p) => {
+        const d = Math.hypot(p.x - s.x, p.z - s.z);
+        return (
+          d > s.radius + 0.8 && d < s.radius + 4 && !this.blocked(p.x, p.z)
+        );
+      });
+      const step = Math.max(1, Math.floor(ring.length / 6));
+      s.spawnPoints = ring.filter((_, i) => i % step === 0).slice(0, 6);
+    }
+    this.spawns = CONQUEST_LAYOUT.bases.map(([x, rows]) =>
+      rows.map((z) => point(x, z)),
+    );
     for (let team = 0; team < 2; team++)
       for (const p of this.spawns[team])
         this.box(p.x, 0.005, p.z, 1.25, 0.02, 1.25, TEAM_COLORS[team], false);
@@ -159,11 +189,30 @@ export class Arena {
         Math.abs(z - b.z) < b.d / 2 + r,
     );
   }
-  // Resolve X and Z separately so actors can slide along a wall instead of sticking to it.
+  // A move into another living body is refused only when it also closes the gap, so actors
+  // that already overlap (a shared spawn, a respawn) can always step apart.
+  bodyBlocked(a, x, z) {
+    if (!this.bodies) return false;
+    for (const b of this.bodies) {
+      if (b === a || !b.alive || Math.abs(b.y - a.y) >= 1.7) continue;
+      const next = Math.hypot(x - b.x, z - b.z);
+      if (next < BODY_GAP && next < Math.hypot(a.x - b.x, a.z - b.z) - 1e-9)
+        return true;
+    }
+    return false;
+  }
+  // Resolve X and Z separately so actors can slide along a wall or a body instead of sticking.
   move(a, dx, dz) {
-    if (!this.blocked(a.x + dx, a.z, 0.36, a.y, a.crouched ? 1.15 : 1.8))
+    const h = a.crouched ? 1.15 : 1.8;
+    if (
+      !this.blocked(a.x + dx, a.z, 0.36, a.y, h) &&
+      !this.bodyBlocked(a, a.x + dx, a.z)
+    )
       a.x += dx;
-    if (!this.blocked(a.x, a.z + dz, 0.36, a.y, a.crouched ? 1.15 : 1.8))
+    if (
+      !this.blocked(a.x, a.z + dz, 0.36, a.y, h) &&
+      !this.bodyBlocked(a, a.x, a.z + dz)
+    )
       a.z += dz;
   }
   // Choose the highest supporting solid below the actor, allowing a small step tolerance.

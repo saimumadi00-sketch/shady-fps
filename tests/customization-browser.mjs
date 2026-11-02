@@ -20,7 +20,6 @@ try {
   await page.selectOption("#optic", "reflex");
   await page.fill("#callsign", "Ranger");
   await page.locator("#fov").fill("95");
-  await page.locator("summary").filter({ hasText: "MATCH RULES" }).click();
   await page.selectOption("#target", "15");
   await page.selectOption("#duration", "180");
   await page.selectOption("#crosshairColor", "#ffbf69");
@@ -50,11 +49,11 @@ try {
     await page.click("#back");
     await page.selectOption(
       "#loadoutClass",
-      ["assault", "engineer", "assault", "scout", "support"][i],
+      ["assault", "engineer", "assault", "recon", "support"][i],
     );
     await page.selectOption("#startingWeapon", String(i));
     await page.click("#play");
-    await page.keyboard.press("Digit" + (i + 1));
+    await page.keyboard.press(i === 2 ? "Digit2" : "Digit1");
     await page.waitForTimeout(250);
     assert.equal(await page.evaluate(() => __arena.game.player.weapon), i);
     assert.equal(await page.evaluate(() => __arena.renderer.gl.getError()), 0);

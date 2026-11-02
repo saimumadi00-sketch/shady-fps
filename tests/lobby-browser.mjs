@@ -41,7 +41,7 @@ try {
   await page.click("#save");
   await page.click('[data-class="recon"]');
   await page.click("#load");
-  assert.equal(await page.locator("#operator-class").textContent(), "ASSAULT");
+  assert.equal(await page.locator("#operator-class").textContent(), "Assault");
   assert.equal(await page.locator("#weapon").inputValue(), "1");
   await page.reload();
   await page.waitForFunction(
@@ -61,12 +61,12 @@ try {
   );
   await page.selectOption("#mode", "Domination");
   await page.selectOption("#region", "EUROPE");
-  assert.equal(await page.locator("#ping").textContent(), "78 MS*");
+  assert.equal(await page.locator("#ping").textContent(), "78 ms simulated");
   await page.click("#find-match");
   await page.click("#find-match");
   assert.match(
     await page.locator("#match-status").textContent(),
-    /SYSTEM READY/,
+    /Not searching/,
   );
   await page.click("#find-match");
   await page.waitForSelector("#launch", { timeout: 16000 });
@@ -100,7 +100,7 @@ try {
   );
   await page.click(".training");
   await page.waitForSelector("#loadoutClass");
-  assert.equal(await page.locator("#loadoutClass").inputValue(), "scout");
+  assert.equal(await page.locator("#loadoutClass").inputValue(), "recon");
   await context.setOffline(false);
   assert.deepEqual(errors, []);
   console.log(

@@ -45,7 +45,7 @@ try {
         await page.evaluate(() => __arena.game.match.state),
         "playing",
       );
-      assert.match(await page.locator("#hint").textContent(), /DRAG TO AIM/);
+      assert.match(await page.locator("#hint").textContent(), /drag to aim/);
     }
     const before = await page.evaluate(() => __arena.game.player.yaw);
     await page.mouse.move(640, 360);

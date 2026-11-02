@@ -18,7 +18,7 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.setClearColor(0, 0);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
     const scene = new THREE.Scene(),
@@ -183,7 +183,8 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
   const yardCanvas = document.createElement("canvas");
   yardCanvas.className = "yard-background";
   yardCanvas.setAttribute("aria-hidden", "true");
-  document.querySelector(".lobby").prepend(yardCanvas);
+  // The yard sits behind the squad inside the stage, so the page itself keeps a true-black ground.
+  (squadCanvas.parentElement || document.body).prepend(yardCanvas);
   const yard = setup(yardCanvas);
   views.push(yard);
   yard.scene.background = new THREE.Color(0x91a5a6);

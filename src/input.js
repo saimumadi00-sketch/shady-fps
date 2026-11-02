@@ -10,6 +10,8 @@ export class InputManager {
     this.dx = 0;
     this.dy = 0;
     this.fire = false;
+    // Counts fire presses so per-frame consumers can detect semi-auto edges.
+    this.firePresses = 0;
     this.aim = false;
     this.active = false;
     this.mouseFallback = false;
@@ -25,7 +27,11 @@ export class InputManager {
       if (!this.active) return;
       if (["Space", "ControlLeft", "ControlRight", "Tab"].includes(e.code))
         e.preventDefault();
-      if (!this.keys.has(e.code)) this.actions.add(e.code);
+      if (!this.keys.has(e.code)) {
+        this.actions.add(e.code);
+        // Q toggles between the primary and sidearm like the touch SWAP button.
+        if (e.code === "KeyQ") this.actions.add("switch");
+      }
       this.keys.add(e.code);
       if (e.code === "Escape") onPause();
     });
@@ -54,6 +60,7 @@ export class InputManager {
         this.lastMouse = { x: e.clientX, y: e.clientY };
         if (e.button === 0) {
           this.fire = true;
+          this.firePresses++;
           this.actions.add("fire");
         }
         if (e.button === 2) this.aim = true;
@@ -68,6 +75,23 @@ export class InputManager {
       }
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    // Either wheel direction toggles weapons; throttle so one flick is one swap.
+    let lastWheel = 0;
+    document.addEventListener(
+      "wheel",
+      (e) => {
+        if (
+          !this.active ||
+          (document.pointerLockElement !== canvas && e.target !== canvas)
+        )
+          return;
+        e.preventDefault();
+        if (e.timeStamp - lastWheel > 180 && Math.abs(e.deltaY) > 0)
+          this.actions.add("switch");
+        lastWheel = e.timeStamp;
+      },
+      { passive: false },
+    );
     // Restore normal aim after capture succeeds; pause when desktop capture is lost.
     document.addEventListener("pointerlockchange", () => {
       if (document.pointerLockElement === canvas) {
@@ -239,6 +263,7 @@ export class TouchInputController {
           this.buttons.set(e.pointerId, a);
           if (a === "fire") {
             input.fire = true;
+            input.firePresses++;
             input.actions.add("fire");
           } else if (a === "aim") input.aim = !input.aim;
           else if (a === "crouch") input.touchCrouch = !input.touchCrouch;

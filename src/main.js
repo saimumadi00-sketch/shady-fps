@@ -2,11 +2,19 @@
 import { NetworkClient } from "./network.js";
 import { InputManager } from "./input.js";
 import { SettingsManager, QualityManager, AudioManager } from "./settings.js";
+import { FootstepTracker, lineOfSound } from "./audio.js";
+import { outpostMap } from "./outpost-map.js";
 import { OfflineSimulation } from "./game.js";
 import { Renderer } from "./renderer.js";
 import { HUDController } from "./hud.js";
 import { Customization } from "./customization.js";
-import { CLASS_IDS, LOADOUTS, loadout, classForWeapon } from "./loadouts.js";
+import {
+  CLASS_IDS,
+  LOADOUTS,
+  loadout,
+  classForWeapon,
+  normalizeClass,
+} from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
 const $ = (id) => document.getElementById(id);
 let network,
@@ -44,28 +52,30 @@ function pause(reason = "Combat is paused.") {
 function weaponInfo(selectId, infoId) {
   const w = WEAPONS[Number($(selectId).value)];
   $(infoId).textContent =
-    `${w.description} ${w.magazine} rounds · ${w.damage} damage · ${w.reload}s reload`;
+    `${w.description} ${w.magazine} rounds · ${w.damage[0]}→${w.damage[1]} damage (${w.falloff[0]}–${w.falloff[1]} m) · ${w.headshot}x head · ${w.rpm} RPM · ${w.reload}s reload`;
 }
 // Switch control hints and touch overlays without restarting the match.
 function controls() {
   document.body.classList.toggle("touch-mode", input.touch);
+  if (game) game.controlHint = input.touch ? "Swap: primary or pistol" : "";
   $("touch").hidden = !input.touch || !input.active;
   $("hint").textContent =
     input.mouseFallback && !input.touch
-      ? "MOUSE CAPTURE UNAVAILABLE: HOLD RIGHT MOUSE + DRAG TO AIM"
-      : "MOUSE AIM · SHIFT + C SLIDE · SPACE CANCEL";
+      ? "Mouse capture unavailable: hold the right button and drag to aim"
+      : "Mouse aim · Shift then C to slide · Space cancels";
   if (!input.touch)
     $("controlsHelp").textContent =
-      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · class primary key / 3 pistol · Esc pause";
+      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1 primary / 2 pistol · Q or wheel swap · Esc pause";
   if (input.touch)
     $("controlsHelp").textContent =
       "Left stick move / push fully to sprint · Right drag aim · FIRE shoot · ADS aim · RLD reload · JUMP · SLIDE crouch / slide while sprinting · JUMP cancel · SWAP weapon";
   orientation();
 }
 // Pause touch gameplay in portrait so hidden controls cannot leave the player vulnerable.
+// The setup screen works in portrait, so the prompt only covers an active match.
 function orientation() {
   const portrait = input.touch && innerHeight > innerWidth;
-  $("rotate").hidden = !portrait;
+  $("rotate").hidden = !(portrait && $("menu").hidden);
   if (portrait && game?.match.state === "playing") {
     rotationPaused = true;
     pause("Device rotated. Return to landscape, then resume.");
@@ -88,47 +98,25 @@ try {
     location.search = params.toString();
   });
   if (game.mode === "conquest") {
-    document.title = "Crosscurrent — Conquest / FreeDM Outpost";
-    $("mapName").textContent = $("briefMapName").textContent =
-      game.arena.name.toUpperCase();
-    $("modeLabel").textContent = $("briefMode").textContent = "CONQUEST · 5v5";
+    document.title = "Crosscurrent · Conquest setup";
+    $("mapName").textContent = $("briefMapName").textContent = game.arena.name;
+    $("modeLabel").textContent = $("briefMode").textContent = "Conquest";
     $("briefDescription").textContent =
-      "Capture A, B and C. Hold more sectors to drain enemy tickets. Every death costs a ticket; the team with tickets remaining wins.";
-    $("tagline").textContent = "Three sectors. Two teams. Control the outpost.";
-    $("ruleTargetLabel").textContent = "TEAM TICKETS";
+      "Capture A, B and C. Holding more sectors drains the enemy's tickets, and every death costs a ticket. The team with tickets left wins.";
+    $("tagline").textContent = "Three sectors, two teams, one outpost";
+    $("ruleTargetLabel").textContent = "Tickets per team";
+    // Conquest's score is the fixed 150 tickets shown in the rules strip; Time limit takes the row.
     $("target").disabled = true;
-    $("target").hidden = true;
-    $("scoreLimitLabel").textContent = "TICKETS: 150 PER TEAM";
-    const { rows, cellSize } = game.arena.map;
-    const svg = $("mapOverview");
-    svg.setAttribute("viewBox", `0 0 ${rows[0].length} ${rows.length}`);
-    svg.setAttribute(
-      "aria-label",
-      "FreeDM Outpost layout with three Conquest sectors",
-    );
-    svg.innerHTML =
-      rows
-        .map((row, z) =>
-          [...row]
-            .map((cell, x) =>
-              cell === "."
-                ? `<rect x="${x}" y="${z}" width="1" height="1" fill="#387576" stroke="none"/>`
-                : "",
-            )
-            .join(""),
-        )
-        .join("") +
-      game.arena.sectors
-        .map((s) => {
-          const x = s.x / cellSize + (rows[0].length - 1) / 2 + 0.5;
-          const z = s.z / cellSize + (rows.length - 1) / 2 + 0.5;
-          return `<circle cx="${x}" cy="${z}" r="2" fill="#efbd63"/><text x="${x}" y="${z + 1}" text-anchor="middle" fill="#122a30" stroke="none" font-size="3" font-weight="bold">${s.id}</text>`;
-        })
-        .join("");
-    $("mapCredit").textContent = "MAP: FREEDOOM / BSD-3-CLAUSE";
+    $("target").closest("label").hidden = true;
+    $("duration").closest("label").classList.add("wide");
+    $("mapOverview").outerHTML = outpostMap("mapOverview");
+    $("mapCredit").textContent =
+      "FreeDM Outpost, from Freedoom (BSD-3-Clause), drawn to scale";
     $("objectives").hidden = false;
   }
   renderer = new Renderer($("canvas"), game.arena);
+  // Walls between the listener and a sound muffle it.
+  audio.occluded = lineOfSound(game.arena);
   const hud = new HUDController();
   // Restore only a valid arsenal index; unavailable storage must not block play.
   let selectedWeapon = 0;
@@ -139,7 +127,7 @@ try {
   // Keep menu and pause selectors synchronized; equipping never replenishes ammunition.
   let selectedClass = classForWeapon(selectedWeapon);
   try {
-    const saved = localStorage.getItem("crosscurrent-class");
+    const saved = normalizeClass(localStorage.getItem("crosscurrent-class"));
     if (CLASS_IDS.includes(saved)) selectedClass = saved;
   } catch {}
   for (const id of CLASS_IDS) {
@@ -149,19 +137,22 @@ try {
     $("loadoutClass").append(option);
   }
   $("loadoutClass").value = selectedClass;
+  // Online equips travel as the same slot keys a player would press.
+  const slotKey = (index) =>
+    "Digit" + (loadout(selectedClass).weapons.indexOf(index) + 1);
   // Rebuild both weapon selectors from the class definition; never expose other class guns.
   function refreshLoadout() {
     const kit = loadout(selectedClass);
     if (!kit.weapons.includes(selectedWeapon)) selectedWeapon = kit.primary;
     $("classInfo").textContent =
-      `${kit.description} Primary: ${WEAPONS[kit.primary].short} / Sidearm: PISTOL. Change class here before your next match.`;
+      `${kit.description} Carries the ${WEAPONS[kit.primary].label.toLowerCase()} and a pistol.`;
     for (const id of ["startingWeapon", "pauseWeapon"]) {
       $(id).replaceChildren();
       kit.weapons.forEach((index) => {
         const w = WEAPONS[index];
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = `${index + 1}. ${w.name}`;
+        option.textContent = `${kit.weapons.indexOf(index) === 0 ? "Primary" : "Sidearm"} · ${w.label}`;
         $(id).append(option);
       });
       $(id).value = String(selectedWeapon);
@@ -180,7 +171,7 @@ try {
       weaponInfo("startingWeapon", "startingWeaponInfo");
       weaponInfo(id, infoId);
       if (id === "pauseWeapon") {
-        if (network) input.actions.add("Digit" + (selectedWeapon + 1));
+        if (network) input.actions.add(slotKey(selectedWeapon));
         else game.weapons.equip(game.player, selectedWeapon);
       }
       try {
@@ -212,12 +203,12 @@ try {
     input.clear();
     input.active = true;
     if (network && selectedWeapon !== game.player.weapon)
-      input.actions.add("Digit" + (selectedWeapon + 1));
+      input.actions.add(slotKey(selectedWeapon));
     $("pause").hidden = true;
     $("menu").hidden = true;
     $("end").hidden = true;
     $("hud").hidden = false;
-    audio.unlock();
+    audio.unlock(); // taste-skill-ignore: audio.unlock() call, not copy
     controls();
     if (game.match.state === "playing") await input.lock();
   }
@@ -249,10 +240,11 @@ try {
       $(id).hidden = true;
     customization.refresh();
     $("menu").hidden = false;
+    orientation();
   }
   $("play").disabled = false;
-  $("play").textContent = "PLAY MATCH ↗";
-  $("status").textContent = "READY · 1 PLAYER + 9 BOTS · ZERO NETWORK REQUIRED";
+  $("play").textContent = "Play match";
+  $("status").textContent = "ready: you and 9 bots, no network needed";
   $("play").onclick = start;
   $("resume").onclick = resume;
   $("restart").onclick = start;
@@ -261,7 +253,7 @@ try {
   $("pauseButton").onclick = () => pause();
   if (params.has("online")) {
     $("roomPanel").hidden = false;
-    $("arenaEdition").textContent = "PRIVATE MULTIPLAYER / BROWSER EDITION";
+    $("arenaEdition").textContent = "Private room";
     customization.values.duration = 420;
     customization.values.target = 30;
     customization.refresh();
@@ -270,11 +262,11 @@ try {
     $("roomCode").value = params.get("room") || "";
     $("roomTeam").value = params.get("team") === "1" ? "1" : "0";
     $("play").disabled = true;
-    $("play").textContent = "WAITING FOR ROOM";
-    $("status").textContent = "PRIVATE MULTIPLAYER · UP TO 10 PLAYERS";
-    $("tagline").textContent = "Invite friends. Choose a team. Fight together.";
+    $("play").textContent = "Waiting for room";
+    $("status").textContent = "private room for up to 10 players";
+    $("tagline").textContent = "Invite friends, pick a team, play together";
     $("scoreTarget").textContent =
-      game.mode === "conquest" ? "TICKETS · HOLD SECTORS" : "FIRST TO 30";
+      game.mode === "conquest" ? "Tickets · hold sectors" : "First to 30";
     $("duration").disabled =
       $("target").disabled =
       $("difficulty").disabled =
@@ -285,7 +277,7 @@ try {
         $("matchMode").disabled = true;
         $("roomCode").value = packet.code;
         $("roomMessage").textContent =
-          `ROOM ${packet.code} · ${packet.host ? "YOU ARE HOST" : "HOST CONTROLS START"} · ${packet.match.state === "menu" ? "WAITING" : packet.match.state.toUpperCase()}`;
+          `Room ${packet.code} · ${packet.host ? "you are the host" : "the host starts the match"} · ${{ menu: "waiting", playing: "playing", ended: "ended", paused: "paused" }[packet.match.state] || packet.match.state}`;
         $("roomRoster").textContent = packet.players
           .map(
             (p) =>
@@ -304,15 +296,15 @@ try {
         $("startRoom").disabled = packet.match.state === "playing";
         $("startRoom").textContent =
           packet.match.state === "ended"
-            ? "RESTART SHARED MATCH"
-            : "START SHARED MATCH";
+            ? "Restart shared match"
+            : "Start shared match";
         $("play").disabled = packet.match.state !== "playing";
-        $("play").textContent = "ENTER SHARED MATCH ↗";
+        $("play").textContent = "Enter shared match";
         $("restart").disabled = !packet.host;
         $("restart").textContent = packet.host
-          ? "RESTART SHARED MATCH ↗"
-          : "WAITING FOR HOST";
-        game.networkLabel = `ROOM ${packet.code} · ${network.ping}ms`;
+          ? "Restart shared match"
+          : "Waiting for host";
+        game.networkLabel = `Room ${packet.code} · ${network.ping} ms`;
         if (
           packet.match.state === "playing" &&
           !input.active &&
@@ -387,7 +379,7 @@ try {
       $("menu").hidden = false;
       localPaused = false;
     };
-    $("back").textContent = $("endMenu").textContent = "LEAVE ROOM";
+    $("back").textContent = $("endMenu").textContent = "Leave room";
     $("copyRoom").onclick = async () => {
       const url = new URL(location.href);
       url.searchParams.set("room", network.code);
@@ -431,6 +423,7 @@ try {
       fatal(e);
     }
   });
+  const footsteps = new FootstepTracker();
   let last = performance.now(),
     accumulator = 0,
     hudTime = 0,
@@ -468,10 +461,21 @@ try {
       localPaused = false;
       hud.end(game);
     }
+    if (network && game.match.state === "playing") network.updateView(raw);
     // Static menus do not need a full-rate GPU loop.
     idleRenderTime += raw;
     if (game.match.state === "playing" || idleRenderTime >= 0.1) {
       network?.renderActors(now);
+      // Surround audio: the listener follows the camera; footsteps come from (interpolated) poses.
+      if (game.match.state === "playing") {
+        const p = game.player;
+        audio.setListener(p.x, p.y + p.eye, p.z, p.yaw, p.pitch);
+        footsteps.update(
+          game.renderActors || game.actors,
+          p.id,
+          (kind, volume, source) => audio.play(kind, volume, 0, source),
+        );
+      } else footsteps.clear();
       renderer.render(game, quality, game.time);
       idleRenderTime = 0;
     }

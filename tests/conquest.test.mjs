@@ -171,3 +171,48 @@ test("both teams' bots capture sectors and a complete Conquest match resolves", 
   assert.ok(game.actors.some((a) => a.kills > 0));
   assert.ok(game.nav.cache.size <= 256);
 });
+// A rival team must drain partial capture progress before starting its own capture.
+test("opposing capture progress drains before a new team can capture", () => {
+  const m = new ConquestMatch([{ id: "A", x: 0, z: 0, radius: 3.2 }]);
+  m.start();
+  const s = m.sectors[0],
+    cyan = presence(s, 0),
+    ember = presence(s, 1);
+  tick(m, 6, [ember]);
+  assert.ok(Math.abs(s.progress - 0.75) < 1e-6);
+  tick(m, 1 / 60, [cyan]);
+  assert.equal(s.capturing, 1, "a single tick does not erase ember progress");
+  assert.ok(s.progress > 0.74);
+  tick(m, 3, [cyan]);
+  assert.equal(s.capturing, 1);
+  assert.ok(Math.abs(s.progress - 0.375) < 0.01);
+  tick(m, 3.5, [cyan]);
+  assert.equal(s.owner, null);
+  assert.equal(s.capturing, 0, "cyan starts capturing only after draining");
+  tick(m, 8, [cyan]);
+  assert.equal(s.owner, 0);
+});
+// Crowding penalties used to be erased by the Conquest score clamp, stacking teammates.
+test("nobody deploys inside another body, at match start or on respawn", async () => {
+  const { BODY_GAP } = await import("../src/world.js");
+  const game = setup();
+  const overlaps = () => {
+    const alive = game.actors.filter((a) => a.alive);
+    let n = 0;
+    for (let i = 0; i < alive.length; i++)
+      for (let j = i + 1; j < alive.length; j++)
+        if (
+          Math.hypot(alive[i].x - alive[j].x, alive[i].z - alive[j].z) <
+          BODY_GAP
+        )
+          n++;
+    return n;
+  };
+  assert.equal(overlaps(), 0);
+  // Respawn every actor repeatedly while the rest stand where they are.
+  for (let round = 0; round < 5; round++)
+    for (const a of game.actors) {
+      game.spawns.spawn(a);
+      assert.equal(overlaps(), 0, `round ${round}, actor ${a.id}`);
+    }
+});

@@ -130,15 +130,20 @@ test("magazines, reserves and reload conservation for every weapon", () => {
       w = WEAPONS[index];
     p.ammo[index].mag = 0;
     game.weapons.reload(p);
-    game.weapons.update(p, w.reload - 0.01);
+    // An empty magazine uses the longer empty reload.
+    game.weapons.update(p, w.reloadEmpty - 0.01);
     assert.equal(p.ammo[index].mag, 0);
     game.weapons.update(p, 0.02);
     assert.equal(p.ammo[index].mag, w.magazine);
     assert.equal(p.ammo[index].reserve, w.reserve - w.magazine);
     p.ammo[index] = { mag: 0, reserve: 3 };
     game.weapons.reload(p);
-    game.weapons.update(p, w.reload + 0.01);
+    game.weapons.update(p, w.reloadEmpty + 0.01);
     assert.deepEqual(p.ammo[index], { mag: 3, reserve: 0 });
+    // A partial magazine skips the chambering action.
+    p.ammo[index] = { mag: 1, reserve: w.magazine };
+    game.weapons.reload(p);
+    assert.equal(p.reload, w.reload);
   }
 });
 // Separate edge-triggered semi-auto fire from held automatic input.
@@ -426,7 +431,7 @@ test("starting weapon, respawn, and selection cover each class inventory", () =>
 
 // Assert the intended class-to-gun mapping independently of the implementation definitions.
 test("classes own their primary and shared pistol, and keep both across respawns", () => {
-  const expected = { assault: 0, support: 4, engineer: 1, scout: 3 };
+  const expected = { assault: 0, support: 4, engineer: 1, recon: 3 };
   assert.deepEqual([...CLASS_IDS].sort(), Object.keys(expected).sort());
   for (const [classId, primary] of Object.entries(expected)) {
     const { game } = setup();
@@ -469,7 +474,8 @@ test("class restrictions reject foreign guns without changing weapon, ammo, or r
     for (let index = 0; index < WEAPONS.length; index++) {
       if (kit.weapons.includes(index)) continue;
       game.weapons.equip(p, index);
-      input.actions.add("Digit" + (index + 1));
+      // Only slots 1 and 2 exist; other number keys are ignored.
+      input.actions.add("Digit" + (3 + (index % 3)));
       game.controller.update(1 / 60, 1);
       assert.equal(p.weapon, kit.primary);
       assert.equal(p.reload, remaining);
@@ -513,4 +519,347 @@ test("bots spawn with class guns and only switch within their assigned inventory
     assert.equal(a.weapon, 2);
     assert.deepEqual(a.ammo[foreign], { mag: 0, reserve: 0 });
   }
+});
+
+// Role tuning: falloff is linear between its distances and headshots multiply after falloff.
+test("damage falloff, headshot multiplier and class time-to-kill roles", async () => {
+  const { damageAt, spreadFor } = await import("../src/weapons.js");
+  const ar = WEAPONS[0],
+    smg = WEAPONS[1];
+  assert.equal(damageAt(ar, 0), 28);
+  assert.equal(damageAt(ar, 50), 23);
+  assert.equal(damageAt(ar, 200), 18);
+  const { game } = setup(),
+    p = game.player,
+    e = game.actors[6];
+  game.bots.update = () => {};
+  for (const a of game.actors) if (a !== p && a !== e) a.alive = false;
+  game.random = () => 0;
+  game.arena.ray = () => 100;
+  Object.assign(p, { x: 0, z: 0, y: 0, eye: 1.58, yaw: Math.PI / 2 });
+  Object.assign(e, { x: 5, z: 0, y: 0, shield: 0, hp: 100, crouched: false });
+  // Eye-level shots strike the head box: 28 * 1.5.
+  p.cooldown = 0;
+  game.weapons.fire(p, Math.PI / 2, 0);
+  assert.equal(e.hp, 100 - 42);
+  e.hp = 100;
+  p.cooldown = 0;
+  game.weapons.fire(p, Math.PI / 2, -0.15);
+  assert.equal(e.hp, 72);
+  // The SMG falls off much harder than the AR by medium range.
+  assert.ok(damageAt(smg, 40) < damageAt(ar, 40) * 0.6);
+  // Engineer handling: better hip and moving accuracy than Assault.
+  const moving = (weapon) =>
+    spreadFor({ weapon, moving: true, adsProgress: 0 });
+  assert.ok(moving(1) < moving(0) * 0.6);
+  // Recon DMR is precise when aimed and two head hits at range still need a third.
+  assert.ok(
+    spreadFor({ weapon: 3, adsProgress: 1 }) <
+      spreadFor({ weapon: 0, adsProgress: 1 }),
+  );
+  assert.ok(damageAt(WEAPONS[3], 60) * 2 * 2 > 100);
+});
+
+// Number keys map to inventory slots; Q/wheel/SWAP share one switch action.
+test("slot keys 1 and 2 select primary and sidearm for every class", () => {
+  for (const classId of CLASS_IDS) {
+    const { game, input } = setup(),
+      kit = LOADOUTS[classId];
+    game.start("normal", kit.primary, classId);
+    const p = game.player;
+    input.actions.add("Digit2");
+    game.controller.update(1 / 60, 1);
+    assert.equal(p.weapon, 2);
+    assert.equal(p.cooldown, WEAPONS[2].equipTime);
+    input.actions.add("Digit1");
+    game.controller.update(1 / 60, 1);
+    assert.equal(p.weapon, kit.primary);
+  }
+});
+
+// ADS accuracy ramps over the weapon's ADS time instead of applying instantly.
+test("ADS progress follows weapon ADS time", () => {
+  const { game, input } = setup(),
+    p = game.player;
+  game.bots.update = () => {};
+  input.aim = true;
+  game.controller.update(WEAPONS[0].adsTime / 2, 1);
+  assert.ok(p.adsProgress > 0.4 && p.adsProgress < 0.6);
+  game.controller.update(WEAPONS[0].adsTime, 1);
+  assert.equal(p.adsProgress, 1);
+});
+
+// Owned, uncontested Conquest sectors become forward spawn points.
+test("conquest players deploy at owned sectors near the front", () => {
+  const game = new OfflineSimulation(
+    { keys: new Set(), actions: new Set(), consume: () => false, clear() {} },
+    { play() {} },
+    () => 0.5,
+    { mode: "conquest" },
+  );
+  game.start("normal");
+  const [a, b] = game.match.sectors;
+  assert.ok(a.spawnPoints.length > 0);
+  const p = game.player;
+  game.spawns.spawn(p);
+  assert.equal(p.spawnSector, null);
+  a.owner = b.owner = 0;
+  for (const e of game.actors) if (e.team === 1) e.alive = false;
+  game.spawns.spawn(p);
+  assert.ok(["A", "B"].includes(p.spawnSector));
+  b.contested = true;
+  a.owner = null;
+  game.spawns.spawn(p);
+  assert.equal(p.spawnSector, null);
+});
+
+// Bots re-check line of sight at the trigger and drop targets hidden behind cover.
+test("bots never fire at a target behind a wall and retreat to cover when hurt", () => {
+  const { game } = setup();
+  const bot = game.actors[6],
+    p = game.player;
+  for (const a of game.actors) if (a !== bot && a !== p) a.alive = false;
+  Object.assign(p, { x: -12, z: -1, y: 0, shield: 0 });
+  Object.assign(bot, { x: -12, z: 12, y: 0, cooldown: 0, hp: 100 });
+  // A freight stack between them blocks sight.
+  bot.brain.target = p;
+  bot.brain.reaction = 0;
+  bot.brain.think = 10;
+  const mag = bot.ammo[bot.weapon].mag;
+  game.bots.update(bot, 1 / 60);
+  assert.equal(bot.ammo[bot.weapon].mag, mag);
+  assert.equal(bot.brain.target, null);
+  // In the open and wounded, the bot picks a cover node the threat cannot see.
+  Object.assign(bot, { x: -4, z: -1, hp: 20 });
+  bot.brain.think = 0;
+  game.bots.update(bot, 1 / 60);
+  assert.equal(bot.brain.state, "SeekCover");
+  const c = bot.brain.cover;
+  assert.ok(c && !game.arena.visible(p, { x: c.x, y: 0, z: c.z }));
+});
+// Semi-automatic taps during the fire interval are queued briefly instead of being discarded.
+test("semi-auto press during cooldown fires once when ready; stale presses expire", () => {
+  const { game, input } = setup(),
+    p = game.player;
+  game.bots.update = () => {};
+  game.weapons.equip(p, 2);
+  p.cooldown = 0;
+  input.actions.add("fire");
+  game.update(1 / 60);
+  assert.equal(p.ammo[2].mag, 11);
+  // Second tap 1/60 s later, well inside the pistol's 0.18 s interval.
+  input.actions.add("fire");
+  game.update(1 / 60);
+  assert.equal(p.ammo[2].mag, 11);
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  assert.equal(p.ammo[2].mag, 10, "buffered tap fires exactly once");
+  // A tap made while the weapon is blocked for longer than the buffer is dropped.
+  p.cooldown = 1;
+  input.actions.add("fire");
+  for (let i = 0; i < 90; i++) game.update(1 / 60);
+  assert.equal(p.ammo[2].mag, 10);
+});
+// A teammate standing inside the shooter's muzzle position must not eat the shot at range zero.
+test("overlapping teammate does not block shots; a teammate further down the lane still does", () => {
+  const { game } = setup();
+  const { p, e } = isolate(game);
+  const mate = game.actors[1];
+  game.spawns.spawn(mate);
+  Object.assign(mate, { x: p.x + 0.15, z: p.z, y: 0, shield: 0 });
+  game.weapons.fire(p, p.yaw, -0.05, 0);
+  assert.ok(e.hp < 100, "enemy is hit through the overlapping teammate");
+  assert.equal(mate.hp, 100);
+  e.hp = 100;
+  Object.assign(mate, { x: 0 });
+  p.cooldown = 0;
+  game.weapons.fire(p, p.yaw, -0.05, 0);
+  assert.equal(e.hp, 100, "teammate between shooter and enemy still blocks");
+});
+// Spawn protection makes a target undamageable, so bots hold fire instead of wasting rounds.
+test("bots do not target or fire at spawn-protected enemies", () => {
+  const { game } = setup();
+  const { p, e } = isolate(game);
+  game.bots.difficulty = "hard";
+  // Enemy bot faces the protected player across an open lane.
+  p.shield = 99;
+  e.shield = 0;
+  const before = e.ammo[e.weapon].mag;
+  for (let i = 0; i < 120; i++) {
+    p.shield = 99;
+    game.bots.update(e, 1 / 60);
+    game.weapons.update(e, 1 / 60);
+  }
+  assert.equal(e.ammo[e.weapon].mag, before);
+  assert.equal(e.brain.target, null);
+  p.shield = 0;
+  for (let i = 0; i < 120; i++) {
+    game.bots.update(e, 1 / 60);
+    game.weapons.update(e, 1 / 60);
+  }
+  assert.ok(e.ammo[e.weapon].mag < before, "bot engages once protection ends");
+});
+// Switching weapons clears all reload bookkeeping, not only the timer.
+test("weapon switch clears reload duration and empty-reload flag", () => {
+  const { game } = setup(),
+    p = game.player;
+  p.ammo[p.weapon].mag = 0;
+  game.weapons.reload(p);
+  assert.ok(p.reloadTime > 0 && p.reloadEmpty);
+  game.weapons.equip(p, 2);
+  assert.equal(p.reload, 0);
+  assert.equal(p.reloadTime, 0);
+  assert.equal(p.reloadEmpty, false);
+});
+// Ammunition sources: eliminations return half a magazine; friendly bases restore reserves.
+test("eliminations resupply half a magazine per carried weapon, capped at the starting reserve", async () => {
+  const { resupply } = await import("../src/match.js");
+  const { game } = setup();
+  const { p, e } = isolate(game);
+  for (const i of [0, 2]) p.ammo[i].reserve = 0;
+  e.hp = 1;
+  game.weapons.fire(p, p.yaw, -0.05, 0);
+  assert.equal(e.alive, false);
+  assert.equal(p.ammo[0].reserve, 15);
+  assert.equal(p.ammo[2].reserve, 6);
+  assert.equal(p.ammo[1].reserve, 0, "weapons outside the class get nothing");
+  p.ammo[0].reserve = WEAPONS[0].reserve - 1;
+  resupply(p);
+  assert.equal(p.ammo[0].reserve, WEAPONS[0].reserve);
+});
+test("standing at a friendly base restores reserves but never fills the magazine directly", () => {
+  const { game } = setup(),
+    p = game.player;
+  game.bots.update = () => {};
+  Object.assign(p, { x: 0, z: -15 });
+  for (const i of [0, 2]) p.ammo[i] = { mag: 0, reserve: 0 };
+  game.update(1 / 60);
+  assert.equal(p.ammo[0].reserve, 0, "no resupply away from base");
+  const enemyBase = game.arena.spawns[1][0];
+  Object.assign(p, { x: enemyBase.x, z: enemyBase.z });
+  game.update(1 / 60);
+  assert.equal(p.ammo[0].reserve, 0, "enemy bases do not resupply");
+  const base = game.arena.spawns[0][0];
+  Object.assign(p, { x: base.x, z: base.z });
+  game.update(1 / 60);
+  assert.equal(p.ammo[0].reserve, WEAPONS[0].reserve);
+  assert.equal(p.ammo[2].reserve, WEAPONS[2].reserve);
+  assert.equal(p.ammo[0].mag, 0);
+  assert.equal(game.notice, "RESUPPLIED");
+});
+test("bots with no ammunition route home and refill instead of chasing with empty guns", () => {
+  const { game } = setup();
+  const bot = game.actors[3];
+  for (const a of game.actors)
+    if (a !== bot) Object.assign(a, { alive: false, respawn: 999 });
+  Object.assign(bot, { x: 0, z: -15 });
+  for (const i of [0, 1, 2, 3, 4]) bot.ammo[i] = { mag: 0, reserve: 0 };
+  bot.brain.think = 0;
+  for (let i = 0; i < 60 * 15 && bot.ammo[bot.weapon].reserve === 0; i++)
+    game.update(1 / 60);
+  assert.ok(
+    bot.ammo[bot.weapon].reserve > 0,
+    "bot reached a base and refilled",
+  );
+});
+test("idle bots top up half-empty magazines; engaged bots keep firing", () => {
+  const { game } = setup();
+  const { p, e } = isolate(game);
+  const w = WEAPONS[e.weapon];
+  p.alive = false;
+  p.respawn = 999;
+  e.ammo[e.weapon].mag = Math.floor(w.magazine * 0.4);
+  game.bots.update(e, 1 / 60);
+  assert.ok(e.reload > 0, "reloads during a lull");
+  const { e: e2 } = isolate(game);
+  e2.ammo[e2.weapon].mag = Math.floor(WEAPONS[e2.weapon].magazine * 0.4);
+  e2.brain.think = 0;
+  game.bots.update(e2, 1 / 60);
+  assert.equal(e2.reload, 0, "no voluntary reload with an enemy in view");
+});
+test("bots separate instead of stacking on one spot; conquest labels objective work", () => {
+  const { game } = setup();
+  const [a, b] = [game.actors[1], game.actors[2]];
+  for (const x of game.actors)
+    if (x !== a && x !== b) Object.assign(x, { alive: false, respawn: 999 });
+  Object.assign(a, { x: 0, z: -15 });
+  Object.assign(b, { x: 0, z: -15 });
+  for (const x of [a, b]) x.brain.path = [];
+  for (let i = 0; i < 60; i++) {
+    game.bots.update(a, 1 / 60);
+    game.bots.update(b, 1 / 60);
+  }
+  assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 0.5);
+  const cq = new OfflineSimulation(
+    { clear() {}, consume: () => false },
+    { play() {} },
+    () => 0.5,
+    { mode: "conquest" },
+  );
+  cq.start("normal");
+  for (const x of cq.actors)
+    if (x.id !== 1) Object.assign(x, { alive: false, respawn: 999 });
+  const bot = cq.actors[1];
+  for (let i = 0; i < 30; i++) cq.bots.update(bot, 1 / 60);
+  assert.ok(
+    ["CaptureSector", "DefendSector"].includes(bot.brain.state),
+    bot.brain.state,
+  );
+});
+// Bodies block movement, but never trap actors that already overlap.
+test("actors cannot walk through each other; overlapping or dead bodies never trap anyone", async () => {
+  const { BODY_GAP } = await import("../src/world.js");
+  const { game, input } = setup();
+  game.bots.update = () => {};
+  const p = game.player,
+    bot = game.actors[6];
+  for (const a of game.actors)
+    if (a !== p && a !== bot) Object.assign(a, { alive: false, respawn: 999 });
+  // Walk straight east (yaw pi/2) into a bot standing 3 m ahead in an open lane.
+  Object.assign(p, { x: -6, z: -10, yaw: Math.PI / 2, pitch: 0 });
+  Object.assign(bot, { x: -3, z: -10 });
+  input.keys.add("KeyW");
+  for (let i = 0; i < 90; i++) game.update(1 / 60);
+  const gap = Math.hypot(p.x - bot.x, p.z - bot.z);
+  assert.ok(
+    gap >= BODY_GAP - 1e-6 && gap < BODY_GAP + 0.1,
+    `stopped at ${gap}`,
+  );
+  // Sidestepping slides past along the body instead of sticking to it.
+  input.keys.add("KeyD");
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  assert.ok(p.z > bot.z + 0.5, "moved sideways around the bot");
+  input.keys.clear();
+  // Exactly stacked actors can still step apart.
+  Object.assign(p, { x: bot.x, z: bot.z });
+  input.keys.add("KeyS");
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  assert.ok(Math.hypot(p.x - bot.x, p.z - bot.z) > BODY_GAP);
+  input.keys.clear();
+  // A dead body does not block.
+  Object.assign(p, { x: -6, z: -10 });
+  Object.assign(bot, { x: -3, z: -10, alive: false, respawn: 999 });
+  input.keys.add("KeyW");
+  for (let i = 0; i < 90; i++) game.update(1 / 60);
+  assert.ok(p.x > bot.x + 1, "walked through where the dead bot lay");
+});
+// A fixed roster order let one team always act first within a tick; the start rotates instead.
+test("every actor takes a turn acting first, so neither team always resolves first", () => {
+  const { game } = setup();
+  const firsts = [];
+  let seen = null;
+  game.bots.update = (a) => {
+    if (seen === null) seen = a.id;
+  };
+  game.controller.update = () => {
+    if (seen === null) seen = 0;
+  };
+  for (let i = 0; i < game.actors.length; i++) {
+    seen = null;
+    game.update(1 / 60);
+    firsts.push(seen);
+  }
+  assert.deepEqual(
+    [...firsts].sort((a, b) => a - b),
+    game.actors.map((a) => a.id),
+  );
 });

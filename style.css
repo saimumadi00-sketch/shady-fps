@@ -1,34 +1,88 @@
-/* Global type, palette, and theme variables shared by menus and HUD. */
+/* Crosscurrent arena: match setup, HUD and in-match dialogs. Same sheet as the lobby (taste-skill
+   true-black flat, seed 1768119028): #000 ground, #111 cards, #2a2a2a nested, Inter, the Cyan team
+   colour as the one data hue and Ember as the opposing team. Over the 3D scene the HUD uses flat
+   neutral scrims for legibility, never glow, blur or text shadows. */
+@font-face {
+  font-family: "Inter";
+  src: url("./assets/fonts/inter-latin.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #e8f0e9;
-  background: #10282c;
+  --ground: #000000;
+  --surface: #111111;
+  --raised: #2a2a2a;
+  --hover: #333333;
+  --border: #1a1a1a;
+  --rule: #161616;
+  --control: #444444;
+  --text: #ffffff;
+  --muted: #b4b4b4;
+  --faint: #949494;
+  --accent: #3fc7b8;
+  --accent-tint: #12302c;
+  --enemy: #f56130;
+  --enemy-tint: #351a10;
+  --warning: #e5a93b;
+  --warning-tint: #2b2414;
+  --negative: #e5484d;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --radius-card: 20px;
+  --radius-inner: 14px;
+  --radius-control: 999px;
+  --gap: 14px;
+  --pad: 22px;
+  --control-height: 36px;
+  --column: 1152px;
+  --rail: 376px;
+  /* Kept for scripts and tests that read the legacy names. */
+  --cyan: var(--accent);
+  --orange: var(--enemy);
+  font-family: "Inter", system-ui, sans-serif;
+  color: var(--text);
+  background: var(--ground);
   font-synthesis: none;
   color-scheme: dark;
-  --cyan: #a7ead4;
-  --orange: #f29a66;
 }
-/* Include padding and borders in component dimensions to keep responsive layouts predictable. */
 * {
   box-sizing: border-box;
 }
 body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+p,
+figure {
   margin: 0;
 }
 button,
 input,
 select {
   font: inherit;
+  color: inherit;
 }
 button {
   cursor: pointer;
 }
+.num,
+#timer,
+#health,
+#ammo,
+#reserve,
+#countdown,
+#finalScore,
+#stats {
+  font-variant-numeric: tabular-nums;
+}
 /* Visible keyboard focus is retained even when pointer interactions use custom styles. */
-button:focus-visible,
-select:focus-visible,
-input:focus-visible {
-  outline: 3px solid var(--orange);
-  outline-offset: 4px;
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 /* Ensure the hidden attribute wins over layout display rules on overlays and controls. */
 [hidden] {
@@ -50,7 +104,8 @@ input:focus-visible {
   touch-action: none;
   background: #91a5a6;
 }
-/* Shared modal layer for setup, pause, results, rotation guidance, and startup errors. */
+
+/* ---------- Overlays: setup is a full page; dialogs sit on a flat scrim over the game ---------- */
 .overlay {
   position: absolute;
   inset: 0;
@@ -58,313 +113,484 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0c2229dd;
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.72);
   overflow: auto;
   padding: 24px;
 }
-/* Bound desktop setup width while allowing its content to grow and scroll on short screens. */
-.menu-shell {
-  margin-block: auto;
-  max-width: 1100px;
-  width: 100%;
-  border: 1px solid #afc4be35;
-  background: linear-gradient(125deg, #122b30f2, #102329eb);
-  box-shadow: 0 30px 100px #0005;
+.overlay.setup {
+  display: block;
+  padding: 0;
+  background: var(--ground);
 }
-.eyebrow {
+.overlay.setup[hidden] {
+  display: none !important;
+}
+
+/* ---------- Top bar, shared with the lobby ---------- */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ground);
+  border-bottom: 1px solid var(--rule);
+}
+.bar-inner {
+  max-width: calc(var(--column) + 48px);
+  height: 48px;
+  margin: 0 auto;
+  padding: 0 24px;
   display: flex;
-  gap: 12px;
   align-items: center;
-  padding: 18px 32px;
-  border-bottom: 1px solid #afc4be25;
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #a5beb9;
+  gap: 28px;
 }
-.signal {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #b7e8aa;
-  box-shadow: 0 0 10px #b7e8aa;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
 }
-.version {
+.mark {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.scope {
+  color: var(--faint);
+  font-weight: 400;
+  font-size: 14px;
+}
+.bar nav {
+  display: flex;
+  gap: 22px;
   margin-left: auto;
 }
-/* Two-column desktop layout separates branding/preview from match setup. */
-.menu-body {
-  display: grid;
-  grid-template-columns: 1.15fr 1fr;
+.bar nav a {
+  color: #bbbbbb;
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
 }
-.intro {
-  position: relative;
-  padding: 48px 32px;
-  background: radial-gradient(ellipse at 10% 80%, #39636260, transparent 65%);
-  overflow: hidden;
+.bar nav a:hover,
+.bar nav a[aria-current="page"] {
+  color: var(--text);
 }
-/* Decorative yard number must never intercept menu clicks. */
-.intro:after {
-  content: "07";
-  position: absolute;
-  bottom: -60px;
-  right: 0;
-  font-size: 260px;
-  font-weight: 900;
-  color: #b1d3c805;
-  pointer-events: none;
+
+/* ---------- Buttons: one inverted primary, grey secondaries ---------- */
+.primary,
+.secondary-button,
+.hud-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--control-height);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s,
+    transform 0.08s;
 }
-.kicker {
-  font-size: 10px;
-  letter-spacing: 2.3px;
-  color: var(--cyan);
-  margin: 0 0 24px;
+.primary:active:not(:disabled),
+.secondary-button:active,
+.hud-button:active {
+  transform: scale(0.97);
+}
+.primary {
+  background: var(--text);
+  color: var(--ground);
+}
+.primary:hover:not(:disabled) {
+  background: #e6e6e6;
+}
+.primary:disabled {
+  background: var(--raised);
+  color: var(--muted);
+  cursor: wait;
+}
+.secondary-button {
+  background: var(--raised);
+  color: var(--text);
+}
+.secondary-button:hover {
+  background: var(--hover);
+}
+button:disabled:not(.primary),
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+  color: var(--faint);
+}
+
+/* ---------- Setup page: 1152 = 762 main + 14 gap + 376 rail ---------- */
+.setup-page {
+  max-width: calc(var(--column) + 48px);
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+}
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 h1 {
-  position: relative;
-  font-size: clamp(44px, 5.8vw, 78px);
-  letter-spacing: -5px;
-  line-height: 0.9;
-  margin: 50px 0 25px;
-  font-weight: 900;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-h1 em {
-  font-style: normal;
-  color: var(--cyan);
+.summary {
+  margin-top: 4px;
+  color: var(--muted);
 }
-h1 > span {
-  position: absolute;
-  font-size: 65px;
-  right: 5px;
-  top: -20px;
-  color: var(--orange);
+#briefMode {
+  color: var(--text);
+  font-weight: 500;
 }
-.tagline {
-  color: #a7bfba;
-  font-size: 17px;
-  line-height: 1.65;
+#play {
+  min-width: 140px;
 }
-.chips {
+.board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px 360px;
+  gap: var(--gap);
+}
+/* Loadout: preview, then class, then weapon and cosmetics, stacked in its own column. */
+.loadout-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.loadout-cols .fields.stack {
+  margin: 0;
+}
+.col {
   display: flex;
-  gap: 8px;
-  margin-top: 35px;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
 }
-.chips span {
-  font-size: 9px;
-  letter-spacing: 1px;
-  border: 1px solid #b3c7c43a;
-  padding: 9px;
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: var(--pad);
 }
-.brief {
-  padding: 25px 30px;
-  border-left: 1px solid #afc4be25;
-}
-/* Draw the tactical-map background with CSS gradients instead of downloaded textures. */
-.map-art {
-  height: 132px;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 15px,
-      #c4dfc007 16px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 15px,
-      #c4dfc007 16px
-    ),
-    #0b2026;
-  position: relative;
-  border: 1px solid #aac9c42a;
-  overflow: hidden;
-}
-.map-art svg {
-  width: 100%;
-  height: 115px;
-  stroke: #aac9c450;
-  fill: none;
-  stroke-width: 2;
-}
-.map-art .cover {
-  fill: #95b5ad30;
-  stroke: #9bb3a9;
-}
-.map-art circle {
-  fill: var(--cyan);
-  stroke: none;
-}
-.map-art .enemy {
-  fill: var(--orange);
-}
-.map-art .dashes {
-  stroke-dasharray: 3 5;
-}
-.map-art > span {
-  position: absolute;
-  bottom: 7px;
-  left: 12px;
-  font: 8px monospace;
-  letter-spacing: 1px;
-  color: #859f9a;
-}
-.brief-title {
+.card-head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-top: 18px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 14px;
 }
 h2 {
-  margin: 0;
-  font-size: 24px;
-  letter-spacing: -0.7px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  white-space: nowrap;
 }
-.brief-title span {
-  font-size: 8px;
-  letter-spacing: 1.3px;
-  color: var(--cyan);
+.meta {
+  color: var(--faint);
+  font-size: 13px;
 }
-.brief > p {
-  font-size: 12px;
-  color: #91aaa5;
-  line-height: 1.6;
-  margin: 10px 0 16px;
+.body {
+  color: var(--text);
 }
-.rules {
+/* The map grows to keep both columns level; the SVG keeps its proportions inside. */
+.map-card {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  padding: 14px 0;
-  border-block: 1px solid #afc4be25;
+  flex-direction: column;
+}
+.map-art {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+/* Zero base height: the drawing fills only the height the row gives it (at least 260 px). */
+.map-art svg {
+  flex: 1 1 auto;
+  height: 0;
+  width: 100%;
+  min-height: 260px;
+  border-radius: var(--radius-inner);
+  background: var(--ground);
+}
+.map-art .floor {
+  fill: var(--raised);
+}
+.map-art .solid {
+  fill: #5c5c5c;
+}
+.map-art .crate {
+  fill: #444444;
+}
+.map-art rect.team-a {
+  fill: var(--accent);
+}
+.map-art rect.team-b {
+  fill: var(--enemy);
+}
+.map-art text {
+  font-size: 1.9px;
+  font-weight: 600;
+}
+.map-art text.team-a {
+  fill: var(--accent);
+}
+.map-art text.team-b {
+  fill: var(--enemy);
+}
+.map-art figcaption {
+  margin: 10px 0 12px;
+  color: var(--faint);
+  font-size: 13px;
+}
+#briefDescription {
+  margin-bottom: 16px;
+}
+/* KPIs are type in one divided container, not tiles. */
+.rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--ground);
+  border-radius: var(--radius-inner);
 }
 .rules div {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
+  padding: 12px 16px;
 }
-.rules b {
-  font-size: 22px;
+.rules div + div {
+  border-left: 1px solid var(--border);
 }
 .rules span {
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: #8aa6a0;
-}
-/* Flexible form rows share available width; responsive rules adjust narrow layouts below. */
-.settings {
-  display: flex;
-  gap: 14px;
-  margin: 17px 0;
-}
-.settings > label {
-  flex: 1;
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: #91ada7;
-}
-select {
-  display: block;
-  width: 100%;
-  margin-top: 7px;
-  background: #20393b;
-  border: 1px solid #5a737366;
-  color: #e9efe7;
-  padding: 8px;
+  color: var(--muted);
   font-size: 12px;
+  line-height: 16px;
 }
-input[type="range"] {
-  display: block;
-  width: 100%;
-  accent-color: var(--cyan);
+.rules b {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
 }
-.secondary {
-  align-items: center;
-  gap: 9px;
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
 }
-.secondary label:first-child {
-  flex: 1.7;
+.fields.stack {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 16px 0;
 }
-.check {
+.rule-fields {
+  margin-top: 14px;
+}
+.fields .wide {
+  grid-column: 1 / -1;
+}
+.fields label,
+.dialog label {
   display: flex;
-  align-items: center;
-  white-space: nowrap;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  min-width: 0;
 }
-.check input {
-  accent-color: var(--cyan);
-}
-/* Primary actions use the strongest contrast and a shared full-width touch target. */
-.primary {
-  width: 100%;
-  padding: 17px;
-  border: 0;
-  background: var(--cyan);
-  color: #15382e;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-align: center;
-  transition: background 0.15s;
-}
-.primary:hover {
-  background: #c6ffe6;
-}
-.primary:disabled {
-  opacity: 0.5;
-  cursor: wait;
-}
-#status {
-  text-align: center;
-  font-size: 9px;
-  color: #92aea7;
-  margin: 9px 0 0;
-}
-footer {
-  border-top: 1px solid #afc4be25;
-  padding: 18px 32px;
+.fields label.range > span {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
-  font-size: 9px;
-  color: #8ea6a1;
-  line-height: 1.8;
 }
-footer > span:last-child {
-  text-align: right;
-  font-size: 8px;
-  letter-spacing: 1px;
+#fovValue {
+  color: var(--text);
 }
-footer b {
-  font-weight: 400;
-  color: var(--cyan);
+select,
+input:not([type="range"]):not([type="checkbox"]) {
+  width: 100%;
+  height: var(--control-height);
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background-color: var(--ground);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 14px;
+  min-width: 0;
 }
-/* Compact modal layout for pause, result, orientation, and failure screens. */
+select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23b4b4b4' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+select:hover,
+input:hover {
+  border-color: #5a5a5a;
+}
+input::placeholder {
+  color: var(--faint);
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--text);
+  margin: 4px 0 0;
+}
+.check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  min-height: 32px;
+}
+.check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--text);
+}
+.weapon-info,
+.custom-note,
+#roomMessage,
+#roomRoster {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.custom-note {
+  margin-top: 12px;
+  color: var(--faint);
+}
+#weaponPreview {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+}
+.custom-panel {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.custom-panel summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+  list-style-position: inside;
+}
+.custom-panel[open] summary {
+  margin-bottom: 14px;
+}
+.button-row {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0;
+}
+.button-row .secondary-button {
+  flex: 1;
+}
+#leaveRoom {
+  width: 100%;
+}
+.foot {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 18px;
+}
+.foot > span:first-child {
+  max-width: 720px;
+}
+
+/* ---------- Dialogs: pause, results, rotation and start-up errors ---------- */
 .dialog {
   margin-block: auto;
-  width: min(480px, 100%);
-  padding: 32px;
-  border: 1px solid #66867d88;
-  background: #122b30;
-  text-align: center;
+  width: min(440px, 100%);
+  padding: 24px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .dialog h2 {
-  font-size: 32px;
+  font-size: 20px;
+  line-height: 28px;
+  white-space: normal;
 }
 .dialog p {
-  color: #adc3b9;
-  font-size: 13px;
-  line-height: 1.6;
+  color: var(--muted);
 }
-.secondary-button {
-  padding: 13px;
-  background: transparent;
-  border: 1px solid #71887d66;
-  color: #b0c9bf;
+.dialog .primary,
+.dialog .secondary-button {
   width: 100%;
-  margin-top: 12px;
-  font-size: 11px;
-  letter-spacing: 1px;
+  height: 44px;
 }
-/* Gameplay information overlays the scene without generally intercepting aiming input. */
+.dialog .primary {
+  margin-top: 4px;
+}
+#finalScore {
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 600;
+}
+#roster {
+  max-height: 260px;
+  overflow: auto;
+}
+#roster table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+#roster th {
+  color: var(--faint);
+  font-weight: 400;
+  font-size: 12px;
+  height: 32px;
+}
+#roster td {
+  height: 36px;
+  border-top: 1px solid var(--border);
+}
+#roster td:not(:first-child),
+#roster th:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#rotate {
+  z-index: 25;
+}
+#fatal {
+  z-index: 30;
+}
+
+/* ---------- HUD: flat scrims over the scene, tabular figures, colour only on team data ---------- */
 #hud {
   position: absolute;
   inset: 0;
@@ -372,7 +598,6 @@ footer b {
   padding: max(20px, env(safe-area-inset-top))
     max(24px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
     max(24px, env(safe-area-inset-left));
-  text-shadow: 0 2px 4px #0009;
 }
 .topline {
   display: flex;
@@ -382,13 +607,18 @@ footer b {
 .map-label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 15px;
-  letter-spacing: 2px;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: var(--radius-inner);
+  background: var(--scrim);
+}
+.map-label b {
+  font-size: 14px;
+  font-weight: 600;
 }
 .map-label span {
-  font-size: 8px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  color: var(--muted);
 }
 .scoreboard {
   position: absolute;
@@ -396,42 +626,45 @@ footer b {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  background: #10282cdb;
-  border: 1px solid #a4c3b340;
+  border-radius: var(--radius-inner);
+  background: var(--scrim);
 }
 .scoreboard > b {
-  font-size: 32px;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
   min-width: 64px;
   text-align: center;
 }
 .cyan {
-  color: var(--cyan);
+  color: var(--accent);
 }
 .orange {
-  color: var(--orange);
+  color: var(--enemy);
 }
 .scoreboard > div {
   text-align: center;
-  padding: 7px 18px;
-  border-inline: 1px solid #a4c3b330;
+  padding: 6px 16px;
 }
 .scoreboard span {
-  font-size: 8px;
-  letter-spacing: 1px;
   display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
 }
 .scoreboard strong {
-  font-size: 20px;
   display: block;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
 }
-.quiet {
+.hud-button {
   pointer-events: auto;
-  background: #10282c9c;
-  border: 1px solid #b5cac450;
-  color: #fff;
-  padding: 8px 13px;
+  background: var(--scrim);
+  color: var(--text);
+}
+.hud-button:hover {
+  background: rgba(0, 0, 0, 0.8);
 }
 .bottomline {
   position: absolute;
@@ -441,57 +674,69 @@ footer b {
   display: flex;
   justify-content: space-between;
   align-items: end;
+  gap: 16px;
 }
 .health,
 .ammo {
-  background: #112b30bd;
-  padding: 12px 18px;
-  min-width: 155px;
-  border-left: 3px solid var(--cyan);
+  padding: 12px 16px;
+  min-width: 160px;
+  border-radius: var(--radius-inner);
+  background: var(--scrim);
 }
 .health > span,
 .ammo > span {
   display: block;
-  font-size: 9px;
-  letter-spacing: 1.5px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
 }
 .health strong,
 .ammo strong {
-  font-size: 34px;
   display: block;
-  margin-top: 3px;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
 }
 .health small,
 .ammo small {
   font-size: 14px;
   font-weight: 400;
-  color: #bdcec6;
+  color: var(--muted);
 }
 .health-track {
-  height: 3px;
-  background: #6e7673;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
   margin-top: 6px;
+  overflow: hidden;
 }
 .health-track i {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--cyan);
+  border-radius: 999px;
+  background: var(--text);
+}
+/* Low health is the one HUD state that needs a signal colour. */
+.health.low strong,
+.health.low small {
+  color: var(--negative);
+}
+.health.low .health-track i {
+  background: var(--negative);
 }
 .ammo {
   text-align: right;
-  border-left: 0;
-  border-right: 3px solid var(--cyan);
 }
 #reloadState {
-  font-size: 8px;
-  color: #c4d4ca;
-  margin-top: 5px;
+  margin-top: 2px;
 }
 #hint {
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: #e9f6e3aa;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
 }
 /* Anchor aim feedback at the exact center of the viewport. */
 #crosshair {
@@ -500,12 +745,13 @@ footer b {
   top: 50%;
   width: 0;
   height: 0;
-  filter: drop-shadow(0 1px 1px #000);
+  /* A dark edge keeps the 2px crosshair legible over any part of the scene. */
+  filter: drop-shadow(0 1px 1px #000); /* taste-skill-ignore */
 }
-/* Four short arms form the crosshair; the later customization rule sets their color. */
+/* Four short arms form the crosshair; their colour comes from the player's setting. */
 #crosshair i {
   position: absolute;
-  background: white;
+  background: var(--crosshair-color, #a7ead4);
   width: 2px;
   height: 6px;
   left: -1px;
@@ -535,10 +781,11 @@ footer b {
   opacity: 0;
   color: #fff;
 }
+/* Damage feedback: a red edge vignette whose opacity the HUD drives. */
 #damage {
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 100px 35px #e45637;
+  box-shadow: inset 0 0 100px 35px #e45637; /* taste-skill-ignore: hurt indicator, not a surface shadow */
   opacity: 0;
 }
 #notice {
@@ -546,30 +793,40 @@ footer b {
   top: 60%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 14px;
-  color: var(--cyan);
-  font-weight: bold;
+  font-size: 15px;
+  font-weight: 600;
   text-align: center;
+  white-space: nowrap;
+}
+#notice:not(:empty) {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--scrim);
 }
 #feed {
   position: absolute;
   right: 24px;
-  top: 90px;
-  text-align: right;
-  font-size: 11px;
-  line-height: 1.8;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 13px;
 }
 #feed > div {
-  background: #0b232aa8;
-  padding: 3px 10px;
-  margin-bottom: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--scrim);
+}
+#feed span {
+  font-weight: 600;
 }
 #stats {
   position: absolute;
   bottom: 4px;
-  left: 25px;
-  font: 9px monospace;
-  color: #d7ece0;
+  left: 24px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
 }
 #death {
   position: absolute;
@@ -579,44 +836,84 @@ footer b {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background: #17292b55;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.45);
 }
 #death p {
-  font-size: 12px;
-  letter-spacing: 3px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
 }
 #death strong {
-  font-size: 90px;
+  font-size: 72px;
+  line-height: 80px;
+  font-weight: 600;
 }
 #death span {
+  font-size: 13px;
+  color: var(--muted);
+}
+/* Objective strip below the scoreboard; the fill tint names the owner. */
+#objectives {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  width: min(620px, 94vw);
+  pointer-events: none;
+}
+#objectives > div {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--scrim);
+}
+#objectives [data-owner="cyan"] {
+  background: rgba(18, 48, 44, 0.88);
+}
+#objectives [data-owner="ember"] {
+  background: rgba(53, 26, 16, 0.88);
+}
+#objectives [data-contested="true"] {
+  background: rgba(43, 36, 20, 0.92);
+}
+#objectives strong,
+#objectives small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#objectives strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+#objectives small {
+  margin-top: 2px;
   font-size: 12px;
+  color: var(--muted);
 }
-#finalScore {
-  font-size: 64px;
-  color: var(--cyan);
-  margin: 20px 0;
+#objectives [data-owner="cyan"] small {
+  color: var(--accent);
 }
-#roster {
-  font-size: 11px;
-  max-height: 210px;
-  overflow: auto;
-  margin: 14px 0;
+#objectives [data-owner="ember"] small {
+  color: var(--enemy);
 }
-#roster table {
+#objectives [data-contested="true"] small {
+  color: var(--warning);
+}
+#objectives progress {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  height: 4px;
+  margin-top: 6px;
+  accent-color: var(--text);
 }
-#roster td,
-#roster th {
-  padding: 5px;
-  border-bottom: 1px solid #ffffff15;
-}
-#roster td:not(:first-child),
-#roster th:not(:first-child) {
-  text-align: right;
-}
-/* The touch container passes events through; individual interactive children opt back in. */
+
+/* ---------- Touch controls: the container passes events through; children opt back in ---------- */
 #touch {
   position: absolute;
   inset: 0;
@@ -629,13 +926,14 @@ footer b {
 #touch button {
   pointer-events: auto;
   position: absolute;
-  border: 1px solid #efffe780;
-  background: #10282c70;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
   color: #fff;
   border-radius: 50%;
-  width: 54px;
-  height: 54px;
-  font-size: 10px;
+  width: 56px;
+  height: 56px;
+  font-size: 12px;
+  font-weight: 500;
   touch-action: none;
 }
 /* Reserve a right-side drag surface for looking independently of the left joystick. */
@@ -656,8 +954,8 @@ footer b {
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  border: 1px solid #d0e6d66b;
-  background: #15302a44;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
   pointer-events: auto;
   touch-action: none;
 }
@@ -668,17 +966,16 @@ footer b {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #c2e3d578;
-  border: 1px solid #e7ffe8aa;
+  background: rgba(255, 255, 255, 0.45);
 }
 #touch #fire {
   right: 36px;
   bottom: 130px;
   width: 80px;
   height: 80px;
-  border-color: var(--orange);
-  color: #ffe3c9;
-  background: #8b523c55;
+  font-size: 14px;
+  border-color: var(--enemy);
+  background: rgba(53, 26, 16, 0.7);
 }
 #aim {
   right: 128px;
@@ -700,16 +997,6 @@ footer b {
   right: 185px;
   bottom: 123px;
 }
-#rotate {
-  z-index: 25;
-}
-.rotate-icon {
-  font-size: 65px;
-  color: var(--cyan);
-}
-#fatal {
-  z-index: 30;
-}
 /* Hide desktop instructions when real touch input selects the mobile control mode. */
 .touch-mode #hint {
   display: none;
@@ -723,141 +1010,133 @@ footer b {
 .touch-mode .health,
 .touch-mode .ammo {
   padding: 8px 12px;
+  min-width: 120px;
 }
 .touch-mode .health strong,
 .touch-mode .ammo strong {
-  font-size: 26px;
-}
-.touch-mode .map-label {
-  font-size: 11px;
+  font-size: 24px;
+  line-height: 30px;
 }
 .touch-mode .scoreboard > b {
-  font-size: 25px;
+  font-size: 22px;
   min-width: 48px;
 }
 .touch-mode .scoreboard strong {
   font-size: 16px;
 }
-/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
-@media (max-width: 800px) {
-  .overlay {
-    padding: 12px;
+
+/* ---------- Tablet: one column, blocks in the order a player needs them ---------- */
+@media (max-width: 1099px) {
+  .board {
+    display: flex;
+    flex-direction: column;
   }
-  .menu-shell {
-    max-width: 640px;
+  .col {
+    display: contents;
   }
-  .intro {
-    padding: 24px;
+  #roomPanel {
+    order: 0;
   }
-  .intro .kicker {
-    font-size: 8px;
+  .map-card {
+    order: 1;
   }
-  h1 {
-    font-size: 48px;
-    letter-spacing: -3px;
-    margin-top: 35px;
+  [aria-labelledby="match-title"] {
+    order: 2;
   }
-  h1 > span {
-    display: none;
+  .loadout-card {
+    order: 3;
   }
-  .tagline {
-    font-size: 13px;
+  [aria-labelledby="you-title"] {
+    order: 4;
   }
-  .chips {
-    flex-wrap: wrap;
+  #leaveRoom {
+    order: 5;
   }
-  .brief {
-    padding: 18px;
+  .loadout-cols {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .map-art {
-    height: 95px;
+  .loadout-cols canvas {
+    grid-column: 1 / -1;
   }
   .map-art svg {
-    height: 85px;
+    height: auto;
+    min-height: 0;
+    max-height: 340px;
   }
-  footer {
-    padding: 12px 20px;
-    font-size: 8px;
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 720px) {
+  .bar-inner {
+    padding: 0 16px;
+    gap: 12px;
   }
-  .eyebrow {
-    padding: 12px 20px;
+  .scope {
+    display: none;
   }
-  .brief-title {
-    display: block;
+  .bar nav {
+    gap: 14px;
+    font-size: 13px;
+    overflow-x: auto;
   }
-  .brief-title span {
-    display: block;
-    margin-top: 5px;
+  .setup-page {
+    padding: 20px 16px 32px;
+  }
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #play {
+    height: 48px;
+  }
+  .card {
+    padding: 18px 16px;
+  }
+  .rules div {
+    padding: 10px 12px;
   }
   .rules b {
-    font-size: 19px;
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .foot {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .loadout-cols {
+    grid-template-columns: 1fr;
+  }
+  select,
+  input:not([type="range"]):not([type="checkbox"]),
+  .secondary-button {
+    min-height: 44px;
   }
   #hint {
     display: none;
   }
 }
-/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
+@media (max-width: 420px) {
+  .bar nav a[href="./"] {
+    display: none;
+  }
+}
+
+/* ---------- Short landscape screens (phones held sideways) ---------- */
 @media (max-height: 600px) and (min-width: 600px) {
   .overlay {
     padding: 10px;
   }
-  .menu-shell {
-    max-width: 920px;
-  }
-  .eyebrow {
-    padding: 8px 22px;
-  }
-  .intro {
-    padding: 22px;
-  }
-  .intro h1 {
-    margin: 20px 0;
-    font-size: 60px;
-  }
-  .intro .kicker {
-    margin-bottom: 10px;
-  }
-  .chips {
-    margin-top: 18px;
-  }
-  .brief {
-    padding: 14px 22px;
-  }
-  .map-art {
-    display: none;
-  }
-  .brief-title {
-    margin: 0;
-    display: flex;
-  }
-  .brief > p {
-    margin: 6px 0;
-    font-size: 10px;
-  }
-  .rules {
-    padding: 8px 0;
-  }
-  .settings {
-    margin: 9px 0;
-  }
-  .primary {
-    padding: 12px;
-  }
-  footer {
-    padding: 8px 22px;
-  }
   .dialog {
-    padding: 20px;
+    padding: 18px;
+    gap: 8px;
   }
-  .dialog h2 {
-    font-size: 25px;
-  }
-  .dialog .kicker {
-    margin-bottom: 12px;
+  .dialog .primary,
+  .dialog .secondary-button {
+    height: 40px;
   }
   #finalScore {
-    font-size: 38px;
-    margin: 10px 0;
+    font-size: 30px;
+    line-height: 36px;
   }
   #roster {
     max-height: 110px;
@@ -893,164 +1172,148 @@ footer b {
     bottom: 145px;
   }
 }
-/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
-@media (max-width: 599px) {
-  .menu-body {
-    grid-template-columns: 1fr;
-  }
-  .intro {
-    display: none;
-  }
-  .brief {
-    border: 0;
-  }
-  .menu-shell footer > span:last-child {
-    display: none;
-  }
-  .brief-title {
-    display: flex;
-  }
-  .map-art {
-    height: 90px;
-  }
-  .eyebrow {
-    font-size: 8px;
-  }
-}
-.weapon-choice {
-  width: 100%;
-}
-.weapon-info {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #a7bfba;
-}
-/* Armory and customization */
-#menu {
-  align-items: flex-start;
-}
-/* Keep the weapon preview framed separately from text and customization controls. */
-.armory-preview {
-  margin-top: 30px;
-  padding: 18px 12px 10px;
-  border: 1px solid #71988e45;
-  background: radial-gradient(ellipse at center, #49636355, #0d2429);
-}
-.armory-preview .kicker {
-  display: block;
-  margin: 0;
-  font-size: 9px;
-}
-#weaponPreview {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.preview-note,
-.custom-note {
-  font-size: 10px;
-  color: #9bb4ae;
-}
-/* Disclosure sections reduce setup clutter while preserving native keyboard accessibility. */
-.custom-panel {
-  border-top: 1px solid #6e928555;
-  padding: 13px 0;
-}
-.custom-panel summary {
-  cursor: pointer;
-  color: var(--cyan);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-}
-.custom-panel .settings {
-  margin: 12px 0;
-}
-.custom-panel input:not([type="range"]) {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  margin-top: 7px;
-  padding: 8px;
-  border: 1px solid #5a737366;
-  background: #20393b;
-  color: #e9efe7;
-  font-size: 12px;
-}
-.fov-label {
-  font-size: 10px;
-  color: #91ada7;
-  display: block;
-}
-#fovValue {
-  float: right;
-  color: var(--cyan);
-}
-#crosshair i {
-  background: var(--crosshair-color, #a7ead4);
-}
-/* Adapt spacing and control placement to the viewport rather than changing gameplay. */
-@media (max-width: 700px), (max-height: 500px) {
-  .armory-preview {
-    margin-top: 12px;
-  }
-  #weaponPreview {
-    max-height: 135px;
-    object-fit: contain;
-  }
-}
-/* Objective cards stay below the scoreboard on desktop and landscape touch. */
-#objectives {
-  position: absolute;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  width: min(620px, 94vw);
-  pointer-events: none;
-}
-#objectives[hidden] {
-  display: none;
-}
-#objectives > div {
-  flex: 1;
-  padding: 8px;
-  min-width: 0;
-  background: #102a30df;
-  border: 1px solid #aebfb5;
-}
-#objectives strong,
-#objectives small {
-  display: block;
-  font-size: 11px;
-}
-#objectives small {
-  margin-top: 4px;
-  font-size: 9px;
-}
-#objectives [data-owner="cyan"] {
-  border-color: #40c7b8;
-}
-#objectives [data-owner="ember"] {
-  border-color: #f56130;
-}
-#objectives [data-contested="true"] {
-  border-color: #ffd14a;
-}
-#objectives progress {
-  width: 100%;
-  height: 4px;
-  accent-color: #e9bb60;
-}
 @media (max-height: 500px) {
   #objectives {
     top: 58px;
     width: min(550px, 92vw);
   }
   #objectives > div {
-    padding: 4px;
+    padding: 4px 8px;
   }
   #objectives strong {
-    font-size: 9px;
+    font-size: 12px;
+  }
+  #objectives small {
+    font-size: 11px;
+  }
+}
+/* ---------- Game window: the setup screen fills the browser window and never scrolls ----------
+   Three columns share the height under the title row; the map absorbs the difference. */
+@media (min-width: 1100px) and (min-height: 640px) {
+  :root {
+    --column: 1552px;
+  }
+  .overlay.setup {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .overlay.setup .bar {
+    flex: none;
+  }
+  .setup-page {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px 16px;
+  }
+  .title-row {
+    flex: none;
+    margin-bottom: 14px;
+  }
+  .board {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .col {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .col > .card {
+    flex: none;
+  }
+  .col > .map-card {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* The weapon preview is the product's own picture: it grows to fill the loadout column. */
+  .col > .loadout-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .loadout-card .loadout-cols {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(110px, 1fr) auto auto;
+  }
+  #weaponPreview {
+    height: 100%;
+    min-height: 110px;
+    object-fit: contain;
+  }
+  /* The last rail card takes the remaining height and spreads its rows, rather than ending short. */
+  .col-rail > [aria-labelledby="you-title"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .col-rail > [aria-labelledby="you-title"] .fields {
+    flex: 1;
+    align-content: space-evenly;
+    row-gap: 10px;
+  }
+  .map-art,
+  .map-art svg {
+    min-height: 120px;
+  }
+  .foot {
+    flex: none;
+    margin-top: 12px;
+  }
+  .foot > span:last-child {
+    display: none;
+  }
+}
+/* Short laptop windows: one step denser so the columns still fit. */
+@media (min-width: 1100px) and (min-height: 640px) and (max-height: 820px) {
+  :root {
+    --gap: 12px;
+    --pad: 18px;
+  }
+  .setup-page {
+    padding: 12px 24px 12px;
+  }
+  .title-row {
+    margin-bottom: 10px;
+  }
+  .card-head {
+    margin-bottom: 10px;
+  }
+  .loadout-cols {
+    gap: 10px;
+  }
+  .fields.stack {
+    gap: 6px;
+  }
+  .fields {
+    gap: 10px;
+  }
+  .fields label.range {
+    grid-column: auto;
+  }
+  .custom-panel {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .rules div {
+    padding: 8px 14px;
+  }
+  .rules b {
+    font-size: 20px;
+    line-height: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
   }
 }

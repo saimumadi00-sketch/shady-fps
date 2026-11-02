@@ -1,5 +1,10 @@
 // Simulation owner: all authoritative movement, combat, timers, and respawns run here.
-import { CLASS_IDS, classForWeapon, loadout } from "./loadouts.js";
+import {
+  CLASS_IDS,
+  classForWeapon,
+  loadout,
+  normalizeClass,
+} from "./loadouts.js";
 import { Arena, NavigationSystem } from "./world.js";
 import {
   MatchManager,
@@ -7,7 +12,10 @@ import {
   SpawnManager,
   DamageSystem,
   snapshot,
+  resupply,
+  RESUPPLY_RADIUS,
 } from "./match.js";
+import { distance } from "./math.js";
 import { WeaponController, EffectPool, WEAPONS } from "./weapons.js";
 import { BotController } from "./bots.js";
 import { PlayerController } from "./player.js";
@@ -25,6 +33,8 @@ export class OfflineSimulation {
         ? new ConquestMatch(this.arena.sectors)
         : new MatchManager();
     this.actors = TeamManager.createActors();
+    // Living actors block each other's movement.
+    this.arena.bodies = this.actors;
     this.player = this.actors[0];
     this.effects = new EffectPool();
     this.spawns = new SpawnManager(this);
@@ -44,6 +54,7 @@ export class OfflineSimulation {
   }
   // Reset match state and loadout while reusing the arena, navigation graph, and effect pool.
   start(difficulty, weapon = 0, classId = classForWeapon(weapon)) {
+    classId = normalizeClass(classId);
     if (!Number.isInteger(weapon) || !WEAPONS[weapon]) weapon = 0;
     this.match.start();
     this.bots.difficulty = difficulty;
@@ -79,8 +90,13 @@ export class OfflineSimulation {
     this.hurt = Math.max(0, this.hurt - dt);
     this.noticeTime = Math.max(0, this.noticeTime - dt);
     for (const e of this.events) e.time -= dt;
-    // Process actors in roster order and stop immediately after the score limit is reached.
-    for (const a of this.actors) {
+    // Process every actor once per tick and stop immediately after the score limit is reached.
+    // Rotate who acts first each tick: a fixed roster order let one team's shots and
+    // movement always resolve before the other's within the same tick.
+    const n = this.actors.length,
+      first = (this.ticks = ((this.ticks || 0) + 1) % n);
+    for (let k = 0; k < n; k++) {
+      const a = this.actors[(first + k) % n];
       if (this.match.state !== "playing") break;
       // Discard dead-player input before respawning, preventing buffered shots or reloads.
       if (!a.alive) {
@@ -99,6 +115,18 @@ export class OfflineSimulation {
       a.lastDamage += dt;
       if (a.lastDamage > 6) a.hp = Math.min(100, a.hp + 8 * dt);
       this.weapons.update(a, dt);
+      // Friendly base spawns double as resupply points; a mid-reload refill is left alone.
+      if (
+        a.reload <= 0 &&
+        this.arena.spawns[a.team].some(
+          (p) => distance(a, p) < RESUPPLY_RADIUS,
+        ) &&
+        resupply(a, true) &&
+        a === this.player
+      ) {
+        this.notice = "RESUPPLIED";
+        this.noticeTime = 1.2;
+      }
       const controller = this.humanControllers
         ? this.humanControllers.get(a.id)
         : a === this.player

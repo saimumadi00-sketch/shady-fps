@@ -35,7 +35,7 @@ try {
   await friend.waitForFunction(() => !!window.__arena);
   await friend.fill("#callsign", "Friend");
   await friend.selectOption("#roomTeam", "1");
-  await friend.selectOption("#loadoutClass", "scout");
+  await friend.selectOption("#loadoutClass", "recon");
   await friend.click("#joinRoom");
   await friend.waitForFunction(() => __arena.network?.ready);
   await host.waitForFunction(() =>
@@ -83,8 +83,21 @@ try {
     __arena.input.actions.add("fire");
     __arena.input.fire = true;
   });
-  await friend.waitForFunction(() => __arena.game.player.ammo[3].mag < 10);
+  await friend.waitForFunction(() => __arena.game.player.ammo[3].mag < 16);
   await friend.evaluate(() => (__arena.input.fire = false));
+  // Online aim is applied locally on the next frame, then echoed by the server.
+  const turned = await friend.evaluate(() => {
+    const before = __arena.game.player.yaw;
+    __arena.input.dx = 200;
+    __arena.network.updateView(1 / 60);
+    return __arena.game.player.yaw - before;
+  });
+  assert.ok(turned > 0.3);
+  const target = await friend.evaluate(() => __arena.game.player.yaw);
+  await host.waitForFunction(
+    (yaw) => Math.abs(__arena.game.actors[5].yaw - yaw) < 0.01,
+    target,
+  );
   // Both pages must observe the actual server capture and subsequent ticket bleed.
   const sector = g.match.sectors[0];
   Object.assign(g.actors[0], { x: sector.x, z: sector.z, y: 0 });
@@ -122,7 +135,7 @@ try {
   await friend.waitForSelector("#menu:not([hidden])");
   await friend.waitForFunction(() => __arena.game.match.state === "playing");
   assert.equal(g.match.scores[0], 150);
-  assert.equal(g.actors[5].classId, "scout");
+  assert.equal(g.actors[5].classId, "recon");
   await hostContext.close();
   await friend.waitForFunction(() => __arena.network.host);
   assert.equal(room.controllers.has(0), false);

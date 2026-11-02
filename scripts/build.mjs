@@ -56,6 +56,8 @@ await writeFile(
 );
 await mkdir("dist/assets", { recursive: true });
 await cp("assets/yard-map.svg", "dist/assets/yard-map.svg");
+// The lobby's typeface ships with the build so the offline cache has it (Inter, SIL OFL 1.1).
+await cp("assets/fonts", "dist/assets/fonts", { recursive: true });
 await mkdir("dist/assets/maps", { recursive: true });
 await cp("assets/maps/freedm", "dist/assets/maps/freedm", { recursive: true });
 await cp("THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
@@ -67,6 +69,7 @@ const files = [
   "lobby.js",
   "lobby.css",
   "assets/yard-map.svg",
+  "assets/fonts/inter-latin.woff2",
 ];
 // Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.
 const hash = createHash("sha256");

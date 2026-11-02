@@ -1,5 +1,6 @@
 import { classes, modes } from "./lobby-data.js";
 import { createLobbyScene } from "./lobby-scene.js";
+import { outpostMap } from "./outpost-map.js";
 const $ = (id) => document.getElementById(id),
   key = "crosscurrent-orbital-v1";
 const defaults = {
@@ -47,7 +48,7 @@ state.xp = Number.isFinite(state.xp) ? Math.max(0, state.xp) : 2450;
 state.slots = Array.isArray(state.slots)
   ? state.slots.slice(0, 3)
   : [null, null, null];
-state.mode = modes[state.mode] ? state.mode : "Conquest";
+state.mode = Object.hasOwn(modes, state.mode) ? state.mode : "Conquest";
 state.region = ["ASIA PACIFIC", "EUROPE", "NORTH AMERICA"].includes(
   state.region,
 )
@@ -113,51 +114,74 @@ try {
   );
 }
 const muted = new Set();
+// Members are listed left to right in the order their figures stand on the spawn pad.
+// Each person keeps one initial and one identity tint, spaced 90 degrees apart.
+const SQUAD = [
+  { id: "hex", name: "HEX", level: 27, class: "engineer", hue: 30 },
+  { id: "rook", name: "ROOK", level: 31, class: "support", hue: 120 },
+  { id: "you", leader: true, hue: 180 },
+  { id: "ghost", name: "GHOST", level: 38, class: "recon", hue: 270 },
+];
 function renderRoster() {
   const roster = $("roster");
   roster.replaceChildren();
-  [
-    {
-      name: state.name,
-      level: 24 + Math.floor(state.xp / 4000),
-      class: state.class,
-      ready,
-      leader: true,
-    },
-    { name: "GHOST", level: 38, class: "recon", ready: true },
-    { name: "ROOK", level: 31, class: "support", ready: true },
-    { name: "HEX", level: 27, class: "engineer", ready: true },
-  ].forEach((p, i) => {
+  const members = SQUAD.map((m) =>
+    m.leader
+      ? {
+          ...m,
+          name: state.name,
+          level: 24 + Math.floor(state.xp / 4000),
+          class: state.class,
+          ready,
+        }
+      : { ...m, ready: true },
+  );
+  for (const p of members) {
     const row = document.createElement("div");
     row.className = "roster-member";
     const avatar = document.createElement("div");
     avatar.className = "avatar";
-    avatar.textContent = ["⟐", "⌖", "▰", "⌁"][i];
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent = p.name.slice(0, 1);
+    avatar.style.background = `hsl(${p.hue} 22% 20%)`;
+    avatar.style.color = `hsl(${p.hue} 55% 82%)`;
     const info = document.createElement("div"),
       name = document.createElement("strong"),
       detail = document.createElement("small");
-    name.textContent = p.name + (p.leader ? " ♛" : "");
-    detail.textContent = `LVL ${p.level} / ${classes[p.class].name}${p.leader ? " / YOU" : ""}`;
+    name.textContent = p.leader ? `${p.name} (you)` : p.name;
+    detail.textContent = `Level ${p.level} · ${classes[p.class].name}`;
     info.append(name, detail);
+    const foot = document.createElement("div");
+    foot.className = "member-foot";
     const status = document.createElement("span");
-    status.className = "member-status";
-    status.textContent = p.ready ? "✓" : "—";
-    status.title = p.ready ? "Ready" : "Not ready";
-    const voice = document.createElement("button");
-    voice.textContent = muted.has(i) ? "×" : "◖";
-    voice.setAttribute(
-      "aria-label",
-      `${muted.has(i) ? "Unmute" : "Mute"} ${p.name} simulated voice`,
-    );
-    voice.setAttribute("aria-pressed", String(muted.has(i)));
-    voice.onclick = () => {
-      muted.has(i) ? muted.delete(i) : muted.add(i);
-      renderRoster();
-    };
-    row.append(avatar, info, status, voice);
+    status.className = "pill" + (p.ready ? " ready" : "");
+    status.textContent = p.ready ? "Ready" : "Not ready";
+    foot.append(status);
+    if (!p.leader) {
+      const voice = document.createElement("button");
+      voice.className = "mute";
+      voice.textContent = muted.has(p.id) ? "Muted" : "Mute";
+      voice.setAttribute(
+        "aria-label",
+        `${muted.has(p.id) ? "Unmute" : "Mute"} ${p.name}'s simulated voice`,
+      );
+      voice.setAttribute("aria-pressed", String(muted.has(p.id)));
+      voice.onclick = () => {
+        muted.has(p.id) ? muted.delete(p.id) : muted.add(p.id);
+        renderRoster();
+      };
+      foot.append(voice);
+    }
+    row.append(avatar, info, foot);
     roster.append(row);
-  });
-  $("squad-status").textContent = `SQUAD ${ready ? "04" : "03"}/04 READY`;
+  }
+  // The screen's finding: who the squad is waiting on.
+  const count = members.filter((m) => m.ready).length,
+    summary = $("squad-status");
+  summary.replaceChildren(`${count} of ${members.length} ready · `);
+  const next = document.createElement("strong");
+  next.textContent = ready ? "find a match to deploy" : "waiting on you";
+  summary.append(next);
 }
 function config() {
   return {
@@ -188,7 +212,7 @@ function renderLoadout() {
     b.classList.toggle("selected", b.dataset.skin === state.skin);
     b.setAttribute("aria-pressed", String(b.dataset.skin === state.skin));
   });
-  // Preview ratings reflect attachment tradeoffs; they do not claim to modify the legacy training simulation.
+  // Preview ratings reflect attachment tradeoffs; attachments are cosmetic in combat.
   $("stats").innerHTML = weapon.stats
     .map((value, i) => {
       const adjusted = Math.max(
@@ -201,7 +225,7 @@ function renderLoadout() {
             (state.barrel === "suppressor" && i === 1 ? -7 : 0),
         ),
       );
-      return `<div class="stat">${["DAMAGE", "RANGE", "CONTROL", "HANDLING"][i]} <span>${adjusted}</span><div class="progress"><i style="width:${adjusted}%"></i></div></div>`;
+      return `<div class="stat-row"><span>${["Damage", "Range", "Control", "Handling"][i]}</span><div class="track"><i style="width:${adjusted}%"></i></div><b>${adjusted}</b></div>`;
     })
     .join("");
   scene?.update(state.class, weapon);
@@ -275,7 +299,7 @@ $("load").onclick = () => {
 function setReady(value) {
   ready = value;
   $("ready").setAttribute("aria-pressed", String(ready));
-  $("ready").textContent = ready ? "✓ READY TO DEPLOY" : "◇ MARK READY";
+  $("ready").textContent = ready ? "Ready" : "Mark ready";
   renderRoster();
 }
 $("ready").onclick = () => {
@@ -304,24 +328,29 @@ $("chat-form").onsubmit = (e) => {
 };
 function renderMode() {
   $("mode").value = state.mode;
-  $("deployment-mode").textContent =
-    state.mode.toUpperCase() +
-    (state.mode === "Domination" ? " / PREVIEW" : " / OFFLINE 5v5");
+  const conquest = state.mode === "Conquest";
+  const map = $("deploy-map");
+  map.querySelector("svg, img")?.remove();
+  if (conquest) map.insertAdjacentHTML("afterbegin", outpostMap());
+  else {
+    const img = new Image();
+    img.src = "./assets/yard-map.svg";
+    img.alt =
+      "Yard 07: freight stacks split the yard into north, middle and south lanes, Cyan spawns west, Ember east";
+    map.prepend(img);
+  }
   document.querySelector(".friends-link").href =
-    "./arena.html?online=1&mode=" +
-    (state.mode === "Conquest" ? "conquest" : "tdm");
+    "./arena.html?online=1&mode=" + (conquest ? "conquest" : "tdm");
   const training = document.querySelector(".training");
-  training.textContent =
-    state.mode === "Conquest"
-      ? "PLAY OFFLINE CONQUEST ↗"
-      : "ENTER OFFLINE TRAINING ↗";
-  training.href =
-    state.mode === "Conquest" ? "./arena.html?mode=conquest" : "./arena.html";
+  training.textContent = conquest
+    ? "Play Conquest offline"
+    : "Play Team Deathmatch offline";
+  training.href = conquest ? "./arena.html?mode=conquest" : "./arena.html";
   $("mode-description").textContent = modes[state.mode];
   $("region").value = state.region;
   $("ping").textContent =
     { "ASIA PACIFIC": 32, EUROPE: 78, "NORTH AMERICA": 124 }[state.region] +
-    " MS*";
+    " ms simulated";
 }
 for (const id of ["mode", "region"])
   $(id).onchange = (e) => {
@@ -350,27 +379,27 @@ $("modal").addEventListener("click", (e) => {
 function stopQueue() {
   clearInterval(queue);
   queue = null;
-  $("find-match").innerHTML = "FIND MATCH <span>→</span>";
-  $("match-status").textContent = "● SYSTEM READY";
+  $("find-match").textContent = "Find match";
+  $("match-status").textContent = "Not searching";
   $("mode").disabled = false;
   $("region").disabled = false;
 }
 $("find-match").onclick = () => {
   if (queue) {
     stopQueue();
-    toast("Demo matchmaking canceled.");
+    toast("Search cancelled.");
     return;
   }
   setReady(true);
   let elapsed = 0;
-  $("find-match").textContent = "CANCEL SEARCH ×";
+  $("find-match").textContent = "Cancel search";
   $("mode").disabled = true;
   $("region").disabled = true;
-  $("match-status").textContent = "● SIMULATED SEARCH · 00:00";
+  $("match-status").textContent = "Searching · 0:00";
   queue = setInterval(() => {
     elapsed++;
     $("match-status").textContent =
-      `● ${elapsed < 4 ? "SIMULATED SEARCH" : "ASSEMBLING DEMO SQUAD"} · 00:${String(elapsed).padStart(2, "0")}`;
+      `${elapsed < 4 ? "Searching" : "Assembling squad"} · 0:${elapsed < 10 ? "0" : ""}${elapsed}`;
     if (elapsed >= 8) {
       stopQueue();
       state.drills.deployments = Math.min(
@@ -379,7 +408,7 @@ $("find-match").onclick = () => {
       );
       renderProgress();
       modal(
-        `<small>LOCAL MATCHMAKING SIMULATION</small><h2>SQUAD ASSEMBLED.</h2><p>${state.mode === "Conquest" ? "Conquest is ready on FreeDM Outpost. Capture three sectors and drain enemy tickets in an offline 5v5 bot match." : state.mode === "Domination" ? "Domination remains a lobby preview. Continue to the playable offline Team Deathmatch arena." : "Offline Team Deathmatch is ready on Yard 07."}</p><button class="primary" id="launch">PLAY ${state.mode === "Conquest" ? "CONQUEST" : "TEAM DEATHMATCH"} ↗</button><button id="return-lobby" style="width:100%;margin-top:12px">RETURN TO LOBBY</button>`,
+        `<h2>Squad assembled</h2><p>${state.mode === "Conquest" ? "Conquest is ready on FreeDM Outpost: capture A, B and C and drain the enemy's tickets in an offline 5v5 against bots." : state.mode === "Domination" ? "Domination is still a lobby preview, so this deploys to offline Team Deathmatch on Yard 07." : "Offline Team Deathmatch is ready on Yard 07."}</p><button class="primary" id="launch">Play ${state.mode === "Conquest" ? "Conquest" : "Team Deathmatch"}</button><button class="secondary" id="return-lobby">Back to lobby</button>`,
       );
       $("launch").onclick = launchTraining;
       $("return-lobby").onclick = () => $("modal").close();
@@ -417,13 +446,13 @@ function renderProgress() {
     if (n >= max && !state.drills.awarded.includes(id)) {
       state.drills.awarded.push(id);
       state.xp += reward;
-      toast(`Daily drill complete · +${reward} demo XP`);
+      toast(`Daily drill complete: +${reward} XP`);
     }
   }
   $("challenges").innerHTML = drills
     .map(
       ([, name, n, max, reward, desc]) =>
-        `<div class="challenge"><div class="challenge-header"><span>${name}</span><span>${Math.min(n, max)}/${max}</span></div><small>${desc} · ${reward} XP</small><div class="progress"><i style="width:${Math.min((n / max) * 100, 100)}%"></i></div></div>`,
+        `<div class="challenge${n >= max ? " done" : ""}" title="${name}"><div class="challenge-header"><span>${desc} <small>· ${reward} XP</small></span><span>${Math.min(n, max)} of ${max}</span></div><div class="bar-track"><i style="width:${Math.min((n / max) * 100, 100)}%"></i></div></div>`,
     )
     .join("");
   $("level").textContent = 24 + Math.floor(state.xp / 4000);
@@ -434,17 +463,17 @@ function renderProgress() {
 }
 $("rankings").onclick = () =>
   modal(
-    "<small>SEASON 04 / SIMULATED STANDINGS</small><h2>YARD CIRCUIT DIVISION</h2><p>Illustrative rankings. No live leaderboard is connected.</p><table><tr><td>01</td><td>GHOST</td><td>3,120 RP</td></tr><tr><td>02</td><td>ROOK</td><td>2,760 RP</td></tr><tr><td>03</td><td>YOU</td><td>2,480 RP</td></tr><tr><td>04</td><td>HEX</td><td>2,240 RP</td></tr></table>",
+    '<h2>Season 04 standings</h2><p>Your squad\'s division. These rankings are simulated; no live leaderboard is connected.</p><table><tr><td>1.</td><td>GHOST</td><td>3,120 RP</td></tr><tr><td>2.</td><td>ROOK</td><td>2,760 RP</td></tr><tr class="you"><td>3.</td><td>You</td><td>2,480 RP</td></tr><tr><td>4.</td><td>HEX</td><td>2,240 RP</td></tr></table>',
   );
 $("sound").onclick = () => {
   state.sound = !state.sound;
-  $("sound").textContent = state.sound ? "SOUND ON" : "SOUND OFF";
+  $("sound").textContent = state.sound ? "Sound on" : "Sound off";
   $("sound").setAttribute("aria-pressed", String(state.sound));
   persist();
 };
 $("settings").onclick = () => {
   modal(
-    '<small>LOCAL PREFERENCES</small><h2>OPERATOR SETTINGS</h2><label>CALLSIGN<input id="callsign" maxlength="16" autocomplete="off"></label><label>ANIMATION<select id="motion"><option value="full">Full idle animations</option><option value="reduced">Reduced motion</option></select></label><button id="save-settings" class="primary">APPLY SETTINGS</button>',
+    '<h2>Settings</h2><p>Saved on this device.</p><label>Callsign<input id="callsign" maxlength="16" autocomplete="off"></label><label>Animation<select id="motion"><option value="full">Full idle animations</option><option value="reduced">Reduced motion</option></select></label><button id="save-settings" class="primary">Save settings</button>',
   );
   $("callsign").value = state.name;
   $("motion").value = state.reduced ? "reduced" : "full";
@@ -455,58 +484,19 @@ $("settings").onclick = () => {
     renderRoster();
     persist();
     $("modal").close();
-    toast("Operator preferences saved.");
+    toast("Settings saved.");
   };
 };
-document.querySelectorAll("[data-view]").forEach(
-  (b) =>
-    (b.onclick = () => {
-      document
-        .querySelectorAll("[data-view]")
-        .forEach((n) => n.classList.toggle("active", n === b));
-      if (b.dataset.view === "armory") {
-        $("armory").scrollIntoView({
-          behavior: state.reduced ? "instant" : "smooth",
-          block: "nearest",
-        });
-        $("armory").classList.add("highlight");
-        tab("configure");
-        setTimeout(() => $("armory").classList.remove("highlight"), 1800);
-      }
-      if (b.dataset.view === "operations") {
-        modal(
-          "<small>YARD OPERATIONS / LOCAL PREVIEW</small><h2>CHOOSE YOUR FRONT.</h2><p>Conquest and Team Deathmatch are playable offline against bots. Domination is a lobby preview. Matchmaking is simulated.</p>" +
-            Object.keys(modes)
-              .map(
-                (m) =>
-                  `<button class="operation" data-mode="${m}" style="display:block;width:100%;margin-top:10px">${m.toUpperCase()}</button>`,
-              )
-              .join(""),
-        );
-        document.querySelectorAll(".operation").forEach(
-          (o) =>
-            (o.onclick = () => {
-              if (queue) {
-                toast("Cancel the current search before changing operation.");
-                return;
-              }
-              state.mode = o.dataset.mode;
-              renderMode();
-              persist();
-              $("modal").close();
-            }),
-        );
-      }
-    }),
-);
-// Bridge only supported legacy options; new lobby weapon variants remain clearly preview profiles.
+// On a phone the navigation and bar actions fold into one menu.
+$("menu-toggle").onclick = () => {
+  const open = $("site-nav").classList.toggle("open");
+  $("menu-toggle").setAttribute("aria-expanded", String(open));
+  $("menu-toggle").textContent = open ? "Close" : "Menu";
+};
+// Launch the arena with the selected class; preview variants deploy with the class primary.
 function launchTraining() {
   try {
-    localStorage.setItem(
-      "crosscurrent-class",
-      state.class === "recon" ? "scout" : state.class,
-    );
-    // Carbines and sniper variants map to each class's supported training primary.
+    localStorage.setItem("crosscurrent-class", state.class);
     localStorage.setItem(
       "crosscurrent-weapon",
       String({ assault: 0, engineer: 1, support: 4, recon: 3 }[state.class]),
@@ -523,7 +513,8 @@ renderLoadout();
 renderMode();
 renderProgress();
 scene?.setReducedMotion(state.reduced);
-$("sound").textContent = state.sound ? "SOUND ON" : "SOUND OFF";
+$("sound").textContent = state.sound ? "Sound on" : "Sound off";
+$("sound").setAttribute("aria-pressed", String(state.sound));
 // Production registers the shared offline cache; development keeps dependency modules fresh.
 if ("serviceWorker" in navigator && !import.meta.url.includes("/src/"))
   navigator.serviceWorker.register("./sw.js").catch(() => {});

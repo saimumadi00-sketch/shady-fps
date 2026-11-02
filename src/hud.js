@@ -24,6 +24,7 @@ export class HUDController {
       "countdown",
     ])
       this.nodes[id] = document.getElementById(id);
+    this.healthPanel = document.querySelector(".health");
     this.lastFeed = "";
     this.objectives = document.getElementById("objectives");
     this.sectorNodes = [];
@@ -66,53 +67,61 @@ export class HUDController {
               : bearing < 0
                 ? "←"
                 : "→";
-        title.textContent = `${s.id} · ${s.name} ${arrow} ${Math.round(Math.hypot(s.x - a.x, s.z - a.z))}m`;
+        title.textContent = `${s.id} · ${s.name} ${arrow} ${Math.round(Math.hypot(s.x - a.x, s.z - a.z))} m`;
         status.textContent = s.contested
-          ? "CONTESTED"
+          ? "Contested"
           : s.capturing !== null
-            ? `${s.owner === null ? "CAPTURING" : "NEUTRALIZING"} · ${s.capturing === 0 ? "CYAN" : "EMBER"} ${Math.floor(s.progress * 100)}%`
+            ? `${s.capturing === 0 ? "Cyan" : "Ember"} ${s.owner === null ? "capturing" : "neutralizing"} · ${Math.floor(s.progress * 100)}%`
             : s.owner === null
-              ? "NEUTRAL"
+              ? "Neutral"
               : s.owner === 0
-                ? "CYAN CONTROL"
-                : "EMBER CONTROL";
+                ? "Cyan holds"
+                : "Ember holds";
         progress.value = s.progress;
       });
     }
     n.timer.textContent =
       Math.floor(seconds / 60)
         .toString()
-        .padStart(2, "0") +
+        .padStart(2, "0") + // taste-skill-ignore: match clock
       ":" +
-      (seconds % 60).toString().padStart(2, "0");
+      (seconds % 60).toString().padStart(2, "0"); // taste-skill-ignore: match clock
     n.health.textContent = Math.ceil(a.hp);
     n.healthBar.style.width = a.hp + "%";
+    // Low health is the HUD's one signal colour.
+    this.healthPanel?.classList.toggle("low", a.alive && a.hp < 35);
     n.ammo.textContent = s.mag;
     n.reserve.textContent = " / " + s.reserve;
-    n.weaponName.textContent = `${loadout(a.classId).name.toUpperCase()} / ${w.short}`;
+    n.weaponName.textContent = w.label;
     n.reloadState.textContent =
       a.reload > 0
-        ? `RELOADING ${a.reload.toFixed(1)}s`
+        ? `Reloading ${a.reload.toFixed(1)} s`
         : s.mag === 0 && s.reserve === 0
-          ? "NO AMMO · SWITCH WEAPON"
+          ? loadout(a.classId).weapons.some(
+              (i) => a.ammo[i].mag > 0 || a.ammo[i].reserve > 0,
+            )
+            ? "No ammo · switch weapon"
+            : "Out of ammo · resupply at base or eliminate"
           : a.shield > 0
-            ? "SPAWN SHIELD · FIRING ENDS IT"
-            : `${loadout(a.classId).primary + 1} PRIMARY · 3 PISTOL / PAUSE TO CHOOSE`;
+            ? "Spawn shield · firing ends it"
+            : game.controlHint || "1 primary · 2 pistol · Q or wheel to swap";
     n.hitmarker.style.opacity = game.hit > 0 ? 1 : 0;
     n.damage.style.opacity = game.hurt * 0.9;
     n.notice.textContent =
       game.noticeTime > 0
         ? game.notice
         : a.sliding
-          ? "SLIDING · SPACE / JUMP TO CANCEL"
+          ? "Sliding · Space or Jump to cancel"
           : a.sprinting
-            ? "SPRINTING · C / CTRL / SLIDE"
+            ? "Sprinting · C, Ctrl or Slide"
             : "";
     n.death.hidden = a.alive || m.state === "ended" || m.state === "menu";
     n.countdown.textContent = Math.max(1, Math.ceil(a.respawn));
     // Rebuild the kill feed only when its visible contents change.
     const events = game.events.filter((e) => e.time > 0);
-    const key = events.map((e) => e.killer + e.victim + e.team).join("|");
+    const key = events
+      .map((e) => e.killer + e.victim + e.team + (e.headshot ? "h" : ""))
+      .join("|");
     if (key !== this.lastFeed) {
       n.feed.replaceChildren(
         ...events.map((e) => {
@@ -120,25 +129,30 @@ export class HUDController {
           let killer = document.createElement("span");
           killer.className = e.team === 0 ? "cyan" : "orange";
           killer.textContent = e.killer;
-          div.append(killer, document.createTextNode("  ▸  " + e.victim));
+          div.append(
+            killer,
+            document.createTextNode(
+              (e.headshot ? "  ◎  " : "  ▸  ") + e.victim,
+            ),
+          );
           return div;
         }),
       );
       this.lastFeed = key;
     }
-    n.stats.textContent = `${quality.fps} FPS · ${Math.round(quality.scale * 100)}% SCALE · ${renderer.drawCalls} DRAWS · ${game.online ? game.networkLabel || "CONNECTING" : "OFFLINE"}`;
+    n.stats.textContent = `${quality.fps} fps · ${Math.round(quality.scale * 100)}% resolution · ${renderer.drawCalls} draw calls · ${game.online ? game.networkLabel || "Connecting" : "Offline"}`;
   }
   // Build a safely escaped scoreboard sorted by team and eliminations.
   end(game) {
     const m = game.match;
     document.getElementById("winner").textContent =
-      m.winner === null ? "DRAW" : m.winner === 0 ? "CYAN WINS" : "EMBER WINS";
+      m.winner === null ? "Draw" : m.winner === 0 ? "Cyan wins" : "Ember wins";
     document.getElementById("finalScore").textContent = m.scores.join(" : ");
     document.getElementById("personalStats").textContent =
-      `YOU / ${game.player.kills} eliminations · ${game.player.deaths} deaths`;
+      `You · ${game.player.kills} eliminations · ${game.player.deaths} deaths`;
     const table = document.createElement("table");
     const head = document.createElement("tr");
-    for (const text of ["PLAYER", "CLASS", "TEAM", "K", "D"]) {
+    for (const text of ["Player", "Class", "Team", "Kills", "Deaths"]) {
       const th = document.createElement("th");
       th.textContent = text;
       head.append(th);
@@ -151,7 +165,7 @@ export class HUDController {
       for (const text of [
         a.name,
         loadout(a.classId).name,
-        a.team === 0 ? "CYAN" : "EMBER",
+        a.team === 0 ? "Cyan" : "Ember",
         a.kills,
         a.deaths,
       ]) {

@@ -75,7 +75,7 @@ export class Customization {
       ? 150
       : v.target;
     document.getElementById("ruleDuration").textContent =
-      String(v.duration / 60).padStart(2, "0") + ":00";
+      String(v.duration / 60).padStart(2, "0") + ":00"; // taste-skill-ignore: match clock
     previewWeapon(
       document.getElementById("weaponPreview"),
       Number(document.getElementById("startingWeapon").value) || 0,
@@ -93,7 +93,7 @@ export class Customization {
     };
     document.getElementById("scoreTarget").textContent =
       game.mode === "conquest"
-        ? "TICKETS · HOLD SECTORS"
-        : "FIRST TO " + this.values.target;
+        ? "Tickets · hold sectors"
+        : "First to " + this.values.target;
   }
 }

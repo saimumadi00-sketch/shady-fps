@@ -1,33 +1,42 @@
 ﻿// Shared class definitions keep menu choices, bot assignments, and combat permissions aligned.
+// Every class carries exactly two weapons: slot 1 is the class primary, slot 2 the shared pistol.
 export const LOADOUTS = Object.freeze({
   assault: Object.freeze({
     name: "Assault",
     primary: 0,
     weapons: Object.freeze([0, 2]),
-    description: "Frontline combat with a balanced assault rifle.",
+    description:
+      "Versatile medium-range fighting with a full-size assault rifle.",
   }),
   support: Object.freeze({
     name: "Support",
     primary: 4,
     weapons: Object.freeze([4, 2]),
-    description: "Sustained covering fire with a large-magazine LMG.",
+    description:
+      "Holds lanes with a 100-round LMG; slow to reload and reposition.",
   }),
   engineer: Object.freeze({
     name: "Engineer",
     primary: 1,
     weapons: Object.freeze([1, 2]),
-    description: "Close-range fighting with a compact, fast-firing SMG.",
+    description: "Fast handling and accurate moving fire with a compact SMG.",
   }),
-  scout: Object.freeze({
-    name: "Scout",
+  recon: Object.freeze({
+    name: "Recon",
     primary: 3,
     weapons: Object.freeze([3, 2]),
-    description: "Long-range precision with a semi-automatic marksman rifle.",
+    description:
+      "Precise long-range shots and headshots with a marksman rifle.",
   }),
 });
 export const CLASS_IDS = Object.freeze(Object.keys(LOADOUTS));
-// Invalid or legacy saved class IDs fall back to the default frontline loadout.
+// Saves and links created before the Recon rename still use the old class ID.
+const ALIASES = Object.freeze({ scout: "recon" });
+export const normalizeClass = (id) =>
+  Object.prototype.hasOwnProperty.call(ALIASES, id) ? ALIASES[id] : id;
+// Invalid saved class IDs fall back to the default frontline loadout.
 export function loadout(id) {
+  id = normalizeClass(id);
   return Object.prototype.hasOwnProperty.call(LOADOUTS, id)
     ? LOADOUTS[id]
     : LOADOUTS.assault;
@@ -41,4 +50,8 @@ export function canEquip(actor, index) {
   return (
     Number.isInteger(index) && loadout(actor.classId).weapons.includes(index)
   );
+}
+// Translate a 1-based inventory slot key into the class's global weapon index.
+export function slotWeapon(classId, slot) {
+  return loadout(classId).weapons[slot - 1];
 }

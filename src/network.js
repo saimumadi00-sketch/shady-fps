@@ -1,5 +1,9 @@
 import { SnapshotInterpolator } from "./network-interpolation.js";
+import { aimScale, FIRE_BUFFER } from "./player.js";
+import { WEAPONS, recoilFor } from "./weapons.js";
+import { clamp } from "./math.js";
 // Shared matches use authenticated HTTP input and a continuous snapshot stream.
+// The client owns its view angles so aiming responds instantly; the server owns everything else.
 export class NetworkClient {
   constructor(
     game,
@@ -19,6 +23,19 @@ export class NetworkClient {
     this.ready = false;
     this.ping = 0;
     this.interpolation = new SnapshotInterpolator();
+    // Local view angles for the current life, plus predicted recoil state.
+    this.view = null;
+    this.predicted = {
+      cooldown: 0,
+      mag: 0,
+      lastMag: 0,
+      weapon: -1,
+      presses: 0,
+      buffer: 0,
+      recoilPitch: 0,
+      recoilYaw: 0,
+      lastShot: -Infinity,
+    };
     game.online = true;
   }
   async request(path, data = {}) {
@@ -103,11 +120,54 @@ export class NetworkClient {
     this.interpolation.push(packet, performance.now());
     const g = this.game,
       old = g.player,
-      oldWeapon = old.weapon,
-      oldAmmo = old.ammo[old.weapon]?.mag,
       oldHp = old.hp;
-    for (const a of packet.actors) Object.assign(g.actors[a.id], a);
+    // Other players' shots are not simulated locally: a fresh muzzle flash together with a
+    // restarted fire cooldown marks a new shot, which plays at the shooter's position.
+    for (const a of packet.actors) {
+      const was = g.actors[a.id];
+      if (
+        this.ready &&
+        a.id !== packet.playerId &&
+        a.alive &&
+        a.flash > 0 &&
+        a.cooldown > (was.cooldown || 0) + 1e-6
+      )
+        g.audio.play("shot", 0.75, a.weapon, {
+          x: a.x,
+          y: a.y + (a.eye || 1.58),
+          z: a.z,
+        });
+      Object.assign(was, a);
+    }
     g.player = g.actors[packet.playerId];
+    const me = g.player;
+    const p = this.predicted,
+      serverPitch = me.recoilPitch || 0,
+      serverYaw = me.recoilYaw || 0;
+    // Adopt server angles only for a new life; otherwise keep the locally aimed view.
+    // The view holds raw aim, so strip any recoil the server already applied this life.
+    if (!this.view || this.view.spawnId !== me.spawnId) {
+      this.view = {
+        yaw: me.yaw - serverYaw,
+        pitch: me.pitch - serverPitch,
+        spawnId: me.spawnId,
+      };
+      p.recoilPitch = p.recoilYaw = 0;
+      p.lastShot = -Infinity;
+    }
+    // Server recoil is authoritative. During a burst keep the (earlier) prediction unless the
+    // server is ahead; once firing stops, settle on the server's totals.
+    if (performance.now() - p.lastShot > 250) {
+      p.recoilPitch = serverPitch;
+      p.recoilYaw = serverYaw;
+    } else p.recoilPitch = Math.max(p.recoilPitch, serverPitch);
+    this.applyView(me);
+    // Reconcile predicted ammo: refills and weapon changes reset it, otherwise trust the lower count.
+    const mag = me.ammo[me.weapon]?.mag ?? 0;
+    if (me.weapon !== p.weapon || mag > p.lastMag) p.mag = mag;
+    else p.mag = Math.min(p.mag, mag);
+    p.lastMag = mag;
+    p.weapon = me.weapon;
     Object.assign(g.match, packet.match);
     g.time = packet.time;
     g.events = packet.events;
@@ -115,15 +175,8 @@ export class NetworkClient {
     packet.effects.forEach((e, i) => {
       if (g.effects.items[i]) Object.assign(g.effects.items[i], e);
     });
-    if (this.ready && old === g.player) {
-      if (g.player.hp < oldHp) g.audio.play("hurt", 0.4);
-      if (
-        g.player.weapon === oldWeapon &&
-        g.player.ammo[g.player.weapon]?.mag < oldAmmo &&
-        g.player.alive
-      )
-        g.audio.play("shot", 0.3, g.player.weapon);
-    }
+    if (this.ready && old === g.player && g.player.hp < oldHp)
+      g.audio.play("hurt", 0.4);
     g.hit = Math.max(0, (g.player.hitUntil || 0) - g.time);
     g.hurt = Math.max(0, (g.player.hurtUntil || 0) - g.time);
     g.notice = g.player.networkNotice || "";
@@ -134,6 +187,63 @@ export class NetworkClient {
     this.ready = true;
     this.onState(packet);
   }
+  // Apply aim and predicted recoil every rendered frame instead of waiting for a snapshot.
+  updateView(dt, sensitivity = this.sensitivity()) {
+    const g = this.game,
+      a = g.player,
+      i = this.input,
+      v = this.view,
+      p = this.predicted;
+    p.cooldown = Math.max(0, p.cooldown - dt);
+    p.buffer = Math.max(0, p.buffer - dt);
+    if (!this.ready || !v || !a.alive || !i.active) {
+      i.dx = i.dy = 0;
+      p.presses = i.firePresses;
+      p.buffer = 0;
+      return;
+    }
+    const scale = aimScale(a, i, sensitivity);
+    v.yaw += i.dx * scale;
+    // Keep raw aim inside the range where raw + recoil reaches the view limits.
+    v.pitch = clamp(
+      v.pitch - i.dy * scale,
+      -1.45 - p.recoilPitch,
+      1.45 - p.recoilPitch,
+    );
+    i.dx = i.dy = 0;
+    const w = WEAPONS[a.weapon];
+    // Mirror the server's semi-auto press buffer so predicted shots match authoritative ones.
+    if (i.firePresses !== p.presses) p.buffer = FIRE_BUFFER;
+    p.presses = i.firePresses;
+    if (
+      (w.automatic ? i.fire : p.buffer > 0) &&
+      p.cooldown === 0 &&
+      p.mag > 0 &&
+      a.reload <= 0 &&
+      a.cooldown <= 0 &&
+      !a.sprinting &&
+      !a.sliding
+    ) {
+      p.mag--;
+      p.cooldown = w.interval;
+      p.buffer = 0;
+      const kick = recoilFor(a, Math.random),
+        before = clamp(v.pitch + p.recoilPitch, -1.45, 1.45);
+      p.recoilPitch += Math.min(1.45, before + kick.pitch) - before;
+      p.recoilYaw += kick.yaw;
+      p.lastShot = performance.now();
+      g.localShots = (g.localShots || 0) + 1;
+      g.audio.play("shot", 1, a.weapon);
+    }
+    this.applyView(a);
+  }
+  // Displayed angles are raw aim plus predicted recoil, matching how the server combines them.
+  applyView(a) {
+    const v = this.view,
+      p = this.predicted;
+    a.yaw = v.yaw + p.recoilYaw;
+    a.pitch = clamp(v.pitch + p.recoilPitch, -1.45, 1.45);
+  }
   async send() {
     if (!this.token || !this.ready || this.busy) return;
     this.busy = true;
@@ -142,8 +252,11 @@ export class NetworkClient {
       seq: this.seq++,
       keys: i.active ? [...i.keys] : [],
       actions: i.active ? [...i.actions] : [],
-      dx: i.active ? i.dx * this.sensitivity() : 0,
-      dy: i.active ? i.dy * this.sensitivity() : 0,
+      view: this.view && {
+        yaw: this.view.yaw,
+        pitch: this.view.pitch,
+        spawnId: this.view.spawnId,
+      },
       moveX: i.active ? i.moveX : 0,
       moveY: i.active ? i.moveY : 0,
       fire: i.active && i.fire,
@@ -151,7 +264,6 @@ export class NetworkClient {
       touch: i.touch,
       touchCrouch: i.active && i.touchCrouch,
     };
-    i.dx = i.dy = 0;
     i.actions.clear();
     const started = performance.now();
     try {

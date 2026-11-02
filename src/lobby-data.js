@@ -1,93 +1,93 @@
-// Lobby balance profiles are deliberately class-specific; training uses existing weapon equivalents.
+// Lobby weapon cards. The first entry per class is the playable weapon and mirrors src/weapons.js;
+// the second is a preview variant that deploys with the class's playable primary.
 export const classes = {
   assault: {
-    name: "ASSAULT",
+    name: "Assault",
     role: "Versatile rifleman",
     color: 0x78939f,
     weapons: [
       {
         name: "AR-41 Vanguard",
-        category: "ASSAULT RIFLE",
+        category: "Assault rifle",
         model: 0,
-        description: "Balanced / 30 rounds / 720 RPM",
+        description: "Balanced · 30 rounds · 650 RPM",
         stats: [65, 64, 72, 70],
       },
       {
         name: "AR-18 Sentinel",
-        category: "ASSAULT RIFLE",
+        category: "Assault rifle",
         model: 0,
-        description: "Controlled / 30 rounds / 620 RPM",
+        description: "Controlled · 30 rounds · 620 RPM",
         stats: [69, 72, 80, 62],
       },
     ],
   },
   engineer: {
-    name: "ENGINEER",
+    name: "Engineer",
     role: "Mobile close-range fighter",
     color: 0xad8456,
     weapons: [
       {
         name: "VX-9 Wraith",
-        category: "SUBMACHINE GUN",
+        category: "Submachine gun",
         model: 1,
-        description: "Agile / 32 rounds / 900 RPM",
+        description: "Agile · 28 rounds · 850 RPM",
         stats: [44, 32, 65, 95],
       },
       {
         name: "C-12 Nomad",
-        category: "COMPACT CARBINE",
+        category: "Compact carbine",
         model: 0,
-        description: "Compact / 24 rounds / 780 RPM",
+        description: "Compact · 24 rounds · 780 RPM",
         stats: [56, 48, 62, 85],
       },
     ],
   },
   support: {
-    name: "SUPPORT",
+    name: "Support",
     role: "Sustained-fire gunner",
     color: 0x788775,
     weapons: [
       {
         name: "MG-60 Atlas",
-        category: "LIGHT MACHINE GUN",
+        category: "Light machine gun",
         model: 4,
-        description: "Sustained / 100 rounds / 650 RPM",
+        description: "Sustained · 100 rounds · 700 RPM",
         stats: [70, 70, 80, 30],
       },
       {
         name: "MG-36 Bastion",
-        category: "LIGHT MACHINE GUN",
+        category: "Light machine gun",
         model: 4,
-        description: "Lane control / 75 rounds / 720 RPM",
+        description: "Lane control · 75 rounds · 720 RPM",
         stats: [64, 65, 74, 40],
       },
     ],
   },
   recon: {
-    name: "RECON",
+    name: "Recon",
     role: "Precision marksman",
     color: 0x697e92,
     weapons: [
       {
-        name: "SR-7 Longbow",
-        category: "SNIPER RIFLE",
+        name: "DMR-14 Spectre",
+        category: "Marksman rifle",
         model: 3,
-        description: "Precision / 5 rounds / 48 RPM",
-        stats: [98, 98, 52, 23],
+        description: "Semi-auto · 16 rounds · 260 RPM",
+        stats: [78, 86, 68, 45],
       },
       {
-        name: "DMR-14 Spectre",
-        category: "MARKSMAN RIFLE",
+        name: "SR-7 Longbow",
+        category: "Sniper rifle",
         model: 3,
-        description: "Semi-auto / 15 rounds / 280 RPM",
-        stats: [78, 86, 68, 45],
+        description: "Preview · 5 rounds · 50 RPM",
+        stats: [98, 98, 52, 23],
       },
     ],
   },
 };
 export const modes = {
-  Conquest:
-    "Playable offline: capture A, B and C on FreeDM Outpost. Hold more sectors to drain enemy tickets.",
-  Domination: "Close quarters. Three objectives. No retreat.",
-  "Team Deathmatch": "Squad against squad. Every elimination counts.",
+  Conquest: "Offline 5v5. Hold more of A, B and C to drain Ember's tickets.",
+  Domination: "A preview for now: it deploys as offline Team Deathmatch.",
+  "Team Deathmatch": "Yard 07, offline 5v5. First team to 30 wins.",
 };

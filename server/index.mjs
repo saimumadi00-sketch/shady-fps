@@ -116,9 +116,15 @@ export function createMultiplayerServer({
       });
       res.end(req.method === "HEAD" ? undefined : body);
     } catch (error) {
+      // Room rules throw plain Errors with player-facing text; anything else is internal.
       if (!res.headersSent)
         json(res, 400, {
-          error: error.code === "ENOENT" ? "Not found" : error.message,
+          error:
+            error.code === "ENOENT"
+              ? "Not found"
+              : error.constructor === Error && !error.code
+                ? error.message
+                : "Request failed.",
         });
       else res.destroy();
     }

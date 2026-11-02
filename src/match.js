@@ -2,6 +2,7 @@
 import { CLASS_IDS, loadout, canEquip } from "./loadouts.js";
 import { distance } from "./math.js";
 import { WEAPONS } from "./weapons.js";
+import { BODY_GAP } from "./world.js";
 export const TDM_RULES = Object.freeze({
   teamSize: 5,
   target: 30,
@@ -116,23 +117,98 @@ export class TeamManager {
     }));
   }
 }
+// Ammunition never refills on its own: each elimination returns half a magazine per carried
+// weapon, and standing at a friendly base spawn restores the full starting reserve. Magazines
+// are never filled directly, so resupplied rounds still go through a normal reload.
+export const RESUPPLY_RADIUS = 2.5;
+export function resupply(a, full = false) {
+  let changed = false;
+  for (const index of loadout(a.classId).weapons) {
+    const w = WEAPONS[index],
+      s = a.ammo[index];
+    if (!s) continue;
+    const reserve = full
+      ? w.reserve
+      : Math.min(w.reserve, s.reserve + Math.ceil(w.magazine / 2));
+    if (reserve !== s.reserve) {
+      s.reserve = reserve;
+      changed = true;
+    }
+  }
+  return changed;
+}
+// True when every carried weapon is completely empty.
+export function outOfAmmo(a) {
+  return loadout(a.classId).weapons.every(
+    (i) => !a.ammo[i] || (a.ammo[i].mag === 0 && a.ammo[i].reserve === 0),
+  );
+}
+// Enemies within this many metres of an owned sector disable spawning there.
+export const FORWARD_SPAWN_CLEARANCE = 20;
 export class SpawnManager {
   // Use the owning simulation for world queries and match-level bookkeeping.
   constructor(game) {
     this.game = game;
   }
-  // Rank team spawn points by enemy distance, friendly occupancy, and a small random tie-break.
+  // Candidate points: team base spawns plus, in Conquest, points beside uncontested owned sectors.
+  candidates(team) {
+    const base = this.game.arena.spawns[team];
+    const sectors = this.game.match.sectors;
+    if (!sectors) return base;
+    const forward = [];
+    // A sector under pressure (any living enemy nearby) is not a safe deployment point;
+    // this keeps a held point from becoming an unbreakable respawn wall.
+    const threatened = (s) =>
+      this.game.actors.some(
+        (e) =>
+          e.team !== team &&
+          e.alive &&
+          distance(e, s) < FORWARD_SPAWN_CLEARANCE,
+      );
+    for (const s of sectors)
+      if (s.owner === team && !s.contested && !threatened(s))
+        for (const p of s.spawnPoints || []) forward.push({ ...p, sector: s });
+    return base.concat(forward);
+  }
+  // The chosen point, or the nearest position around it (rings of 0.8 m) clear of walls and bodies.
+  clearSpot(p, a) {
+    const g = this.game;
+    const free = (x, z) =>
+      !g.arena.blocked(x, z) &&
+      g.actors.every(
+        (o) => o === a || !o.alive || Math.hypot(o.x - x, o.z - z) >= BODY_GAP,
+      );
+    for (const r of [0, 0.8, 1.6])
+      for (let k = 0; k < (r ? 8 : 1); k++) {
+        const x = p.x + r * Math.cos((k * Math.PI) / 4),
+          z = p.z + r * Math.sin((k * Math.PI) / 4);
+        if (free(x, z)) return { x, z };
+      }
+    return p;
+  }
+  // Conquest spawns favour the uncontested owned point nearest the fight; TDM favours safety.
   spawn(a) {
     // Repair invalid equipped IDs before restoring only the class inventory.
     if (!canEquip(a, a.weapon)) a.weapon = loadout(a.classId).primary;
+    const g = this.game,
+      sectors = g.match.sectors;
     let best = null,
       score = -Infinity;
-    for (const p of this.game.arena.spawns[a.team]) {
-      let safety = 50;
-      for (const enemy of this.game.actors)
+    for (const p of this.candidates(a.team)) {
+      let nearest = 50;
+      for (const enemy of g.actors)
         if (enemy.team !== a.team && enemy.alive)
-          safety = Math.min(safety, distance(p, enemy));
-      for (const friend of this.game.actors)
+          nearest = Math.min(nearest, distance(p, enemy));
+      let safety = nearest;
+      if (sectors) {
+        // Prefer staying close to sectors the team still needs to take.
+        let target = Infinity;
+        for (const s of sectors)
+          if (s.owner !== a.team) target = Math.min(target, distance(p, s));
+        if (target !== Infinity) safety = Math.min(safety, 20) - target * 0.6;
+      }
+      // Penalties come after the Conquest clamp above, which would otherwise erase them.
+      for (const friend of g.actors)
         if (
           friend !== a &&
           friend.team === a.team &&
@@ -140,16 +216,20 @@ export class SpawnManager {
           distance(p, friend) < 2
         )
           safety -= 20;
-      safety += this.game.random() * 2;
+      // Never deploy within close range of a living enemy when another option exists.
+      if (nearest < 8) safety -= 100;
+      safety += g.random() * 2;
       if (safety > score) {
         score = safety;
         best = p;
       }
     }
+    // If every point is taken, step to the nearest clear spot so no one deploys inside a body.
+    const spot = this.clearSpot(best, a);
     // Reset transient combat/movement state while preserving identity, score, and equipped weapon.
     Object.assign(a, {
-      x: best.x,
-      z: best.z,
+      x: spot.x,
+      z: spot.z,
       y: 0,
       vy: 0,
       yaw: a.team ? -Math.PI / 2 : Math.PI / 2,
@@ -180,7 +260,27 @@ export class SpawnManager {
       hurtUntil: 0,
       noticeUntil: 0,
       networkNotice: "",
+      adsProgress: 0,
+      reloadTime: 0,
+      reloadEmpty: false,
+      // Server-applied recoil for networked players resets with each life.
+      recoilPitch: 0,
+      recoilYaw: 0,
+      // Clients tag absolute view angles with this counter so stale aim cannot override a respawn.
+      spawnId: (a.spawnId || 0) + 1,
+      spawnSector: best.sector?.id || null,
     });
+    if (best.sector) {
+      const message = "DEPLOYED AT " + best.sector.id;
+      if (a === g.player) {
+        g.notice = message;
+        g.noticeTime = 2;
+      }
+      if (g.humanControllers) {
+        a.networkNotice = message;
+        a.noticeUntil = g.time + 2;
+      }
+    }
     // Keep stable global ammo indices, but unassigned weapons receive no usable ammunition.
     a.ammo = WEAPONS.map((w, index) => ({
       mag: canEquip(a, index) ? w.magazine : 0,
@@ -191,6 +291,7 @@ export class SpawnManager {
     a.brain.state = "Patrol";
     a.brain.step = 0;
     a.brain.reaction = 0;
+    a.brain.cover = null;
   }
 }
 export class DamageSystem {
@@ -199,7 +300,7 @@ export class DamageSystem {
     this.game = game;
   }
   // Reject invalid damage before mutating HP; one lethal hit produces one death and score event.
-  apply(target, amount, attacker) {
+  apply(target, amount, attacker, headshot = false) {
     const g = this.game;
     if (
       g.match.state !== "playing" ||
@@ -230,8 +331,11 @@ export class DamageSystem {
       target.respawn = g.match.rules.respawn;
       target.brain.state = "Dead";
       attacker.kills++;
+      resupply(attacker);
       if (g.humanControllers) {
-        attacker.networkNotice = "ELIMINATED " + target.name.toUpperCase();
+        attacker.networkNotice =
+          (headshot ? "HEADSHOT · " : "ELIMINATED ") +
+          target.name.toUpperCase();
         attacker.noticeUntil = g.time + 2;
       }
       g.match.kill(attacker.team);
@@ -239,11 +343,14 @@ export class DamageSystem {
         killer: attacker.name,
         victim: target.name,
         team: attacker.team,
+        headshot,
         time: 5,
       });
       if (g.events.length > 5) g.events.shift();
       if (attacker === g.player) {
-        g.notice = "ELIMINATED " + target.name.toUpperCase();
+        g.notice =
+          (headshot ? "HEADSHOT · " : "ELIMINATED ") +
+          target.name.toUpperCase();
         g.noticeTime = 2;
         g.audio.play("kill", 0.4);
       }
@@ -251,9 +358,7 @@ export class DamageSystem {
     return true;
   }
 }
-// Compact transport boundary for a future server-authoritative implementation.
-// OfflineSimulation owns damage, ammo, spawning and scoring; UI only submits input.
-// Quantize positions and angles to integer arrays for a possible future transport layer.
+// Quantized summary of match state used by deterministic tests and debugging tools.
 export function snapshot(game) {
   return {
     mode: game.mode,

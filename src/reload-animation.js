@@ -9,7 +9,13 @@ const smooth = (t, a, b) => {
 export function reloadPose(actor) {
   const active = actor.reload > 0 && actor.alive;
   const t = active
-    ? Math.max(0, Math.min(1, 1 - actor.reload / WEAPONS[actor.weapon].reload))
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          1 - actor.reload / (actor.reloadTime || WEAPONS[actor.weapon].reload),
+        ),
+      )
     : 0;
   const lmg = actor.weapon === 4;
   const lift = active ? smooth(t, 0, 0.13) * (1 - smooth(t, 0.86, 1)) : 0;

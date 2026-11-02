@@ -30,7 +30,7 @@ try {
       ["assault", "0"],
       ["support", "4"],
       ["engineer", "1"],
-      ["scout", "3"],
+      ["recon", "3"],
     ]) {
       await page.selectOption("#loadoutClass", classId);
       for (const id of ["startingWeapon", "pauseWeapon"])
@@ -53,21 +53,21 @@ try {
     await page.reload();
     assert.equal(await page.locator("#loadoutClass").inputValue(), "support");
     assert.equal(await page.locator("#startingWeapon").inputValue(), "2");
-    await page.selectOption("#loadoutClass", "scout");
+    await page.selectOption("#loadoutClass", "recon");
     await page.selectOption("#startingWeapon", "3");
     assert.match(
       await page.locator("#startingWeaponInfo").textContent(),
-      /60 damage/,
+      /45→34 damage/,
     );
     await page.reload();
-    assert.equal(await page.locator("#loadoutClass").inputValue(), "scout");
+    assert.equal(await page.locator("#loadoutClass").inputValue(), "recon");
     assert.equal(await page.locator("#startingWeapon").inputValue(), "3");
     if (mobile) await page.locator("#play").tap();
     else await page.click("#play");
     await page.waitForFunction(() => __arena.game.match.state === "playing");
     assert.equal(
       await page.evaluate(() => __arena.game.player.classId),
-      "scout",
+      "recon",
     );
     assert.equal(await page.evaluate(() => __arena.game.player.weapon), 3);
     await page.evaluate(() => {
@@ -82,15 +82,15 @@ try {
     assert.equal(await page.evaluate(() => __arena.game.player.weapon), 2);
     assert.equal(await page.evaluate(() => __arena.game.player.ammo[2].mag), 7);
     if (mobile) await page.locator("#switch").tap();
-    else await page.keyboard.press("Digit4");
+    else await page.keyboard.press("Digit1");
     await page.waitForFunction(() => __arena.game.player.weapon === 3);
     if (!mobile) {
-      await page.keyboard.press("Digit5");
+      await page.keyboard.press("Digit3");
       await page.waitForTimeout(100);
       assert.equal(await page.evaluate(() => __arena.game.player.weapon), 3);
     }
     if (mobile) await page.locator("#switch").tap();
-    else await page.keyboard.press("Digit3");
+    else await page.keyboard.press("Digit2");
     await page.waitForFunction(() => __arena.game.player.weapon === 2);
     // A respawn keeps the chosen class and sidearm while restoring only assigned ammunition.
     await page.evaluate(() => {
@@ -102,7 +102,7 @@ try {
         __arena.game.player.weapon,
         __arena.game.player.ammo[4],
       ]),
-      ["scout", 2, { mag: 0, reserve: 0 }],
+      ["recon", 2, { mag: 0, reserve: 0 }],
     );
     await page.evaluate(() => __arena.pause());
     // Returning to setup is the boundary for changing class; Play applies the next loadout.

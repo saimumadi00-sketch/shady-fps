@@ -20,7 +20,7 @@ try {
     () => document.querySelector("#squad-canvas").dataset.class,
   );
   await page.selectOption("#mode", "Conquest");
-  assert.match(await page.locator(".training").textContent(), /CONQUEST/);
+  assert.match(await page.locator(".training").textContent(), /Conquest/);
   await page.click(".training");
   await page.waitForSelector("#matchMode");
   assert.match(page.url(), /mode=conquest/);
@@ -34,7 +34,7 @@ try {
   await page.waitForFunction(() => document.pointerLockElement !== null);
   await page.waitForSelector("#objectives > div");
   assert.equal(await page.locator("#objectives > div").count(), 3);
-  assert.match(await page.locator("#scoreTarget").textContent(), /TICKETS/);
+  assert.match(await page.locator("#scoreTarget").textContent(), /Tickets/);
   await page.evaluate(() => {
     const g = __arena.game;
     g.bots.update = () => {};
@@ -100,7 +100,7 @@ try {
     __arena.game.match.bleedTime = __arena.game.match.rules.bleedInterval;
   });
   await page.waitForSelector("#end", { state: "visible" });
-  assert.equal(await page.locator("#winner").textContent(), "CYAN WINS");
+  assert.equal(await page.locator("#winner").textContent(), "Cyan wins");
   assert.equal(await page.locator("#finalScore").textContent(), "3 : 0");
   await page.click("#restart");
   assert.deepEqual(
@@ -117,7 +117,7 @@ try {
   await page.selectOption("#matchMode", "tdm");
   await page.waitForFunction(() => window.__arena?.game.mode === "tdm");
   assert.equal(await page.locator("#target").isDisabled(), false);
-  assert.equal(await page.locator("#briefMapName").textContent(), "YARD 07");
+  assert.equal(await page.locator("#briefMapName").textContent(), "Yard 07");
   await page.selectOption("#matchMode", "conquest");
   await page.waitForFunction(() => window.__arena?.game.mode === "conquest");
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);

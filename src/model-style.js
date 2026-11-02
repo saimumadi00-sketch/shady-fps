@@ -1,4 +1,5 @@
 // Original anime-inspired squad designs shared by third- and first-person models.
+import { normalizeClass } from "./loadouts.js";
 const STYLES = {
   assault: {
     hair: [0.23, 0.2, 0.36],
@@ -14,7 +15,7 @@ const STYLES = {
     cloth: [0.24, 0.23, 0.26],
     cut: "bob",
   },
-  scout: {
+  recon: {
     hair: [0.72, 0.81, 0.91],
     iris: [0.28, 0.49, 0.94],
     accent: [0.6, 0.79, 1.0],
@@ -30,8 +31,5 @@ const STYLES = {
   },
 };
 export function characterStyle(classId, id = 0) {
-  return (
-    STYLES[classId === "recon" ? "scout" : classId] ||
-    Object.values(STYLES)[id % 4]
-  );
+  return STYLES[normalizeClass(classId)] || Object.values(STYLES)[id % 4];
 }

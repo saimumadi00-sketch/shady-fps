@@ -3,7 +3,8 @@ import { drawCharacter } from "./characters.js";
 import { cameraMatrix } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
-import { viewmodelPose } from "./viewmodel.js";
+import { viewmodelPose, GunRecoil } from "./viewmodel.js";
+import { WEAPONS } from "./weapons.js";
 // The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
 precision highp float;
@@ -251,10 +252,24 @@ export class Renderer {
     const now = performance.now();
     const elapsed = Math.min((now - (this.viewTime ?? now)) / 1000, 0.05);
     this.viewTime = now;
+    this.gunRecoil ??= new GunRecoil();
     if (this.viewWeapon !== p.weapon || !inGame || !p.alive) {
       this.aimBlend = 0;
       this.viewWeapon = p.weapon;
+      this.gunRecoil.reset();
     }
+    // Kick the viewmodel once per new local shot (several may land in one frame at low FPS).
+    const shots = game.localShots || 0,
+      fresh = Math.min(3, shots - (this.seenShots ?? shots));
+    this.seenShots = shots;
+    if (inGame && p.alive)
+      for (let i = 0; i < fresh; i++)
+        this.gunRecoil.kick(
+          (WEAPONS[p.weapon]?.kick || 0.019) / 0.019,
+          this.aimBlend || 0,
+          Math.random() * 2 - 1,
+        );
+    this.gunRecoil.update(elapsed);
     const aimTarget = p.aim && p.reload <= 0 && inGame ? 1 : 0;
     this.aimBlend +=
       (aimTarget - (this.aimBlend || 0)) * (1 - Math.exp(-elapsed * 22));
@@ -344,6 +359,7 @@ export class Renderer {
         this.aimBlend,
         pose,
         sightHeight,
+        this.gunRecoil,
       );
       const finish = this.customization?.finish || "graphite";
       const optic = this.customization?.optic || "iron";
@@ -402,7 +418,7 @@ export class Renderer {
       g.vertexAttrib3f(2, view.x, view.y, view.z);
       g.vertexAttrib3f(3, 1, 1, 1);
       g.vertexAttrib1f(5, view.yaw);
-      g.vertexAttrib1f(6, 0);
+      g.vertexAttrib1f(6, view.pitch);
       g.drawArrays(g.TRIANGLES, 0, model.count);
       this.drawCalls++;
     }

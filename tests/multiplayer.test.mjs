@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RoomService, NetworkInput } from "../server/rooms.mjs";
+import {
+  RoomService,
+  NetworkInput,
+  INPUT_LIMIT_PER_SECOND,
+} from "../server/rooms.mjs";
+import { WEAPONS } from "../src/weapons.js";
 import { createMultiplayerServer } from "../server/index.mjs";
 function setup(mode = "tdm") {
   let now = 0;
@@ -10,7 +15,7 @@ function setup(mode = "tdm") {
     name: "Friend",
     team: 1,
     code: host.room.code,
-    classId: "scout",
+    classId: "recon",
   });
   host.stream = friend.stream = { end() {} };
   service.start(host);
@@ -91,7 +96,8 @@ test("network controls reject malformed values, duplicate edges and client comba
   assert.equal(host.actor.x, before.x);
   assert.equal(friend.actor.hp, before.hp);
   assert.deepEqual(host.room.game.match.scores, before.score);
-  for (let i = 0; i < 89; i++) service.input(host, { seq: 2 + i });
+  for (let i = 0; i < INPUT_LIMIT_PER_SECOND - 1; i++)
+    service.input(host, { seq: 2 + i });
   assert.throws(() => service.input(host, { seq: 999 }), /Too many/);
 });
 test("both clients receive server movement, stale controls stop and classes cannot equip forbidden guns", () => {
@@ -138,12 +144,12 @@ test("shared TDM shot, ammo, deaths, score and respawn are authoritative for eit
     cooldown: 0,
     weapon: 3,
   });
-  g.random = () => 0.5;
+  g.random = () => 0;
   g.arena.ray = () => 100;
   service.input(friend, { seq: 1, actions: ["fire"], fire: true });
   advance(1);
   assert.equal(host.actor.alive, false);
-  assert.equal(friend.actor.ammo[3].mag, 9);
+  assert.equal(friend.actor.ammo[3].mag, WEAPONS[3].magazine - 1);
   assert.deepEqual(service.snapshot(host).match.scores, [0, 1]);
   assert.equal(service.snapshot(host).actors[5].kills, 1);
   advance(181);
@@ -182,7 +188,7 @@ test("shared conquest capture, contested sectors, tickets and victory replicate 
   service.start(host);
   assert.deepEqual(g.match.scores, [150, 150]);
   assert.equal(s.owner, null);
-  assert.equal(friend.actor.classId, "scout");
+  assert.equal(friend.actor.classId, "recon");
 });
 test("HTTP create/join, authenticated streaming, start permissions and static files work together", async () => {
   const app = createMultiplayerServer({ realtime: false });
@@ -274,7 +280,7 @@ test("two real network clients stream the same match and pausing sends neutral i
     await a.client.join({ mode: "conquest", team: 0, name: "Cyan" }, true);
     await until(() => a.client.ready);
     await b.client.join(
-      { code: a.client.code, team: 1, name: "Ember", classId: "scout" },
+      { code: a.client.code, team: 1, name: "Ember", classId: "recon" },
       false,
     );
     await until(() => b.client.ready);
@@ -296,7 +302,7 @@ test("two real network clients stream the same match and pausing sends neutral i
     await until(() => room.game.actors[5].cooldown === 0);
     b.input.actions.add("fire");
     b.input.fire = true;
-    await until(() => b.game.player.ammo[3].mag === 9);
+    await until(() => b.game.player.ammo[3].mag === WEAPONS[3].magazine - 1);
     b.input.fire = false;
     assert.equal(a.game.match.scores[0], b.game.match.scores[0]);
     b.input.active = false;
@@ -401,7 +407,10 @@ test("idle timeout is renewed by valid activity and host start, not stale input"
   now = 1400;
   service.tick(1 / 60);
   assert.equal(service.sessions.size, 1);
-  service.input(host, { seq: 1, dx: 2 });
+  service.input(host, {
+    seq: 1,
+    view: { yaw: 0.2, pitch: 0, spawnId: host.actor.spawnId },
+  });
   now = 2200;
   service.input(host, { seq: 1, keys: ["KeyW"] });
   service.tick(1 / 60);
@@ -458,4 +467,158 @@ test("remote presentation interpolates poses and wrapped angles without changing
   assert.ok(buffer.frames.length <= 12);
   buffer.clear();
   assert.equal(buffer.sample([local], 0, 5000)[0], local);
+});
+
+// Clients own view angles for the current life only; stale lives and bad values are ignored.
+test("absolute client view angles are validated and tied to the current life", () => {
+  const { service, host, advance } = setup();
+  const a = host.actor;
+  service.input(host, {
+    seq: 1,
+    view: { yaw: 1.25, pitch: 9, spawnId: a.spawnId },
+  });
+  advance(1);
+  assert.equal(a.yaw, 1.25);
+  assert.equal(a.pitch, 1.45);
+  const spawnYaw = (host.room.game.spawns.spawn(a), a.yaw);
+  service.input(host, {
+    seq: 2,
+    view: { yaw: -2, pitch: 0, spawnId: a.spawnId - 1 },
+  });
+  advance(1);
+  assert.equal(a.yaw, spawnYaw);
+  service.input(host, { seq: 3, view: { yaw: NaN, pitch: 0, spawnId: 1 } });
+  assert.equal(host.input.view, null);
+});
+
+// Other players' snapshots omit private ammo and internal movement state.
+test("snapshots hide other players' private state", () => {
+  const { service, host, friend } = setup();
+  const snap = service.snapshot(host);
+  const self = snap.actors[host.actor.id],
+    other = snap.actors[friend.actor.id];
+  assert.ok(Array.isArray(self.ammo));
+  assert.equal(other.ammo, undefined);
+  assert.equal(other.fireDelay, undefined);
+  assert.equal(typeof other.x, "number");
+  assert.ok(Array.isArray(host.actor.ammo));
+});
+// Recoil applied by the server accumulates across ticks even though the client keeps sending
+// the same raw view, and it resets with each new life.
+test("server recoil accumulates on top of held client aim and resets on respawn", () => {
+  const { service, host, advance } = setup();
+  const g = host.room.game,
+    a = host.actor;
+  for (const b of g.actors)
+    if (b !== a) Object.assign(b, { alive: false, respawn: 999 });
+  Object.assign(a, { shield: 0, cooldown: 0 });
+  service.input(host, {
+    seq: 1,
+    view: { yaw: 0.5, pitch: 0, spawnId: a.spawnId },
+    fire: true,
+  });
+  advance(20);
+  const fired = WEAPONS[a.weapon].magazine - a.ammo[a.weapon].mag;
+  assert.ok(fired >= 2);
+  const expected = fired * WEAPONS[a.weapon].recoil * (Math.PI / 180);
+  assert.ok(Math.abs(a.recoilPitch - expected) < 1e-9);
+  assert.ok(Math.abs(a.pitch - expected) < 1e-9, "raw pitch 0 + server recoil");
+  assert.ok(Math.abs(a.yaw - (0.5 + a.recoilYaw)) < 1e-9);
+  // Raw aim beyond the view limit is allowed, but the combined angle is clamped.
+  service.input(host, {
+    seq: 2,
+    view: { yaw: 0.5, pitch: -5, spawnId: a.spawnId },
+  });
+  advance(1);
+  assert.equal(a.pitch, -1.45);
+  g.spawns.spawn(a);
+  assert.equal(a.recoilPitch, 0);
+  assert.equal(a.recoilYaw, 0);
+});
+// Another player's snapshot hides recoil, and sector spawn lists never leave the server.
+test("snapshots omit others' recoil and static sector spawn points", () => {
+  const { service, host, friend } = setup("conquest");
+  const snap = service.snapshot(host);
+  assert.equal("recoilPitch" in snap.actors[friend.actor.id], false);
+  assert.equal("recoilPitch" in snap.actors[host.actor.id], true);
+  assert.ok(snap.match.sectors.length > 0);
+  for (const s of snap.match.sectors) {
+    assert.equal("spawnPoints" in s, false);
+    assert.ok(Number.isFinite(s.x) && Number.isFinite(s.radius));
+  }
+  assert.ok(host.room.game.match.sectors[0].spawnPoints.length > 0);
+});
+// Player-facing room errors keep their text; internal exceptions do not leak details.
+test("HTTP errors keep room messages but hide internal exception text", async () => {
+  const app = createMultiplayerServer({ realtime: false });
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${app.server.address().port}`;
+  try {
+    const missing = await fetch(base + "/api/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: "NOPE" }),
+    });
+    assert.equal(missing.status, 400);
+    assert.match((await missing.json()).error, /Room not found/);
+    const malformed = await fetch(base + "/%E0%A4%A");
+    assert.equal(malformed.status, 400);
+    assert.equal((await malformed.json()).error, "Request failed.");
+  } finally {
+    app.close();
+  }
+});
+// The client sends raw aim, shows predicted recoil on top, and settles on server recoil after a burst.
+test("network client keeps raw aim separate from predicted and server recoil", async () => {
+  const { NetworkClient } = await import("../src/network.js");
+  const { OfflineSimulation } = await import("../src/game.js");
+  const { service, host } = setup();
+  const local = new OfflineSimulation(
+    { clear() {} },
+    { play() {} },
+    Math.random,
+  );
+  const input = {
+    active: true,
+    dx: 0,
+    dy: 0,
+    fire: false,
+    firePresses: 0,
+    touch: false,
+    clear() {},
+  };
+  const client = new NetworkClient(local, input, {
+    onState() {},
+    onDisconnect() {},
+  });
+  const a = host.actor;
+  Object.assign(a, { shield: 0, cooldown: 0, pitch: 0.1, yaw: 0.3 });
+  client.apply(service.snapshot(host));
+  const me = local.player;
+  assert.equal(client.view.pitch, 0.1);
+  // A predicted semi-auto shot raises the displayed pitch but not the raw view sent upstream.
+  me.weapon = 2;
+  client.predicted.weapon = 2;
+  client.predicted.mag = 5;
+  input.firePresses++;
+  client.updateView(1 / 60, 1);
+  const kick = WEAPONS[2].recoil * (Math.PI / 180);
+  assert.equal(client.view.pitch, 0.1);
+  assert.ok(Math.abs(me.pitch - (0.1 + kick)) < 1e-9);
+  // After the burst, the server's recoil total replaces the prediction.
+  a.recoilPitch = 2 * kick;
+  a.recoilYaw = 0.01;
+  a.pitch = 0.1 + 2 * kick;
+  client.predicted.lastShot = -Infinity;
+  client.apply(service.snapshot(host));
+  assert.equal(client.predicted.recoilPitch, 2 * kick);
+  assert.ok(Math.abs(me.pitch - (0.1 + 2 * kick)) < 1e-9);
+  assert.ok(Math.abs(me.yaw - (client.view.yaw + 0.01)) < 1e-9);
+  // A new life adopts server angles with any recoil already stripped from the raw view.
+  host.room.game.spawns.spawn(a);
+  a.recoilPitch = kick;
+  a.pitch += kick;
+  client.apply(service.snapshot(host));
+  assert.ok(Math.abs(client.view.pitch + kick - a.pitch) < 1e-9);
+  assert.ok(Math.abs(me.pitch - a.pitch) < 1e-9);
 });

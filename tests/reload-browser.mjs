@@ -26,7 +26,7 @@ try {
     await page.click("#back");
     await page.selectOption(
       "#loadoutClass",
-      ["assault", "engineer", "assault", "scout", "support"][weapon],
+      ["assault", "engineer", "assault", "recon", "support"][weapon],
     );
     await page.selectOption("#startingWeapon", String(weapon));
     await page.click("#play");
@@ -59,7 +59,7 @@ try {
     g.weapons.reload(g.player);
   });
   // Switching during an unfinished reload must immediately discard the old animation/timer.
-  await page.keyboard.press("Digit3");
+  await page.keyboard.press("Digit2");
   await page.waitForFunction(() => __arena.game.player.weapon === 2);
   assert.equal(await page.evaluate(() => __arena.game.player.reload), 0);
   assert.deepEqual(errors, []);

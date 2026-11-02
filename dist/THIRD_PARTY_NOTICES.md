@@ -44,3 +44,9 @@ For a list of contributors to the Freedoom project, see the file
 CREDITS.
 
 The original contributor list is included at assets/maps/freedm/CREDITS.
+
+## Inter typeface
+
+`assets/fonts/inter-latin.woff2` (the lobby's typeface) is Inter by Rasmus Andersson and the Inter
+Project Authors, licensed under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org). Source: https://github.com/rsms/inter.

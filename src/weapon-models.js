@@ -8,7 +8,7 @@ export function weaponMesh(
   optic = "iron",
   firing = false,
   hands = false,
-  classId = ["assault", "engineer", "assault", "scout", "support"][index],
+  classId = ["assault", "engineer", "assault", "recon", "support"][index],
 ) {
   const out = [],
     parts = [];

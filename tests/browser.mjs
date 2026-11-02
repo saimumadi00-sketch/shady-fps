@@ -65,13 +65,22 @@ await page.waitForFunction(
 );
 assert.equal(await page.evaluate(() => __arena.game.player.ammo[0].mag), 30);
 results.push("Reload completes");
-await page.keyboard.press("Digit2");
-await page.waitForTimeout(300);
-assert.equal(await page.evaluate(() => __arena.game.player.weapon), 0);
 await page.keyboard.press("Digit3");
 await page.waitForTimeout(300);
+assert.equal(await page.evaluate(() => __arena.game.player.weapon), 0);
+await page.keyboard.press("Digit2");
+await page.waitForTimeout(300);
 assert.equal(await page.evaluate(() => __arena.game.player.weapon), 2);
-results.push("Keyboard switches to the class sidearm and rejects foreign guns");
+await page.keyboard.press("KeyQ");
+await page.waitForTimeout(400);
+assert.equal(await page.evaluate(() => __arena.game.player.weapon), 0);
+await page.mouse.wheel(0, 120);
+await page.waitForTimeout(400);
+assert.equal(await page.evaluate(() => __arena.game.player.weapon), 2);
+await page.keyboard.press("Digit1");
+await page.waitForTimeout(400);
+assert.equal(await page.evaluate(() => __arena.game.player.weapon), 0);
+results.push("Slot keys, Q and mouse wheel switch within the class inventory");
 await page.evaluate(() => {
   const p = __arena.game.player;
   Object.assign(p, { x: -18, z: -13, yaw: 1.85, pitch: -0.03 });
@@ -155,7 +164,7 @@ try {
   await browser.close();
   throw e;
 }
-assert.equal(await page.locator("#winner").textContent(), "CYAN WINS");
+assert.equal(await page.locator("#winner").textContent(), "Cyan wins");
 await page.screenshot({ path: "artifacts/match-end.png" });
 await page.click("#restart");
 await page.waitForFunction(() => document.pointerLockElement !== null);

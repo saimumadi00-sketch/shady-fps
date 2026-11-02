@@ -1,5 +1,5 @@
 {
-  "version": "fcd6e9b09401",
+  "version": "395487fc02f7",
   "files": [
     "index.html",
     "arena.html",
@@ -8,9 +8,10 @@
     "lobby.js",
     "lobby.css",
     "assets/yard-map.svg",
+    "assets/fonts/inter-latin.woff2",
     "sw.js"
   ],
-  "rawBytes": 701943,
-  "gzipBytes": 193425,
-  "brotliBytes": 161102
+  "rawBytes": 776868,
+  "gzipBytes": 249169,
+  "brotliBytes": 216325
 }
