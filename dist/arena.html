@@ -85,10 +85,13 @@
         <div id="lookZone" aria-label="Drag to look"></div>
         <div id="joystick" aria-label="Movement joystick"><i></i></div>
         <button data-action="fire" id="fire">Fire</button
-        ><button data-action="aim" id="aim">Aim</button
+        ><button data-action="aim" id="aim" aria-pressed="false">Aim</button
         ><button data-action="reload" id="reload">Reload</button
         ><button data-action="jump" id="jump">Jump</button
-        ><button data-action="crouch" id="crouch">Slide</button
+        ><button data-action="crouch" id="crouch" aria-pressed="false">
+          Crouch</button
+        ><button data-action="sprint" id="sprint" aria-pressed="false">
+          Sprint</button
         ><button data-action="switch" id="switch">Swap</button>
       </div>
       <!-- Match setup. Gameplay begins only after an explicit Play interaction. -->
@@ -278,7 +281,13 @@
                     role="img"
                     aria-label="Yard 07 map"
                   >
-                    <rect class="floor" x="-25" y="-19" width="50" height="38" />
+                    <rect
+                      class="floor"
+                      x="-25"
+                      y="-19"
+                      width="50"
+                      height="38"
+                    />
                   </svg>
                   <figcaption>
                     <span class="north" aria-hidden="true">N</span>
@@ -405,7 +414,9 @@
                 <span id="briefMode">Team Deathmatch</span>
               </p>
               <h1><span id="briefMapName">Yard 07</span></h1>
-              <p class="summary"><span id="status">Preparing the arena…</span></p>
+              <p class="summary">
+                <span id="status">Preparing the arena…</span>
+              </p>
             </div>
             <div class="rules">
               <div>
@@ -413,7 +424,8 @@
                 ><b id="ruleTarget" class="num">30</b>
               </div>
               <div>
-                <span>Time limit</span><b id="ruleDuration" class="num">07:00</b>
+                <span>Time limit</span
+                ><b id="ruleDuration" class="num">07:00</b>
               </div>
               <div><span>Respawn</span><b class="num">3 s</b></div>
             </div>

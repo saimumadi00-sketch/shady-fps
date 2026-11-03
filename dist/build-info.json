@@ -1,5 +1,5 @@
 {
-  "version": "a4f272923f55",
+  "version": "626d15b02284",
   "files": [
     "index.html",
     "arena.html",
@@ -9,9 +9,32 @@
     "lobby.css",
     "assets/yard-map.svg",
     "assets/fonts/inter-latin.woff2",
+    "assets/audio/shot-ar.mp3",
+    "assets/audio/shot-smg.mp3",
+    "assets/audio/shot-pistol.mp3",
+    "assets/audio/shot-dmr.mp3",
+    "assets/audio/shot-lmg.mp3",
+    "assets/audio/ar-out.mp3",
+    "assets/audio/ar-in.mp3",
+    "assets/audio/ar-rack.mp3",
+    "assets/audio/pistol-out.mp3",
+    "assets/audio/pistol-in.mp3",
+    "assets/audio/pistol-rack.mp3",
+    "assets/audio/dmr-out.mp3",
+    "assets/audio/dmr-in.mp3",
+    "assets/audio/dmr-rack.mp3",
+    "assets/audio/lmg-out.mp3",
+    "assets/audio/lmg-in.mp3",
+    "assets/audio/lmg-rack.mp3",
+    "assets/audio/smg-rack.mp3",
+    "assets/audio/dry.mp3",
+    "assets/audio/impact-1.wav",
+    "assets/audio/impact-2.wav",
+    "assets/audio/hurt.wav",
+    "assets/audio/death.wav",
     "sw.js"
   ],
-  "rawBytes": 838788,
-  "gzipBytes": 272060,
-  "brotliBytes": 236040
+  "rawBytes": 1717862,
+  "gzipBytes": 1148410,
+  "brotliBytes": 1112198
 }

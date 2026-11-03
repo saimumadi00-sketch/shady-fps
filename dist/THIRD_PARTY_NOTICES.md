@@ -50,3 +50,15 @@ The original contributor list is included at assets/maps/freedm/CREDITS.
 `assets/fonts/inter-latin.woff2` (the lobby's typeface) is Inter by Rasmus Andersson and the Inter
 Project Authors, licensed under the SIL Open Font License, Version 1.1
 (https://openfontlicense.org). Source: https://github.com/rsms/inter.
+
+# Sound effects
+
+Gunshot, reload and dry-fire recordings: Snake's Authentic Gun Sounds and Snake's SECOND
+Authentic Gun Sounds Pack by SnakeF8 (https://f8studios.itch.io/snakes-authentic-gun-sounds,
+https://f8studios.itch.io/snakes-second-authentic-gun-sounds-pack). Free for commercial use.
+
+Retro FPS SFX Free by heyheythere - https://heyheythere.itch.io/retro-fps-sfx-free - CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/). Impact, ricochet, pain and death sounds,
+resampled to 22 kHz mono.
+
+File-by-file sources: assets/audio/CREDITS.md
