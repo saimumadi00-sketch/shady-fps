@@ -33,17 +33,22 @@ const PRIVATE_FIELDS = [
   "slideCooldown",
   "crouchHeld",
   "ignoreCrouch",
-  "fireDelay",
   "lastDamage",
   "networkNotice",
   "noticeUntil",
   "hitUntil",
+  "hitKind",
   "hurtUntil",
   "kick",
   "vy",
   "spawnSector",
   "recoilPitch",
   "recoilYaw",
+  "recoilShot",
+  "recoilRest",
+  "recoverPitch",
+  "recoverYaw",
+  "viewPitch",
 ];
 const finite = (v, limit) =>
   typeof v === "number" && Number.isFinite(v)

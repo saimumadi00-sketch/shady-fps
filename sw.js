@@ -19,6 +19,7 @@ const FILES = [
   "./src/maps/freedm-dm01.js",
   "./src/renderer.js",
   "./src/viewmodel.js",
+  "./src/combat-fx.js",
   "./src/weapon-models.js",
   "./src/reload-animation.js",
   "./src/customization.js",

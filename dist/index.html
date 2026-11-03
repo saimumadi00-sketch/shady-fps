@@ -18,265 +18,274 @@
     <link rel="stylesheet" href="./lobby.css" />
   </head>
   <body>
-    <header class="bar">
-      <div class="bar-inner">
-        <a class="brand" href="./" aria-label="Crosscurrent lobby">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="mark">
-            <path d="M3 7h11l-3-3M21 17H10l3 3" />
-            <path d="M3 17 21 7" />
-          </svg>
-          <span>Crosscurrent</span>
-          <span class="scope">Yard 07</span>
-        </a>
-        <button
-          class="menu-toggle"
-          id="menu-toggle"
-          aria-expanded="false"
-          aria-controls="site-nav"
-        >
-          Menu
+    <!-- Full-screen operator stage: the squad stands on the Yard 07 pad behind every menu. -->
+    <div class="stage-view" aria-hidden="false">
+      <canvas
+        id="squad-canvas"
+        aria-label="Your four-person squad standing on the Yard 07 spawn pad"
+      ></canvas>
+    </div>
+
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Crosscurrent lobby">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="mark">
+          <path d="M3 7h11l-3-3M21 17H10l3 3" />
+          <path d="M3 17 21 7" />
+        </svg>
+        <span>Crosscurrent</span>
+      </a>
+      <nav class="main-tabs" role="tablist" aria-label="Lobby sections">
+        <kbd class="hint" aria-hidden="true">Q</kbd>
+        <button role="tab" data-section="play" aria-selected="true">
+          Play
         </button>
-        <div class="menu" id="site-nav">
-          <nav aria-label="Main">
-            <a href="./" aria-current="page">Lobby</a>
-            <a href="./arena.html?mode=conquest">Offline arena</a>
-            <a href="./arena.html?online=1&mode=conquest">Private room</a>
-          </nav>
-          <div class="bar-actions">
-            <button id="sound" class="quiet" aria-pressed="false">
-              Sound off
-            </button>
-            <button id="settings" class="quiet">Settings</button>
-          </div>
+        <button role="tab" data-section="weapons" aria-selected="false">
+          Weapons
+        </button>
+        <button role="tab" data-section="progress" aria-selected="false">
+          Barracks
+        </button>
+        <kbd class="hint" aria-hidden="true">E</kbd>
+      </nav>
+      <div class="top-actions">
+        <div class="player-chip">
+          <span class="level-badge num" id="level-badge">24</span>
+          <span>
+            <strong id="callsign-label">NOVA</strong>
+            <small>Platinum III</small>
+          </span>
         </div>
+        <button id="sound" class="icon" aria-pressed="false">Sound off</button>
+        <button id="settings" class="icon">Settings</button>
       </div>
     </header>
 
     <main class="lobby">
-      <div class="title-row">
-        <div>
-          <h1>Squad lobby</h1>
-          <p class="summary" id="squad-status">3 of 4 ready</p>
-        </div>
-        <div class="title-actions">
-          <span id="match-status" aria-live="polite">Not searching</span>
-          <button id="ready" class="secondary" aria-pressed="false">
-            Mark ready
-          </button>
-          <button id="find-match" class="primary">Find match</button>
-        </div>
-      </div>
-
-      <div class="board">
-        <div class="col col-squad">
-          <section class="card squad" aria-labelledby="squad-title">
-            <div class="card-head">
-              <h2 id="squad-title">Strike team</h2>
-              <span class="meta">Private squad</span>
-            </div>
-            <div id="roster" class="roster" aria-label="Squad members"></div>
-          </section>
-
-          <section class="card chat" aria-labelledby="chat-title">
-            <div class="card-head">
-              <h2 id="chat-title">Squad comms</h2>
-              <span class="meta">Simulated</span>
-            </div>
-            <div id="chat-log" role="log" aria-live="polite">
-              <p class="system">Squad formed: HEX, ROOK, GHOST and you.</p>
-              <p><b>ROOK</b> Same plan as last round?</p>
-              <p><b>GHOST</b> Ready when you are.</p>
-              <p><b>ROOK</b> I'll hold the middle lane to B.</p>
-              <p><b>HEX</b> Flanking east toward C.</p>
-            </div>
-            <form id="chat-form">
-              <input
-                id="chat-input"
-                aria-label="Squad message"
-                placeholder="Message your squad"
-                maxlength="180"
-                autocomplete="off"
-              /><button class="secondary">Send</button>
-            </form>
-            <p class="foot">
-              Local prototype. Squadmates, chat, ranks and matchmaking in this
-              lobby are simulated; the arena's Conquest and Team Deathmatch
-              matches are real. Outpost map from FreeDM (BSD-3-Clause).
-            </p>
-          </section>
-        </div>
-        <div class="col col-main">
-          <section class="card stage" aria-labelledby="stage-title">
-            <div class="card-head">
-              <h2 id="stage-title">Your operator</h2>
-              <p class="meta">
-                <strong id="operator-class">Assault</strong>
-                <span id="operator-role">Versatile rifleman</span>
-              </p>
-            </div>
-            <div class="stage-view">
-              <canvas
-                id="squad-canvas"
-                aria-label="Your four-person squad standing on the Yard 07 spawn pad"
-              ></canvas>
-            </div>
-          </section>
-
-          <section
-            class="card armory"
-            id="armory"
-            aria-labelledby="armory-title"
-          >
-            <div class="card-head">
-              <h2 id="armory-title">Loadout</h2>
-              <span class="meta" id="weapon-category">Assault rifle</span>
-            </div>
-            <div class="class-tabs segmented" aria-label="Operator class"></div>
-            <div class="weapon-row">
-              <div class="weapon-pick">
-                <label for="weapon">Primary weapon</label>
-                <select id="weapon"></select>
-                <p id="weapon-description" class="meta"></p>
-              </div>
-              <canvas
-                id="weapon-canvas"
-                tabindex="0"
-                aria-label="3D weapon preview. Drag or use arrow keys to rotate."
-              ></canvas>
-            </div>
-            <div
-              class="armory-tabs tabs"
-              role="tablist"
-              aria-label="Loadout views"
+      <!-- Left column: the active section. -->
+      <div class="left">
+        <section
+          class="panel"
+          id="panel-play"
+          role="tabpanel"
+          aria-labelledby="play-title"
+        >
+          <p class="eyebrow">Multiplayer</p>
+          <h1 id="play-title">Quick play</h1>
+          <div
+            class="mode-list"
+            id="mode-list"
+            role="radiogroup"
+            aria-label="Playlist"
+          ></div>
+          <figure class="map" id="deploy-map">
+            <figcaption id="mode-description"></figcaption>
+          </figure>
+          <div class="fields two">
+            <label
+              >Region<select id="region">
+                <option value="ASIA PACIFIC">Asia Pacific</option>
+                <option value="EUROPE">Europe</option>
+                <option value="NORTH AMERICA">North America</option>
+              </select></label
             >
-              <button role="tab" aria-selected="true" data-tab="configure">
-                Attachments
-              </button>
-              <button role="tab" aria-selected="false" data-tab="stats">
-                Statistics
-              </button>
-              <button role="tab" aria-selected="false" data-tab="saved">
-                Saved loadouts
-              </button>
+            <div class="ping-box">
+              <span class="label">Latency</span>
+              <strong id="ping" class="num">32 ms</strong>
             </div>
-            <div id="configure" class="tab-content fields">
-              <label
-                >Optic<select id="optic">
-                  <option value="iron">Iron sights</option>
-                  <option value="reflex">Holo reflex</option>
-                  <option value="scope">Precision 4×</option>
-                </select></label
-              >
-              <label
-                >Barrel<select id="barrel">
-                  <option value="standard">Standard</option>
-                  <option value="compensator">Compensator</option>
-                  <option value="suppressor">Suppressor</option>
-                </select></label
-              >
-              <div
-                class="skin-picker"
-                role="group"
-                aria-labelledby="finish-label"
-              >
-                <span id="finish-label">Finish</span>
-                <div class="swatches">
-                  <button
-                    data-skin="graphite"
-                    aria-label="Graphite finish"
-                    class="swatch graphite selected"
-                  ></button
-                  ><button
-                    data-skin="sand"
-                    aria-label="Sand finish"
-                    class="swatch sand"
-                  ></button
-                  ><button
-                    data-skin="olive"
-                    aria-label="Olive finish"
-                    class="swatch olive"
-                  ></button>
-                </div>
-              </div>
-            </div>
-            <div id="stats" class="tab-content" hidden></div>
-            <div id="saved" class="tab-content fields" hidden>
-              <label
-                >Slot<select id="slot">
-                  <option value="0">Alpha</option>
-                  <option value="1">Bravo</option>
-                  <option value="2">Charlie</option>
-                </select></label
-              >
-              <div class="saved-actions">
-                <button id="save" class="secondary">Save current</button
-                ><button id="load" class="secondary">Equip saved</button>
-              </div>
-            </div>
-          </section>
-        </div>
-        <div class="col col-rail">
-          <section class="card deployment" aria-labelledby="deploy-title">
-            <div class="card-head">
-              <h2 id="deploy-title">Next deployment</h2>
-              <span class="meta" id="ping">32 ms</span>
-            </div>
-            <figure class="map" id="deploy-map">
-              <figcaption id="mode-description"></figcaption>
-            </figure>
-            <div class="fields two">
-              <label
-                >Operation<select id="mode">
-                  <option>Conquest</option>
-                  <option>Domination</option>
-                  <option>Team Deathmatch</option>
-                </select></label
-              >
-              <label
-                >Region<select id="region">
-                  <option value="ASIA PACIFIC">Asia Pacific</option>
-                  <option value="EUROPE">Europe</option>
-                  <option value="NORTH AMERICA">North America</option>
-                </select></label
-              >
-            </div>
-            <div class="deploy-links">
-              <a class="training" href="./arena.html">Play offline now</a>
-              <a class="friends-link" href="./arena.html?online=1&mode=conquest"
-                >Play with friends</a
-              >
-            </div>
-          </section>
+          </div>
+          <div class="deploy-links">
+            <a class="training" href="./arena.html">Play offline now</a>
+            <a class="friends-link" href="./arena.html?online=1&mode=conquest"
+              >Private match</a
+            >
+          </div>
+        </section>
 
-          <section class="card season" aria-labelledby="progress-title">
-            <div class="card-head">
-              <h2 id="progress-title">Progress</h2>
-              <button class="link" id="rankings">Season standings</button>
-            </div>
-            <div class="level">
-              <div>
-                <span class="label">Operator level</span>
-                <strong class="num" id="level">24</strong>
+        <section
+          class="panel"
+          id="panel-weapons"
+          role="tabpanel"
+          aria-labelledby="armory-title"
+          hidden
+        >
+          <p class="eyebrow">Loadout</p>
+          <h1 id="armory-title">
+            <span id="operator-class">Assault</span>
+            <small id="operator-role">Versatile rifleman</small>
+          </h1>
+          <div class="class-tabs segmented" aria-label="Operator class"></div>
+          <div class="weapon-pick">
+            <label for="weapon"
+              >Primary · <span id="weapon-category">Assault rifle</span></label
+            >
+            <select id="weapon"></select>
+            <p id="weapon-description" class="meta"></p>
+          </div>
+          <canvas
+            id="weapon-canvas"
+            tabindex="0"
+            aria-label="3D weapon preview. Drag or use arrow keys to rotate."
+          ></canvas>
+          <div
+            class="armory-tabs tabs"
+            role="tablist"
+            aria-label="Loadout views"
+          >
+            <button role="tab" aria-selected="true" data-tab="configure">
+              Attachments
+            </button>
+            <button role="tab" aria-selected="false" data-tab="stats">
+              Stats
+            </button>
+            <button role="tab" aria-selected="false" data-tab="saved">
+              Custom slots
+            </button>
+          </div>
+          <div id="configure" class="tab-content fields">
+            <label
+              >Optic<select id="optic">
+                <option value="iron">Iron sights</option>
+                <option value="reflex">Holo reflex</option>
+                <option value="scope">Precision 4×</option>
+              </select></label
+            >
+            <label
+              >Barrel<select id="barrel">
+                <option value="standard">Standard</option>
+                <option value="compensator">Compensator</option>
+                <option value="suppressor">Suppressor</option>
+              </select></label
+            >
+            <div
+              class="skin-picker"
+              role="group"
+              aria-labelledby="finish-label"
+            >
+              <span id="finish-label">Camo</span>
+              <div class="swatches">
+                <button
+                  data-skin="graphite"
+                  aria-label="Graphite finish"
+                  class="swatch graphite selected"
+                ></button
+                ><button
+                  data-skin="sand"
+                  aria-label="Sand finish"
+                  class="swatch sand"
+                ></button
+                ><button
+                  data-skin="olive"
+                  aria-label="Olive finish"
+                  class="swatch olive"
+                ></button>
               </div>
-              <div class="rank">
-                <span class="label">Season 04 rank</span>
-                <strong>Platinum III</strong>
-                <span class="meta num">2,480 RP · demo</span>
-              </div>
             </div>
-            <div class="xp">
-              <div class="bar-track"><i id="xp-bar"></i></div>
-              <span class="meta num" id="xp-text">2,450 / 4,000 XP</span>
+          </div>
+          <div id="stats" class="tab-content" hidden></div>
+          <div id="saved" class="tab-content fields" hidden>
+            <label
+              >Slot<select id="slot">
+                <option value="0">Custom 1</option>
+                <option value="1">Custom 2</option>
+                <option value="2">Custom 3</option>
+              </select></label
+            >
+            <div class="saved-actions">
+              <button id="save" class="secondary">Save current</button
+              ><button id="load" class="secondary">Equip</button>
             </div>
-            <h3>Daily drills</h3>
-            <div id="challenges"></div>
-          </section>
-        </div>
+          </div>
+        </section>
+
+        <section
+          class="panel"
+          id="panel-progress"
+          role="tabpanel"
+          aria-labelledby="progress-title"
+          hidden
+        >
+          <p class="eyebrow">Barracks</p>
+          <h1 id="progress-title">Career</h1>
+          <div class="level">
+            <div>
+              <span class="label">Rank</span>
+              <strong class="num" id="level">24</strong>
+            </div>
+            <div class="rank">
+              <span class="label">Season 04</span>
+              <strong>Platinum III</strong>
+              <span class="meta num">2,480 RP · demo</span>
+            </div>
+          </div>
+          <div class="xp">
+            <div class="bar-track"><i id="xp-bar"></i></div>
+            <span class="meta num" id="xp-text">2,450 / 4,000 XP</span>
+          </div>
+          <div class="section-head">
+            <h2>Daily challenges</h2>
+            <button class="link" id="rankings">Leaderboard</button>
+          </div>
+          <div id="challenges"></div>
+        </section>
       </div>
+
+      <!-- Right column: party and comms, always visible. -->
+      <aside class="right">
+        <section class="panel party" aria-labelledby="squad-title">
+          <div class="section-head">
+            <h2 id="squad-title">Party</h2>
+            <span class="meta" id="squad-status">3 of 4 ready</span>
+          </div>
+          <div id="roster" class="roster" aria-label="Party members"></div>
+        </section>
+        <section class="panel chat" aria-labelledby="chat-title">
+          <div class="section-head">
+            <h2 id="chat-title">Party chat</h2>
+            <span class="meta">Simulated</span>
+          </div>
+          <div id="chat-log" role="log" aria-live="polite">
+            <p class="system">Party formed: HEX, ROOK, GHOST and you.</p>
+            <p><b>ROOK</b> Same plan as last round?</p>
+            <p><b>GHOST</b> Ready when you are.</p>
+            <p><b>ROOK</b> I'll hold the middle lane to B.</p>
+            <p><b>HEX</b> Flanking east toward C.</p>
+          </div>
+          <form id="chat-form">
+            <input
+              id="chat-input"
+              aria-label="Party message"
+              placeholder="Message your party"
+              maxlength="180"
+              autocomplete="off"
+            /><button class="secondary">Send</button>
+          </form>
+        </section>
+      </aside>
     </main>
+
+    <footer class="footbar">
+      <div class="keys" aria-hidden="true">
+        <span><kbd>Q</kbd><kbd>E</kbd> Section</span>
+        <span><kbd>R</kbd> Ready up</span>
+        <span><kbd>F</kbd> Find match</span>
+        <span><kbd>Esc</kbd> Back</span>
+      </div>
+      <p class="foot">
+        Local prototype: party, chat, ranks and matchmaking are simulated.
+        Outpost map from FreeDM (BSD-3-Clause).
+      </p>
+      <div class="deploy">
+        <span id="match-status" aria-live="polite">Not searching</span>
+        <button id="ready" class="secondary" aria-pressed="false">
+          Ready up
+        </button>
+        <button id="find-match" class="primary">Find match</button>
+      </div>
+    </footer>
+
     <div id="toast" role="status"></div>
     <dialog id="modal">
-      <button id="close-modal" class="quiet" aria-label="Close dialog">
+      <button id="close-modal" class="icon" aria-label="Close dialog">
         Close
       </button>
       <div id="modal-content"></div>

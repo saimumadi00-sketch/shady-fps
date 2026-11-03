@@ -299,7 +299,7 @@ $("load").onclick = () => {
 function setReady(value) {
   ready = value;
   $("ready").setAttribute("aria-pressed", String(ready));
-  $("ready").textContent = ready ? "Ready" : "Mark ready";
+  $("ready").textContent = ready ? "Ready" : "Ready up";
   renderRoster();
 }
 $("ready").onclick = () => {
@@ -326,8 +326,35 @@ $("chat-form").onsubmit = (e) => {
     1100,
   );
 };
+// Playlist tiles replace a drop-down: one tap picks the operation, like a quick-play list.
+const MODE_TAGS = {
+  Conquest: ["5v5", "FreeDM Outpost"],
+  Domination: ["Preview", "Yard 07"],
+  "Team Deathmatch": ["5v5", "Yard 07"],
+};
+for (const name of Object.keys(modes)) {
+  const tile = document.createElement("button");
+  tile.className = "mode-tile";
+  tile.dataset.mode = name;
+  tile.setAttribute("role", "radio");
+  const title = document.createElement("strong"),
+    tag = document.createElement("small");
+  title.textContent = name;
+  tag.textContent = MODE_TAGS[name].join(" · ");
+  tile.append(title, tag);
+  tile.onclick = () => {
+    if (queue) return toast("Cancel matchmaking to change playlist.");
+    state.mode = name;
+    renderMode();
+    persist();
+  };
+  $("mode-list").append(tile);
+}
 function renderMode() {
-  $("mode").value = state.mode;
+  document.querySelectorAll("[data-mode]").forEach((t) => {
+    t.classList.toggle("selected", t.dataset.mode === state.mode);
+    t.setAttribute("aria-checked", String(t.dataset.mode === state.mode));
+  });
   const conquest = state.mode === "Conquest";
   const map = $("deploy-map");
   map.querySelector("svg, img")?.remove();
@@ -352,12 +379,11 @@ function renderMode() {
     { "ASIA PACIFIC": 32, EUROPE: 78, "NORTH AMERICA": 124 }[state.region] +
     " ms simulated";
 }
-for (const id of ["mode", "region"])
-  $(id).onchange = (e) => {
-    state[id] = e.target.value;
-    renderMode();
-    persist();
-  };
+$("region").onchange = (e) => {
+  state.region = e.target.value;
+  renderMode();
+  persist();
+};
 function modal(html) {
   $("modal-content").innerHTML = html;
   $("modal").showModal();
@@ -381,7 +407,7 @@ function stopQueue() {
   queue = null;
   $("find-match").textContent = "Find match";
   $("match-status").textContent = "Not searching";
-  $("mode").disabled = false;
+  document.body.classList.remove("searching");
   $("region").disabled = false;
 }
 $("find-match").onclick = () => {
@@ -393,7 +419,7 @@ $("find-match").onclick = () => {
   setReady(true);
   let elapsed = 0;
   $("find-match").textContent = "Cancel search";
-  $("mode").disabled = true;
+  document.body.classList.add("searching");
   $("region").disabled = true;
   $("match-status").textContent = "Searching · 0:00";
   queue = setInterval(() => {
@@ -455,7 +481,8 @@ function renderProgress() {
         `<div class="challenge${n >= max ? " done" : ""}" title="${name}"><div class="challenge-header"><span>${desc} <small>· ${reward} XP</small></span><span>${Math.min(n, max)} of ${max}</span></div><div class="bar-track"><i style="width:${Math.min((n / max) * 100, 100)}%"></i></div></div>`,
     )
     .join("");
-  $("level").textContent = 24 + Math.floor(state.xp / 4000);
+  $("level").textContent = $("level-badge").textContent =
+    24 + Math.floor(state.xp / 4000);
   $("xp-text").textContent = `${(state.xp % 4000).toLocaleString()} / 4,000 XP`;
   $("xp-bar").style.width = (state.xp % 4000) / 40 + "%";
   renderRoster();
@@ -482,17 +509,41 @@ $("settings").onclick = () => {
     state.reduced = $("motion").value === "reduced";
     scene?.setReducedMotion(state.reduced);
     renderRoster();
+    $("callsign-label").textContent = state.name;
     persist();
     $("modal").close();
     toast("Settings saved.");
   };
 };
-// On a phone the navigation and bar actions fold into one menu.
-$("menu-toggle").onclick = () => {
-  const open = $("site-nav").classList.toggle("open");
-  $("menu-toggle").setAttribute("aria-expanded", String(open));
-  $("menu-toggle").textContent = open ? "Close" : "Menu";
-};
+// Top-level sections switch like a shooter front end: click a tab or cycle with Q / E.
+const SECTIONS = ["play", "weapons", "progress"];
+let section = "play";
+function showSection(name) {
+  section = name;
+  document.querySelectorAll("[data-section]").forEach((b) => {
+    b.setAttribute("aria-selected", String(b.dataset.section === name));
+    b.tabIndex = b.dataset.section === name ? 0 : -1;
+  });
+  for (const id of SECTIONS) $("panel-" + id).hidden = id !== name;
+}
+document
+  .querySelectorAll("[data-section]")
+  .forEach((b) => (b.onclick = () => showSection(b.dataset.section)));
+// Shortcuts never fire while typing or while a dialog is open.
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if ($("modal").open || e.target.closest("input, select, textarea")) return;
+  const k = e.key.toLowerCase();
+  if (k === "q" || k === "e") {
+    const i = SECTIONS.indexOf(section) + (k === "e" ? 1 : -1);
+    showSection(SECTIONS[(i + SECTIONS.length) % SECTIONS.length]);
+    sound();
+  } else if (k === "r") $("ready").click();
+  else if (k === "f") $("find-match").click();
+  else if (k === "escape" && section !== "play") showSection("play");
+  else return;
+  e.preventDefault();
+});
 // Launch the arena with the selected class; preview variants deploy with the class primary.
 function launchTraining() {
   try {
@@ -509,6 +560,8 @@ document.querySelector(".training").onclick = (e) => {
   e.preventDefault();
   launchTraining();
 };
+showSection("play");
+$("callsign-label").textContent = state.name;
 renderLoadout();
 renderMode();
 renderProgress();

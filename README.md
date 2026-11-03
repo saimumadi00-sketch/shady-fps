@@ -42,7 +42,7 @@ Domination is a lobby preview only. Lobby squadmates, rankings, matchmaking and 
 | Swap weapon | Q or mouse wheel | SWAP |
 | Pause | Escape | Pause icon |
 
-If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. Leaving a sprint or slide briefly delays firing (per-weapon sprint-to-fire time).
+If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Run and gun:** every weapon fires while sprinting or sliding with no sprint-to-fire delay, and firing does not break the sprint; the hip cone widens 1.4x while sprinting and 1.7x while sliding. Aiming down sights still ends a sprint.
 
 ## Classes and weapons
 
@@ -66,8 +66,9 @@ Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 | LMG | 26 → 17 | 30 – 110 | 700 | 100 | 4.80 / 5.80 | 1.5x | 3.2 / 0.20 | 0.38 |
 
 - Damage falls off linearly between the two distances; the head multiplier applies after falloff. Actors have separate head and body hitboxes.
-- Spread is a cone that blends from hip to ADS over the weapon's ADS time and is multiplied while moving (per weapon), sliding (1.7x) or reduced while crouched still (0.85x).
-- Recoil adds vertical climb plus a small bounded horizontal kick each shot.
+- Spread is a cone that blends from hip to ADS over the weapon's ADS time and is multiplied while moving (per weapon), sprinting (1.4x), sliding (1.7x) or reduced while crouched still (0.85x).
+- **Recoil patterns** (`RECOIL_PATTERNS` in `src/weapons.js`): each gun climbs in a learnable shape with a harder first kick and a fixed sideways drift plus a little random jitter. The AR pulls right, then swings left mid-magazine and steadies. The SMG zigzags tightly. The LMG kicks hard, drifts left, then settles once the belt is running. The pistol and DMR give one mostly vertical kick per shot. When you stop firing, part of the climb eases back on its own: 55% AR, 65% SMG, 75% pistol, 70% DMR, 45% LMG. Pulling the mouse down during or after a burst counts against that recovery, so the view never drops below where you put it. Offline play, the server and online client prediction all run the same rules.
+- Shot feedback is presentation only and never changes hits: a camera punch that settles back, tracers, muzzle flashes on other players, sparks, dust and wall marks on impact, blood on body and head hits, ejected brass, and a hitmarker that is white for body hits, gold for headshots and red for kills (each with its own sound).
 - Movement speed scales with the carried primary's weight (also while the pistol is drawn); ADS strafe speed is per weapon.
 - 100 HP; regenerate 8 HP/s after 6 s without damage. 3 s respawn with a 1.5 s spawn shield that firing ends. No friendly fire; teammates block shots.
 
@@ -121,7 +122,7 @@ To deploy statically, upload the contents of `dist/`. Serve `sw.js` and `index.h
 | `src/game.js` | `OfflineSimulation`: the single authority for rules, used offline and by the server |
 | `src/match.js` | TDM rules, roster, spawn selection (incl. Conquest forward spawns), damage, snapshots |
 | `src/conquest.js` | Sector capture, tickets, bleed, bot objective selection |
-| `src/weapons.js` | Weapon tuning, falloff, hitboxes, spread, recoil, reload lifecycle, effect pool |
+| `src/weapons.js` | Weapon tuning, falloff, hitboxes, spread, recoil patterns and recovery, reload lifecycle, effect pool |
 | `src/player.js` | Turns input into aim, movement, slot switching, ADS progress and fire |
 | `src/movement.js` | Sprint, slide/cancel, crouch clearance, gravity, weight-based speed |
 | `src/bots.js` | Staggered perception, navigation, ADS, line-of-sight firing, cover retreat |
@@ -130,6 +131,6 @@ To deploy statically, upload the contents of `dist/`. Serve `sw.js` and `index.h
 | `server/` | HTTP room service and streaming transport |
 | `src/main.js` | Arena bootstrap, menus, fixed 60 Hz loop |
 | `src/lobby*.js` | Squad lobby UI and 3D scene |
-| `src/renderer.js`, `characters.js`, `weapon-models.js` | Rendering only; never decides hits |
+| `src/renderer.js`, `characters.js`, `weapon-models.js`, `combat-fx.js` | Rendering only; never decides hits |
 
 Map provenance and license: `assets/maps/freedm/`; regenerate the adaptation with `npm run import:conquest-map`. Third-party notices: `THIRD_PARTY_NOTICES.md`.

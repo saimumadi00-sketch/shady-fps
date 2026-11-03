@@ -34,6 +34,8 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#squad-canvas").dataset.class === "assault",
   );
+  // The weapon preview lives in the Weapons section; open it so both scenes are on screen.
+  await page.click('[data-section="weapons"]');
   const draws = () => page.evaluate(() => ({ ...window.__draws }));
   const settle = () => page.waitForTimeout(500);
   await settle();

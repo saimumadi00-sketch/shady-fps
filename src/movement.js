@@ -8,8 +8,6 @@ export const MOVEMENT = Object.freeze({
   slideEnd: 3.4,
   slideDuration: 0.8,
   slideCooldown: 0.65,
-  sprintToFire: 0.14,
-  slideToFire: 0.12,
 });
 
 // Tactical movement is independent of camera aim: turning during a slide does
@@ -18,7 +16,6 @@ const DEFAULT_HANDLING = Object.freeze({
   walk: 1,
   sprint: 1,
   adsMove: 0.65,
-  sprintToFire: MOVEMENT.sprintToFire,
 });
 export class TacticalMovement {
   // Resolve intent, slide transitions, horizontal collision, and vertical motion in that order.
@@ -45,7 +42,6 @@ export class TacticalMovement {
     // Check the full standing volume before leaving a low stance under cover.
     const standingClear = () => !arena.blocked(a.x, a.z, 0.35, a.y, 1.8);
     a.slideCooldown = Math.max(0, a.slideCooldown - dt);
-    a.fireDelay = Math.max(0, a.fireDelay - dt);
     const wantsSprint =
       (k.has("ShiftLeft") ||
         k.has("ShiftRight") ||
@@ -67,7 +63,6 @@ export class TacticalMovement {
       a.sliding = false;
       a.slideTime = 0;
       a.slideCooldown = MOVEMENT.slideCooldown;
-      a.fireDelay = Math.max(a.fireDelay, MOVEMENT.slideToFire);
     };
     let cancelled = false;
     if (a.sliding && jump && standingClear()) {
@@ -85,12 +80,9 @@ export class TacticalMovement {
       a.sliding ||
       (crouch && !a.ignoreCrouch) ||
       (a.crouched && !standingClear());
-    // Apply sprint-to-fire recovery only when leaving sprint, not every tick.
-    const wasSprint = a.sprinting;
+    // Run and gun: sprinting never blocks or delays fire; spreadFor() widens the cone instead.
     a.sprinting =
       wantsSprint && !a.crouched && !a.sliding && grounded && !cancelled;
-    if (wasSprint && !a.sprinting)
-      a.fireDelay = Math.max(a.fireDelay, h.sprintToFire);
     a.aim = i.aim && !a.sliding;
     // Interpolate slide speed over its lifetime and stop when collision blocks travel.
     if (a.sliding) {

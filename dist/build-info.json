@@ -1,5 +1,5 @@
 {
-  "version": "395487fc02f7",
+  "version": "e513b0626be7",
   "files": [
     "index.html",
     "arena.html",
@@ -11,7 +11,7 @@
     "assets/fonts/inter-latin.woff2",
     "sw.js"
   ],
-  "rawBytes": 776868,
-  "gzipBytes": 249169,
-  "brotliBytes": 216325
+  "rawBytes": 786709,
+  "gzipBytes": 252366,
+  "brotliBytes": 219045
 }

@@ -5,7 +5,7 @@ import {
   NetworkInput,
   INPUT_LIMIT_PER_SECOND,
 } from "../server/rooms.mjs";
-import { WEAPONS } from "../src/weapons.js";
+import { WEAPONS, RECOIL_PATTERNS, recoilScale } from "../src/weapons.js";
 import { createMultiplayerServer } from "../server/index.mjs";
 function setup(mode = "tdm") {
   let now = 0;
@@ -499,7 +499,7 @@ test("snapshots hide other players' private state", () => {
     other = snap.actors[friend.actor.id];
   assert.ok(Array.isArray(self.ammo));
   assert.equal(other.ammo, undefined);
-  assert.equal(other.fireDelay, undefined);
+  assert.equal(other.slideCooldown, undefined);
   assert.equal(typeof other.x, "number");
   assert.ok(Array.isArray(host.actor.ammo));
 });
@@ -520,13 +520,26 @@ test("server recoil accumulates on top of held client aim and resets on respawn"
   advance(20);
   const fired = WEAPONS[a.weapon].magazine - a.ammo[a.weapon].mag;
   assert.ok(fired >= 2);
-  const expected = fired * WEAPONS[a.weapon].recoil * (Math.PI / 180);
+  // Each round follows the weapon's pattern (a harder first kick, then steady climb).
+  let expected = 0;
+  for (let shot = 0; shot < fired; shot++)
+    expected +=
+      WEAPONS[a.weapon].recoil * (Math.PI / 180) * recoilScale(a.weapon, shot);
   assert.ok(Math.abs(a.recoilPitch - expected) < 1e-9);
   assert.ok(Math.abs(a.pitch - expected) < 1e-9, "raw pitch 0 + server recoil");
   assert.ok(Math.abs(a.yaw - (0.5 + a.recoilYaw)) < 1e-9);
-  // Raw aim beyond the view limit is allowed, but the combined angle is clamped.
+  // Once the trigger is released the server eases back the recoverable share of the climb.
   service.input(host, {
     seq: 2,
+    view: { yaw: 0.5, pitch: 0, spawnId: a.spawnId },
+  });
+  advance(60);
+  const kept = expected * (1 - RECOIL_PATTERNS[a.weapon].recover);
+  assert.ok(Math.abs(a.recoilPitch - kept) < expected * 0.03);
+  assert.ok(Math.abs(a.pitch - a.recoilPitch) < 1e-9);
+  // Raw aim beyond the view limit is allowed, but the combined angle is clamped.
+  service.input(host, {
+    seq: 3,
     view: { yaw: 0.5, pitch: -5, spawnId: a.spawnId },
   });
   advance(1);

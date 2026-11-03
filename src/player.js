@@ -2,7 +2,7 @@
 import { loadout, slotWeapon } from "./loadouts.js";
 import { clamp } from "./math.js";
 import { TacticalMovement } from "./movement.js";
-import { WEAPONS, handling } from "./weapons.js";
+import { WEAPONS, handling, compensateRecoil } from "./weapons.js";
 // Mouse deltas are pixels; touch drags use a larger multiplier. ADS slows aim.
 export function aimScale(a, input, sensitivity) {
   return 0.0024 * sensitivity * (a.aim ? 0.65 : 1) * (input.touch ? 1.8 : 1);
@@ -34,12 +34,17 @@ export class PlayerController {
     if (i.view) {
       // Client angles exclude recoil; the server-owned recoil for this life is added on top.
       if (i.view.spawnId === a.spawnId) {
+        // Pulling the raw aim down counts against the recoil that would otherwise recover.
+        if (typeof a.viewPitch === "number")
+          compensateRecoil(a, i.view.pitch - a.viewPitch);
+        a.viewPitch = i.view.pitch;
         a.yaw = i.view.yaw + (a.recoilYaw || 0);
         a.pitch = clamp(i.view.pitch + (a.recoilPitch || 0), -1.45, 1.45);
       }
     } else {
       const scale = aimScale(a, i, sensitivity);
       a.yaw += i.dx * scale;
+      compensateRecoil(a, -i.dy * scale);
       a.pitch = clamp(a.pitch - i.dy * scale, -1.45, 1.45);
     }
     i.dx = i.dy = 0;
@@ -68,8 +73,6 @@ export class PlayerController {
     if (i.consume("fire")) this.fireBuffer = FIRE_BUFFER;
     const automatic = WEAPONS[a.weapon].automatic;
     if (
-      !a.sprinting &&
-      a.fireDelay === 0 &&
       (automatic ? i.fire : this.fireBuffer > 0) &&
       g.weapons.fire(a) &&
       !automatic

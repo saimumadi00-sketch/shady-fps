@@ -1,6 +1,6 @@
 # Weapon-role design
 
-Status: partially implemented. The AR, SMG, LMG and DMR archetypes, plus the pistol, use the damage/falloff, RPM, magazine, partial/empty reload, headshot multiplier, hip/ADS spread, moving-spread, recoil, ADS time, sprint-to-fire, equip time and weight values below (`src/weapons.js`); actors have separate head and body hitboxes. Not yet implemented: carbine and bolt-action sniper archetypes, universal weapons, projectile velocity/drop, shot bloom, Support bipod/stabilization and scope glint. All numbers remain fictional playtest starting values, not measured balance results or real firearm specifications.
+Status: partially implemented. The AR, SMG, LMG and DMR archetypes, plus the pistol, use the damage/falloff, RPM, magazine, partial/empty reload, headshot multiplier, hip/ADS spread, moving-spread, recoil, ADS time, equip time and weight values below (`src/weapons.js`); actors have separate head and body hitboxes. Not yet implemented: carbine and bolt-action sniper archetypes, universal weapons, projectile velocity/drop, shot bloom, Support bipod/stabilization and scope glint. Sprint-to-fire is superseded by run and gun: weapons fire while sprinting or sliding at 1.4x / 1.7x hip spread, so the sprint-to-fire column below is not used. All numbers remain fictional playtest starting values, not measured balance results or real firearm specifications.
 
 Exactly four canonical classes: **Assault, Engineer, Support, Recon**. Recon replaces the existing Scout identity; it is not a fifth class.
 

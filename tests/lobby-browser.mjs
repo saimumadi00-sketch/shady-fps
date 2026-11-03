@@ -20,6 +20,13 @@ try {
   await mkdir("artifacts", { recursive: true });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: "artifacts/lobby-desktop.png" });
+  // Q / E cycle the top-level sections; the Weapons section holds the loadout.
+  await page.keyboard.press("e");
+  assert.equal(await page.locator("#panel-weapons").isVisible(), true);
+  await page.keyboard.press("e");
+  assert.equal(await page.locator("#panel-progress").isVisible(), true);
+  await page.keyboard.press("q");
+  await page.screenshot({ path: "artifacts/lobby-weapons.png" });
   for (const cls of ["engineer", "support", "recon", "assault"]) {
     await page.click(`[data-class="${cls}"]`);
     assert.equal(
@@ -59,7 +66,12 @@ try {
     await page.locator("#ready").getAttribute("aria-pressed"),
     "true",
   );
-  await page.selectOption("#mode", "Domination");
+  await page.click('[data-section="play"]');
+  await page.click('[data-mode="Domination"]');
+  assert.equal(
+    await page.locator('[data-mode="Domination"]').getAttribute("aria-checked"),
+    "true",
+  );
   await page.selectOption("#region", "EUROPE");
   assert.equal(await page.locator("#ping").textContent(), "78 ms simulated");
   await page.click("#find-match");
@@ -86,6 +98,7 @@ try {
     ),
     true,
   );
+  await page.click('[data-section="weapons"]');
   await page.click('[data-class="recon"]');
   assert.equal(
     await page.locator("#squad-canvas").getAttribute("data-class"),
@@ -98,6 +111,7 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#squad-canvas").dataset.class === "recon",
   );
+  await page.click('[data-section="play"]');
   await page.click(".training");
   await page.waitForSelector("#loadoutClass");
   assert.equal(await page.locator("#loadoutClass").inputValue(), "recon");

@@ -96,12 +96,12 @@ export class TeamManager {
       sprinting: false,
       crouchHeld: false,
       ignoreCrouch: false,
-      fireDelay: 0,
       crouched: false,
       moving: false,
       aim: false,
       lastDamage: 0,
       hitUntil: 0,
+      hitKind: "body",
       hurtUntil: 0,
       noticeUntil: 0,
       networkNotice: "",
@@ -247,7 +247,6 @@ export class SpawnManager {
       sprinting: false,
       crouchHeld: false,
       ignoreCrouch: false,
-      fireDelay: 0,
       crouched: false,
       moving: false,
       aim: false,
@@ -257,15 +256,21 @@ export class SpawnManager {
       kick: 0,
       lastDamage: 0,
       hitUntil: 0,
+      hitKind: "body",
       hurtUntil: 0,
       noticeUntil: 0,
       networkNotice: "",
       adsProgress: 0,
       reloadTime: 0,
       reloadEmpty: false,
-      // Server-applied recoil for networked players resets with each life.
+      // Server-applied recoil for networked players and the burst pattern reset with each life.
       recoilPitch: 0,
       recoilYaw: 0,
+      recoilShot: 0,
+      recoilRest: 0,
+      recoverPitch: 0,
+      recoverYaw: 0,
+      viewPitch: null,
       // Clients tag absolute view angles with this counter so stale aim cannot override a respawn.
       spawnId: (a.spawnId || 0) + 1,
       spawnSector: best.sector?.id || null,
@@ -311,13 +316,17 @@ export class DamageSystem {
       return false;
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamage = 0;
+    // Hit confirmation distinguishes body hits, headshots and the killing blow.
+    const hitKind = target.hp === 0 ? "kill" : headshot ? "head" : "body";
     if (g.humanControllers) {
-      attacker.hitUntil = g.time + 0.13;
+      attacker.hitUntil = g.time + (hitKind === "kill" ? 0.32 : 0.13);
+      attacker.hitKind = hitKind;
       target.hurtUntil = g.time + 0.4;
     }
     if (attacker === g.player) {
-      g.hit = 0.13;
-      g.audio.play("hit", 0.35);
+      g.hit = hitKind === "kill" ? 0.32 : 0.13;
+      g.hitKind = hitKind;
+      g.audio.play(headshot ? "headshot" : "hit", headshot ? 0.4 : 0.35);
     }
     if (target === g.player) {
       g.hurt = 0.4;

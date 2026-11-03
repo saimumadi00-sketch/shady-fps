@@ -329,7 +329,33 @@ test("sprint crouch starts directional slide; jump cancels and restores standing
   assert.equal(p.crouched, false);
   assert.ok(p.y > 0);
   assert.ok(p.slideCooldown > 0);
-  assert.ok(p.fireDelay > 0);
+});
+// Run and gun: sprinting and sliding keep their movement and still fire, at a wider cone.
+test("run and gun: firing while sprinting and sliding, with wider hip spread", async () => {
+  const { spreadFor, SPRINT_SPREAD } = await import("../src/weapons.js");
+  const { game, input } = setup();
+  game.bots.update = () => {};
+  const p = game.player;
+  Object.assign(p, { x: -10, z: -15, yaw: Math.PI / 2 });
+  game.weapons.equip(p, 0);
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  input.keys.add("KeyW");
+  input.keys.add("ShiftLeft");
+  input.fire = true;
+  const start = p.ammo[0].mag;
+  for (let i = 0; i < 20; i++) game.update(1 / 60);
+  assert.equal(p.sprinting, true, "firing must not cancel the sprint");
+  assert.ok(p.ammo[0].mag < start, "rifle fires while sprinting");
+  const sprintCone = spreadFor(p);
+  assert.ok(
+    Math.abs(sprintCone / spreadFor({ ...p, sprinting: false }) - SPRINT_SPREAD) < 1e-9,
+  );
+  input.keys.add("KeyC");
+  game.update(1 / 60);
+  assert.equal(p.sliding, true);
+  const beforeSlideShots = p.ammo[0].mag;
+  for (let i = 0; i < 12; i++) game.update(1 / 60);
+  assert.ok(p.ammo[0].mag < beforeSlideShots, "rifle fires while sliding");
 });
 // Cover slide prerequisites, expiry, collision, and reset to prevent persistent movement-state bugs.
 test("slide needs sprint, expires, respects collision and resets on respawn", () => {

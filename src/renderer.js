@@ -5,6 +5,7 @@ import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
 import { viewmodelPose, GunRecoil } from "./viewmodel.js";
 import { WEAPONS } from "./weapons.js";
+import { CameraPunch, CombatFx, punchStrength } from "./combat-fx.js";
 // The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
 precision highp float;
@@ -253,23 +254,38 @@ export class Renderer {
     const elapsed = Math.min((now - (this.viewTime ?? now)) / 1000, 0.05);
     this.viewTime = now;
     this.gunRecoil ??= new GunRecoil();
+    this.punch ??= new CameraPunch();
+    this.fx ??= new CombatFx();
     if (this.viewWeapon !== p.weapon || !inGame || !p.alive) {
       this.aimBlend = 0;
       this.viewWeapon = p.weapon;
       this.gunRecoil.reset();
+      this.punch.reset();
     }
+    if (!inGame) this.fx.reset();
     // Kick the viewmodel once per new local shot (several may land in one frame at low FPS).
     const shots = game.localShots || 0,
       fresh = Math.min(3, shots - (this.seenShots ?? shots));
     this.seenShots = shots;
     if (inGame && p.alive)
-      for (let i = 0; i < fresh; i++)
+      for (let i = 0; i < fresh; i++) {
         this.gunRecoil.kick(
-          (WEAPONS[p.weapon]?.kick || 0.019) / 0.019,
+          punchStrength(p.weapon),
           this.aimBlend || 0,
           Math.random() * 2 - 1,
         );
+        // The view itself jolts and settles; aim (and so hit detection) is untouched.
+        this.punch.kick(punchStrength(p.weapon), this.aimBlend || 0);
+        this.fx.eject({ ...cam, floor: p.y }, p.weapon);
+      }
     this.gunRecoil.update(elapsed);
+    this.punch.update(elapsed);
+    if (inGame) {
+      cam.pitch += this.punch.pitch;
+      cam.yaw += this.punch.yaw;
+    }
+    this.fx.scan(game.effects, cam);
+    this.fx.update(elapsed);
     const aimTarget = p.aim && p.reload <= 0 && inGame ? 1 : 0;
     this.aimBlend +=
       (aimTarget - (this.aimBlend || 0)) * (1 - Math.exp(-elapsed * 22));
@@ -313,21 +329,12 @@ export class Renderer {
         continue;
       drawCharacter(add, a, time, quality.shadows);
     }
-    // Respect the adaptive visual-effect budget without modifying simulated shots or damage.
-    let effects = 0;
-    for (const e of game.effects.items)
-      if (e.life > 0 && effects++ < quality.effects) {
-        const v = e.kind === "impact" ? 0.08 : 0.14;
-        add(
-          e.x,
-          e.y,
-          e.z,
-          v,
-          v,
-          v,
-          e.kind === "impact" ? [1, 0.8, 0.4] : [1, 0.96, 0.6],
-        );
-      }
+    // Respect the adaptive visual-effect budget and the instance buffer's capacity.
+    const capacity = this.dynamic.length / 11;
+    this.fx.draw(
+      (...args) => n < capacity && add(...args),
+      Math.min(quality.effects * 5, capacity - n),
+    );
     this.draw(this.dynamicBatch, n, this.dynamic);
     if (inGame && p.alive && game.match.state !== "ended") {
       // Keep nearby world geometry from clipping through the first-person weapon.

@@ -29,7 +29,6 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.08,
       kick: 0.019,
       adsTime: 0.22,
-      sprintToFire: 0.2,
       equipTime: 0.28,
       weight: 3.5,
       adsMove: 0.65,
@@ -56,7 +55,6 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.1,
       kick: 0.012,
       adsTime: 0.14,
-      sprintToFire: 0.1,
       equipTime: 0.18,
       weight: 2.2,
       adsMove: 0.85,
@@ -83,7 +81,6 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.1,
       kick: 0.026,
       adsTime: 0.12,
-      sprintToFire: 0.08,
       equipTime: 0.15,
       weight: 1.2,
       adsMove: 0.8,
@@ -110,7 +107,6 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.04,
       kick: 0.045,
       adsTime: 0.34,
-      sprintToFire: 0.32,
       equipTime: 0.4,
       weight: 4.6,
       adsMove: 0.4,
@@ -137,7 +133,6 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.15,
       kick: 0.024,
       adsTime: 0.38,
-      sprintToFire: 0.4,
       equipTime: 0.55,
       weight: 7.5,
       adsMove: 0.4,
@@ -167,7 +162,6 @@ export function handling(a) {
     walk: clamp(1.08 - 0.02 * primary.weight, 0.88, 1.05),
     sprint: clamp(1.025 - 0.008 * primary.weight, 0.94, 1.02),
     adsMove: w.adsMove,
-    sprintToFire: w.sprintToFire,
   };
 }
 // Separate head and body volumes. Heights match the drawn character (head top at stance height).
@@ -196,6 +190,9 @@ export function hitboxes(target) {
     },
   ];
 }
+// Run and gun: firing is allowed while sprinting or sliding, at a wider hip cone.
+export const SPRINT_SPREAD = 1.4;
+export const SLIDE_SPREAD = 1.7;
 // Current cone half-angle in radians from ADS progress, movement, and stance.
 export function spreadFor(a) {
   const w = WEAPONS[a.weapon],
@@ -203,17 +200,112 @@ export function spreadFor(a) {
   return (
     (w.hipSpread + (w.adsSpread - w.hipSpread) * ads) *
     DEG *
-    (a.sliding ? 1.7 : 1) *
+    (a.sliding ? SLIDE_SPREAD : a.sprinting ? SPRINT_SPREAD : 1) *
     (a.moving ? w.movingSpread : a.crouched ? 0.85 : 1)
   );
 }
+// Learnable recoil patterns, indexed like WEAPONS. Each burst starts with a harder `first`
+// kick, climbs at 1x, then eases to `settle` after `settleAfter` shots. Horizontal kick follows
+// `drift` (repeating, in units of the weapon's recoilX) plus a random `jitter`. When firing
+// stops, `recover` of the climb the player did not pull down themselves returns on its own.
+export const RECOIL_PATTERNS = Object.freeze(
+  [
+    // AR: firm first shot, pulls right, swings left mid-magazine, then steadies.
+    {
+      first: 1.35,
+      settle: 0.85,
+      settleAfter: 9,
+      drift: [0.5, 0.7, 0.5, 0.2, -0.3, -0.7, -0.6, -0.2, 0.3, 0.5],
+      jitter: 0.35,
+      recover: 0.55,
+    },
+    // SMG: light, tight zigzag; easy to hold, recovers quickly.
+    {
+      first: 1.2,
+      settle: 1,
+      settleAfter: 6,
+      drift: [0.6, -0.5, 0.7, -0.6, 0.5, -0.7],
+      jitter: 0.45,
+      recover: 0.65,
+    },
+    // Pistol: single kicks that return most of the way between taps.
+    {
+      first: 1,
+      settle: 1,
+      settleAfter: 1,
+      drift: [0.3, -0.3],
+      jitter: 0.6,
+      recover: 0.75,
+    },
+    // DMR: one big, nearly vertical kick per shot that mostly recovers.
+    {
+      first: 1,
+      settle: 1,
+      settleAfter: 1,
+      drift: [0.25, -0.15],
+      jitter: 0.4,
+      recover: 0.7,
+    },
+    // LMG: heavy start that drifts left, settles once the belt is running, recovers least.
+    {
+      first: 1.6,
+      settle: 0.7,
+      settleAfter: 12,
+      drift: [-0.6, -0.8, -0.5, -0.1, 0.4, 0.6, 0.3, -0.2],
+      jitter: 0.3,
+      recover: 0.45,
+    },
+  ].map((p) => Object.freeze({ ...p, drift: Object.freeze(p.drift) })),
+);
+// How quickly the recoverable climb eases back once a burst ends (per second).
+export const RECOIL_RECOVERY_RATE = 9;
+// Vertical multiplier for the `shot`-th round (0-based) of a burst.
+export function recoilScale(weapon, shot) {
+  const p = RECOIL_PATTERNS[weapon] || RECOIL_PATTERNS[0];
+  return shot === 0 ? p.first : shot < p.settleAfter ? 1 : p.settle;
+}
 // Per-shot aim displacement shared by the authoritative simulation and client-side prediction.
-export function recoilFor(a, random) {
-  const w = WEAPONS[a.weapon];
+// `shot` is the round's index in the current burst.
+export function recoilFor(a, random, shot = a.recoilShot || 0) {
+  const w = WEAPONS[a.weapon],
+    p = RECOIL_PATTERNS[a.weapon] || RECOIL_PATTERNS[0],
+    drift = p.drift[shot % p.drift.length];
   return {
-    pitch: w.recoil * DEG * (a.aim ? 0.7 : 1),
-    yaw: (random() - 0.5) * 2 * w.recoilX * DEG,
+    pitch: w.recoil * DEG * (a.aim ? 0.7 : 1) * recoilScale(a.weapon, shot),
+    yaw: (drift + (random() - 0.5) * 2 * p.jitter) * w.recoilX * DEG,
   };
+}
+// Recoil burst state lives on the simulated actor and, for online prediction, on the client.
+// Record a fired round: advance the pattern and bank the share of its kick that will recover.
+export function trackRecoil(state, weapon, pitch, yaw) {
+  const p = RECOIL_PATTERNS[weapon] || RECOIL_PATTERNS[0];
+  state.recoilShot = (state.recoilShot || 0) + 1;
+  state.recoilRest = 0;
+  state.recoverPitch = (state.recoverPitch || 0) + pitch * p.recover;
+  state.recoverYaw = (state.recoverYaw || 0) + yaw * p.recover;
+}
+// The player pulling their aim down (negative pitch change) already did the recovering.
+export function compensateRecoil(state, pitchChange) {
+  if (pitchChange < 0 && state.recoverPitch > 0)
+    state.recoverPitch = Math.max(0, state.recoverPitch + pitchChange);
+}
+// Advance the burst timer; once the gun has rested past its fire interval, end the burst and
+// return the [pitch, yaw] amounts to take back off the view this step.
+export function recoverRecoil(state, weapon, dt) {
+  state.recoilRest = (state.recoilRest || 0) + dt;
+  if (state.recoilRest < (WEAPONS[weapon]?.interval || 0.1) + 0.08)
+    return [0, 0];
+  state.recoilShot = 0;
+  const k = 1 - Math.exp(-RECOIL_RECOVERY_RATE * dt),
+    pitch = (state.recoverPitch || 0) * k,
+    yaw = (state.recoverYaw || 0) * k;
+  state.recoverPitch = (state.recoverPitch || 0) - pitch;
+  state.recoverYaw = (state.recoverYaw || 0) - yaw;
+  return [pitch, yaw];
+}
+// Clear burst state, e.g. for a new life.
+export function resetRecoil(state) {
+  state.recoilShot = state.recoilRest = state.recoverPitch = state.recoverYaw = 0;
 }
 export class EffectPool {
   // Allocate a fixed ring of effect slots to keep combat allocation bounded.
@@ -222,18 +314,29 @@ export class EffectPool {
       x: 0,
       y: 0,
       z: 0,
+      ox: 0,
+      oy: 0,
+      oz: 0,
       life: 0,
       kind: "impact",
+      seq: 0,
     }));
     this.next = 0;
   }
   // Overwrite the oldest slot when capacity is reached instead of growing the pool.
-  add(x, y, z, kind = "impact") {
-    const e = this.items[this.next++ % this.items.length];
+  // `kind` is what the round struck ("impact" = world, "body", "head"); the origin is the
+  // shooter's muzzle so renderers can draw a tracer. `seq` lets renderers spot new shots
+  // even when a networked snapshot reuses the same slot.
+  add(x, y, z, kind = "impact", ox = x, oy = y, oz = z) {
+    const e = this.items[this.next % this.items.length];
+    e.seq = ++this.next;
     e.x = x;
     e.y = y;
     e.z = z;
-    e.life = kind === "impact" ? 0.18 : 0.065;
+    e.ox = ox;
+    e.oy = oy;
+    e.oz = oz;
+    e.life = 0.18;
     e.kind = kind;
   }
   // Expire visuals without removing or reallocating their storage.
@@ -275,6 +378,20 @@ export class WeaponController {
   }
   // Advance weapon timers and transfer reserve ammo only when the reload completes.
   update(a, dt) {
+    // Human-aimed guns ease back after a burst. Online players keep raw aim separate, so the
+    // recovery comes off the server-held recoil total instead of the combined angle.
+    const game = this.game;
+    if (a === game.player || game.humanControllers?.has(a.id)) {
+      const [pitch, yaw] = recoverRecoil(a, a.weapon, dt);
+      if (pitch || yaw) {
+        if (game.humanControllers?.has(a.id)) {
+          a.recoilPitch = (a.recoilPitch || 0) - pitch;
+          a.recoilYaw = (a.recoilYaw || 0) - yaw;
+        }
+        a.pitch = clamp(a.pitch - pitch, -1.45, 1.45);
+        a.yaw -= yaw;
+      }
+    }
     a.cooldown = Math.max(0, a.cooldown - dt);
     a.flash = Math.max(0, a.flash - dt);
     a.kick = Math.max(0, a.kick - dt * 0.12);
@@ -348,10 +465,16 @@ export class WeaponController {
         }
       }
     }
+    // The tracer starts at the muzzle: ahead of the eye, right of centre and slightly low.
+    const right = [Math.cos(a.yaw), 0, Math.sin(a.yaw)];
     game.effects.add(
       o[0] + d[0] * length,
       o[1] + d[1] * length,
       o[2] + d[2] * length,
+      victim ? (head ? "head" : "body") : "impact",
+      o[0] + d[0] * 0.7 + right[0] * 0.16,
+      o[1] + d[1] * 0.7 - 0.12,
+      o[2] + d[2] * 0.7 + right[2] * 0.16,
     );
     // Falloff applies first, then the head multiplier.
     if (victim)
@@ -364,6 +487,7 @@ export class WeaponController {
     if (a === game.player || game.humanControllers?.has(a.id)) {
       const kick = recoilFor(a, game.random),
         pitch = Math.min(1.45, a.pitch + kick.pitch);
+      trackRecoil(a, a.weapon, pitch - a.pitch, kick.yaw);
       // Online players send raw aim; the server keeps the recoil it applied this life and adds it
       // on top every tick, so a client cannot discard recoil by omitting it from its view angles.
       if (game.humanControllers?.has(a.id)) {

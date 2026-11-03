@@ -1,6 +1,13 @@
 import { SnapshotInterpolator } from "./network-interpolation.js";
 import { aimScale, FIRE_BUFFER } from "./player.js";
-import { WEAPONS, recoilFor } from "./weapons.js";
+import {
+  WEAPONS,
+  recoilFor,
+  trackRecoil,
+  compensateRecoil,
+  recoverRecoil,
+  resetRecoil,
+} from "./weapons.js";
 import { clamp } from "./math.js";
 // Shared matches use authenticated HTTP input and a continuous snapshot stream.
 // The client owns its view angles so aiming responds instantly; the server owns everything else.
@@ -34,6 +41,11 @@ export class NetworkClient {
       buffer: 0,
       recoilPitch: 0,
       recoilYaw: 0,
+      // Burst pattern state, mirrored from the server's actor fields of the same names.
+      recoilShot: 0,
+      recoilRest: 0,
+      recoverPitch: 0,
+      recoverYaw: 0,
       lastShot: -Infinity,
     };
     game.online = true;
@@ -153,6 +165,7 @@ export class NetworkClient {
         spawnId: me.spawnId,
       };
       p.recoilPitch = p.recoilYaw = 0;
+      resetRecoil(p);
       p.lastShot = -Infinity;
     }
     // Server recoil is authoritative. During a burst keep the (earlier) prediction unless the
@@ -160,6 +173,8 @@ export class NetworkClient {
     if (performance.now() - p.lastShot > 250) {
       p.recoilPitch = serverPitch;
       p.recoilYaw = serverYaw;
+      p.recoverPitch = me.recoverPitch || 0;
+      p.recoverYaw = me.recoverYaw || 0;
     } else p.recoilPitch = Math.max(p.recoilPitch, serverPitch);
     this.applyView(me);
     // Reconcile predicted ammo: refills and weapon changes reset it, otherwise trust the lower count.
@@ -178,6 +193,7 @@ export class NetworkClient {
     if (this.ready && old === g.player && g.player.hp < oldHp)
       g.audio.play("hurt", 0.4);
     g.hit = Math.max(0, (g.player.hitUntil || 0) - g.time);
+    g.hitKind = g.player.hitKind || "body";
     g.hurt = Math.max(0, (g.player.hurtUntil || 0) - g.time);
     g.notice = g.player.networkNotice || "";
     g.noticeTime = Math.max(0, (g.player.noticeUntil || 0) - g.time);
@@ -203,6 +219,11 @@ export class NetworkClient {
       return;
     }
     const scale = aimScale(a, i, sensitivity);
+    // Predict the server's post-burst recovery and the player's own pull-down compensation.
+    const [back, side] = recoverRecoil(p, a.weapon, dt);
+    p.recoilPitch -= back;
+    p.recoilYaw -= side;
+    compensateRecoil(p, -i.dy * scale);
     v.yaw += i.dx * scale;
     // Keep raw aim inside the range where raw + recoil reaches the view limits.
     v.pitch = clamp(
@@ -220,17 +241,17 @@ export class NetworkClient {
       p.cooldown === 0 &&
       p.mag > 0 &&
       a.reload <= 0 &&
-      a.cooldown <= 0 &&
-      !a.sprinting &&
-      !a.sliding
+      a.cooldown <= 0
     ) {
       p.mag--;
       p.cooldown = w.interval;
       p.buffer = 0;
-      const kick = recoilFor(a, Math.random),
-        before = clamp(v.pitch + p.recoilPitch, -1.45, 1.45);
-      p.recoilPitch += Math.min(1.45, before + kick.pitch) - before;
+      const kick = recoilFor(a, Math.random, p.recoilShot),
+        before = clamp(v.pitch + p.recoilPitch, -1.45, 1.45),
+        applied = Math.min(1.45, before + kick.pitch) - before;
+      p.recoilPitch += applied;
       p.recoilYaw += kick.yaw;
+      trackRecoil(p, a.weapon, applied, kick.yaw);
       p.lastShot = performance.now();
       g.localShots = (g.localShots || 0) + 1;
       g.audio.play("shot", 1, a.weapon);

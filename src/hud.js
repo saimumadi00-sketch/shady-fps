@@ -105,7 +105,12 @@ export class HUDController {
           : a.shield > 0
             ? "Spawn shield · firing ends it"
             : game.controlHint || "1 primary · 2 pistol · Q or wheel to swap";
-    n.hitmarker.style.opacity = game.hit > 0 ? 1 : 0;
+    // The marker pops out on each hit and eases back; kills hold longer and read red.
+    const marker = n.hitmarker,
+      kind = game.hit > 0 ? game.hitKind || "body" : "";
+    if (marker.dataset.kind !== kind) marker.dataset.kind = kind;
+    marker.style.opacity = game.hit > 0 ? Math.min(1, game.hit * 12) : 0;
+    marker.style.setProperty("--pop", 1 + Math.min(game.hit, 0.13) * 3);
     n.damage.style.opacity = game.hurt * 0.9;
     n.notice.textContent =
       game.noticeTime > 0

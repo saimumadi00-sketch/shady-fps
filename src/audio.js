@@ -176,7 +176,7 @@ export class AudioManager {
       o.stop(t + delay + duration + 0.02);
       nodes.push(o, g);
     };
-    const burst = (filterType, frequency, q, duration, level) => {
+    const burst = (filterType, frequency, q, duration, level, delay = 0) => {
       const s = c.createBufferSource(),
         f = c.createBiquadFilter(),
         g = c.createGain();
@@ -184,13 +184,14 @@ export class AudioManager {
       f.type = filterType;
       f.frequency.value = frequency;
       f.Q.value = q;
-      g.gain.setValueAtTime(level, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.setValueAtTime(level, t + delay);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + delay + duration);
       s.connect(f);
       f.connect(g);
       g.connect(out);
       // Random offsets keep repeated footsteps and shots from sounding identical.
-      s.start(t, Math.random() * 0.8, duration + 0.02);
+      s.start(t + delay, Math.random() * 0.8, duration + 0.02);
       nodes.push(s, f, g);
     };
     if (kind === "shot") {
@@ -199,7 +200,21 @@ export class AudioManager {
       burst("lowpass", 900, 0.7, w.tail, 0.32);
       tone("sawtooth", w.body, Math.max(35, w.body * 0.3), 0.09, 0.12);
       tone("sine", 70, 38, w.tail * 0.8, 0.35);
-      return w.tail;
+      // Slap-back: the report returns off the yard's containers and walls a moment later.
+      burst("lowpass", 1400, 0.6, w.tail * 0.9, 0.11, 0.075);
+      burst("lowpass", 700, 0.6, w.tail * 1.2, 0.06, 0.16);
+      return w.tail + 0.2;
+    }
+    if (kind === "hit" || kind === "headshot") {
+      // A dull impact thump, plus a bright metallic tink when the round finds a helmet.
+      burst("lowpass", 1100, 1.1, 0.06, 0.6);
+      tone("sine", 160, 60, 0.07, 0.35);
+      tone("triangle", 1900, 1700, 0.045, 0.14);
+      if (kind === "headshot") {
+        tone("sine", 2600, 2450, 0.16, 0.22);
+        tone("sine", 3900, 3700, 0.1, 0.1);
+      }
+      return kind === "headshot" ? 0.17 : 0.08;
     }
     if (kind === "step") {
       // Soft heel scuff plus a low body thud, with slight variation per step.
@@ -215,14 +230,7 @@ export class AudioManager {
       return 0.13;
     }
     const duration = kind === "reload" ? 0.12 : kind === "kill" ? 0.23 : 0.075;
-    const f =
-      kind === "hit"
-        ? 820
-        : kind === "kill"
-          ? 1100
-          : kind === "hurt"
-            ? 85
-            : 350;
+    const f = kind === "kill" ? 1100 : kind === "hurt" ? 85 : 350;
     tone("sine", f, Math.max(35, f * 0.3), duration, 0.1);
     return duration;
   }

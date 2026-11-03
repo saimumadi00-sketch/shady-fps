@@ -772,15 +772,35 @@ input[type="range"] {
   left: 6px;
   top: -1px;
 }
+/* Four diagonal ticks around the crosshair. --pop (set per frame) scales them out on a hit. */
 #hitmarker {
+  --pop: 1;
+  --tick: #ffffff;
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 40px;
+  width: 0;
+  height: 0;
   opacity: 0;
-  color: #fff;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px #000); /* taste-skill-ignore: legibility over bright scenes */
 }
+#hitmarker i {
+  position: absolute;
+  left: -1px;
+  top: calc(-12px * var(--pop));
+  width: 2px;
+  height: 8px;
+  background: var(--tick);
+  transform-origin: 1px calc(12px * var(--pop));
+}
+#hitmarker i:nth-child(1) { transform: rotate(45deg); }
+#hitmarker i:nth-child(2) { transform: rotate(135deg); }
+#hitmarker i:nth-child(3) { transform: rotate(225deg); }
+#hitmarker i:nth-child(4) { transform: rotate(315deg); }
+#hitmarker[data-kind="head"] { --tick: #ffd34d; }
+#hitmarker[data-kind="kill"] { --tick: #ff3b30; }
+#hitmarker[data-kind="kill"] i { width: 3px; height: 11px; left: -1.5px; }
 /* Damage feedback: a red edge vignette whose opacity the HUD drives. */
 #damage {
   position: absolute;
