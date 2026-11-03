@@ -61,97 +61,11 @@ const field = (boxes) => (p) => {
   return d;
 };
 
-// Geometry that hands rest on, matching the meshes in weapon-models.js.
-export function weaponShapes(kind) {
-  const pistol = kind === "pistol",
-    smg = kind === "smg",
-    lmg = kind === "lmg";
-  // Trigger guard (bottom bar, front post) and trigger, as drawn in weapon-models.js.
-  const guard = pistol
-    ? [
-        aabb(-0.012, 0.012, -0.056, -0.044, -0.031, 0.059),
-        aabb(-0.012, 0.012, -0.056, -0.014, -0.035, -0.021),
-      ]
-    : [
-        aabb(-0.012, 0.012, -0.101, -0.089, -0.031, 0.059),
-        aabb(-0.012, 0.012, -0.0985, -0.0335, -0.035, -0.021),
-      ];
-  const trigger = pistol
-    ? aabb(-0.006, 0.006, -0.044, -0.018, 0.018, 0.03)
-    : aabb(-0.006, 0.006, -0.078, -0.036, 0.018, 0.03);
-  if (pistol) {
-    const grip = {
-      top: [0, 0.035, 0.085],
-      bottom: [0, -0.195, 0.145],
-      hw: 0.037,
-      hd: 0.0435,
-    };
-    const gripBox = slab(grip.top, grip.bottom, [1, 0, 0], grip.hw, grip.hd);
-    const mag = aabb(-0.0315, 0.0315, -0.295, -0.115, 0.111, 0.179);
-    return {
-      grip,
-      receiverHalf: 0.0425,
-      trigger,
-      body: [
-        aabb(-0.0425, 0.0425, 0.025, 0.135, -0.22, 0.17),
-        aabb(-0.0375, 0.0375, -0.0145, 0.0305, -0.205, 0.025),
-        gripBox,
-        mag,
-        ...guard,
-        trigger,
-      ],
-      mag: { box: mag, top: [0, -0.2, 0.145], bottom: [0, -0.295, 0.145] },
-    };
-  }
-  const half = lmg ? 0.07 : 0.0525,
-    hw = smg ? 0.0425 : 0.0475;
-  const front = smg ? -0.3 : kind === "dmr" ? -0.56 : lmg ? -0.49 : -0.43;
-  const grip = {
-    top: [0, -0.035, 0.11],
-    bottom: [0, -0.235, 0.17],
-    hw: 0.036,
-    hd: 0.038,
-  };
-  const handguard = aabb(-hw, hw, -0.022, 0.085, front, -0.19);
-  const mag = lmg
-    ? {
-        box: aabb(-0.09, 0.09, -0.24, -0.04, -0.17, -0.01),
-        top: [0, -0.06, -0.09],
-        bottom: [0, -0.2, -0.09],
-      }
-    : smg
-      ? {
-          box: aabb(-0.034, 0.034, -0.29, -0.03, -0.1, -0.025),
-          top: [0, -0.03, -0.0625],
-          bottom: [0, -0.29, -0.0625],
-        }
-      : {
-          box: slab(
-            [0, -0.03, -0.083],
-            [0, -0.27, -0.145],
-            [1, 0, 0],
-            0.034,
-            0.045,
-          ),
-          top: [0, -0.03, -0.083],
-          bottom: [0, -0.27, -0.145],
-        };
-  return {
-    grip,
-    receiverHalf: half,
-    handguard: { box: handguard, hw, top: 0.085, bottom: -0.022, front },
-    trigger,
-    body: [
-      aabb(-half, half, -0.045, 0.105, -0.22, 0.21),
-      slab(grip.top, grip.bottom, [1, 0, 0], grip.hw, grip.hd),
-      handguard,
-      mag.box,
-      ...guard,
-      trigger,
-    ],
-    mag,
-  };
-}
+// Box builders for the shape sets measured from each gun (see a2bShapes in a2b-guns.js).
+// A shape set: grip {top, bottom, hw, hd}, trigger, body boxes, mag {box, top, bottom, hw},
+// receiverHalf, guardBottom, triggerPad, and handguard + supportZ (long guns) or magHold
+// (pistols, whose magazine sits flush in the grip).
+export const shapeHelpers = Object.freeze({ aabb, slab });
 
 // ---------------------------------------------------------------------------- hand rig
 // Stylised guns here are chunkier than real ones; hands are scaled up to match them.
@@ -492,12 +406,10 @@ function poseHand(sdf, f, { held, index, thumb, thumbSeeds = [] }) {
 }
 
 // Every hand pose for one weapon: firing grip, support grip, support on the magazine.
-export function solveHands(kind) {
-  const shapes = weaponShapes(kind),
-    pistol = kind === "pistol",
+export function solveHands(kind, shapes) {
+  const pistol = kind === "pistol",
     smg = kind === "smg",
-    lmg = kind === "lmg",
-    dmr = kind === "dmr";
+    lmg = kind === "lmg";
   const sdf = field(shapes.body);
   const { grip } = shapes;
   const down = norm(sub(grip.bottom, grip.top)),
@@ -509,10 +421,10 @@ export function solveHands(kind) {
   ]);
   const magField = field([shapes.mag.box]);
   // Middle finger sits just under the trigger guard; the index pad rests on the trigger.
-  const guardBottom = pistol ? -0.056 : -0.101;
+  const { guardBottom, triggerPad, receiverHalf: frameHalf } = shapes;
   const tMiddle =
     (guardBottom - 0.017 - grip.top[1]) / (grip.bottom[1] - grip.top[1]);
-  const triggerPad = [0, pistol ? -0.036 : -0.068, 0.012];
+  const gripTop = grip.top[1];
 
   // Firing hand (right): back of the hand faces right, fingers point forward around the
   // front strap, index on the trigger, thumb over the backstrap onto the receiver's left.
@@ -528,8 +440,8 @@ export function solveHands(kind) {
       held: gripField,
       index: triggerPad,
       thumb: pistol
-        ? [-0.0375 - THUMB.r * 0.85, 0, 0.095]
-        : [-grip.hw - THUMB.r * 0.85, -0.06, 0.12],
+        ? [-frameHalf - THUMB.r * 0.85, gripTop - 0.035, grip.top[2] + 0.01]
+        : [-grip.hw - THUMB.r * 0.85, gripTop - 0.025, grip.top[2] + 0.01],
       // Across the top of the backstrap, then forward along the far side.
       thumbSeeds: [
         [107, 62, 17, 72, -78],
@@ -546,7 +458,7 @@ export function solveHands(kind) {
     // Only below the firing thumb, which lies along the frame, so the support thumb can rest
     // on the frame beneath it rather than hovering out at the fattened width.
     const fatGrip = slab(
-      along((-0.045 - grip.top[1]) / (grip.bottom[1] - grip.top[1])),
+      along((gripTop - 0.08 - grip.top[1]) / (grip.bottom[1] - grip.top[1])),
       grip.bottom,
       right,
       grip.hw + FAT,
@@ -565,21 +477,31 @@ export function solveHands(kind) {
       // Thumb forward along the frame, just under the firing thumb, within its reach.
       {
         held: field([fatGrip]),
-        thumb: (base) => [-0.0375 - THUMB.r * 0.85, -0.02, base[2] - 0.12],
+        thumb: (base) => [
+          -frameHalf - THUMB.r * 0.85,
+          gripTop - 0.055,
+          base[2] - 0.12,
+        ],
       },
     );
-    // Reload: fingers around the magazine base, thumb under the floorplate.
+    // Reload: the magazine sits flush, so the hand cups the base of the grip around it.
     magHold = poseHand(
       sdf,
       anchorFrame(
         frame([0, 0, -1], [-1, 0, 0.3], false),
-        [-0.0315, -0.25, 0.12],
+        shapes.magHold.anchor,
       ),
-      { held: magField, thumb: [0, -0.31, 0.16] },
+      {
+        held: field([
+          shapes.mag.box,
+          slab(grip.top, grip.bottom, right, grip.hw, grip.hd),
+        ]),
+        thumb: shapes.magHold.thumb,
+      },
     );
   } else {
     const hg = shapes.handguard,
-      z0 = smg ? -0.262 : dmr ? -0.4 : lmg ? -0.33 : -0.27;
+      z0 = shapes.supportZ;
     // Palm up under the handguard, fingers wrapping up its right side, thumb forward along
     // its left side pointing down the barrel, wrist low on the left.
     support = poseHand(
@@ -607,7 +529,7 @@ export function solveHands(kind) {
     // Reload: palm on the left face of the magazine, fingers around its front.
     const magAxis = norm(sub(shapes.mag.bottom, shapes.mag.top)),
       magFront = norm(cross(right, magAxis)),
-      magHalfW = lmg ? 0.09 : 0.034;
+      magHalfW = shapes.mag.hw;
     magHold = poseHand(
       sdf,
       anchorFrame(
@@ -640,10 +562,7 @@ export function solveHands(kind) {
 // ------------------------------------------------------------------------------ meshing
 export function buildHands(emit, part, opts, capture) {
   const { kind, outfit } = opts;
-  const pistol = kind === "pistol",
-    smg = kind === "smg",
-    dmr = kind === "dmr",
-    lmg = kind === "lmg";
+  const pistol = kind === "pistol";
   // Matches the anime squad look of the third-person models (characters.js): off-white
   // gloves that read clearly against a dark rifle, ink palm pads and wrist strap, knuckle
   // plates in the class accent, and the same sleeve as the third-person jacket (white cuff,
@@ -684,7 +603,12 @@ export function buildHands(emit, part, opts, capture) {
   // Square-section segments through control points, radius per point. `up` orients the flat
   // faces (the hand's back for fingers and forearms); each segment overruns its ends slightly
   // so neighbouring blocks overlap at the joints instead of leaving gaps.
-  function limb(path, radii, colorAt, { up = [0, 1, 0], flat = 1, overrun = 0.6 } = {}) {
+  function limb(
+    path,
+    radii,
+    colorAt,
+    { up = [0, 1, 0], flat = 1, overrun = 0.6 } = {},
+  ) {
     const n = path.length;
     for (let i = 0; i < n - 1; i++) {
       const a = path[i],
@@ -786,7 +710,13 @@ export function buildHands(emit, part, opts, capture) {
     }
     // A thick base keeps the thumb reading as part of the hand where it crosses the
     // backstrap, rather than as a thin loop of tube.
-    finger(pose.thumb, THUMB.r, bareTips ? skin : glove, f.Y, [1.75, 1.3, 1.05, 1]);
+    finger(
+      pose.thumb,
+      THUMB.r,
+      bareTips ? skin : glove,
+      f.Y,
+      [1.75, 1.3, 1.05, 1],
+    );
   }
 
   // Forearm + elbow + upper arm from the wrist toward the shoulder (off screen), laid out
@@ -806,7 +736,9 @@ export function buildHands(emit, part, opts, capture) {
     seg([band, shoulder], [0.064, 0.068], team);
   }
 
-  const { firing, support, magHold } = cachedPoses(kind);
+  const { firing, support, magHold, shapes } = cachedPoses(opts.key, () =>
+    solveHands(kind, opts.shapes),
+  );
   // Forearms leave each wrist opposite the fingers, dropping toward a low elbow.
   const forearm = (pose, drop, elbow, shoulder) =>
     arm(
@@ -826,7 +758,7 @@ export function buildHands(emit, part, opts, capture) {
       [0.3, -0.72, 0.8],
     );
   });
-  const z0 = smg ? -0.262 : dmr ? -0.4 : lmg ? -0.33 : -0.27;
+  const z0 = shapes.supportZ;
   const supportArm = (pose, reload) => {
     hand(pose);
     if (pistol)
@@ -849,7 +781,7 @@ export function buildHands(emit, part, opts, capture) {
 }
 // Poses depend only on the weapon, not on finish, optic or class: solve once per weapon.
 const POSES = new Map();
-function cachedPoses(kind) {
-  if (!POSES.has(kind)) POSES.set(kind, solveHands(kind));
-  return POSES.get(kind);
+function cachedPoses(key, solve) {
+  if (!POSES.has(key)) POSES.set(key, solve());
+  return POSES.get(key);
 }

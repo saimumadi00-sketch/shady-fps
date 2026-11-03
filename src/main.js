@@ -18,6 +18,7 @@ import {
   normalizeClass,
 } from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
+import { weaponMesh } from "./weapon-models.js";
 const $ = (id) => document.getElementById(id);
 let network,
   localPaused = false;
@@ -271,6 +272,20 @@ try {
     orientation();
   }
   $("play").disabled = false;
+  // Solve each gun's hand poses in idle time (they are cached per gun), so the first draw or
+  // switch to a weapon never stalls a frame. The selected class's guns go first.
+  {
+    const order = [
+        ...new Set([...loadout(selectedClass).weapons, 0, 1, 2, 3, 4]),
+      ],
+      idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 60));
+    const next = () => {
+      if (!order.length) return;
+      weaponMesh(order.shift(), "graphite", "iron", false, true);
+      idle(next);
+    };
+    idle(next);
+  }
   $("play").textContent = "Deploy";
   $("status").textContent = "ready: you and 9 bots, no network needed";
   $("play").onclick = start;

@@ -3,11 +3,11 @@
 // runtime without a hitch.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { solveHands } from "../src/viewmodel-hands.js";
-import { weaponMesh } from "../src/weapon-models.js";
+import { solveHands, shapeHelpers } from "../src/viewmodel-hands.js";
+import { weaponMesh, weaponSight } from "../src/weapon-models.js";
+import { A2B_GUNS, a2bShapes, describe } from "../src/a2b-guns.js";
 import { CLASS_IDS } from "../src/loadouts.js";
 
-const KINDS = ["rifle", "smg", "pistol", "dmr", "lmg"];
 // Deepest any finger segment sinks below its surface, in metres (negative = inside).
 function worstSink(sdf, pose) {
   let worst = 0;
@@ -20,10 +20,16 @@ function worstSink(sdf, pose) {
   return worst;
 }
 
-for (const kind of KINDS)
-  test(`${kind}: hands grip the weapon without sinking into it`, () => {
+// Every gun, posed against the collision shapes measured from its model.
+const CASES = A2B_GUNS.map((g, i) => [
+  g.model,
+  g.kind,
+  () => solveHands(g.kind, a2bShapes(i, shapeHelpers)),
+]);
+for (const [label, kind, solve] of CASES)
+  test(`${label}: hands grip the weapon without sinking into it`, () => {
     const start = performance.now();
-    const { sdf, firing, support, magHold, shapes } = solveHands(kind);
+    const { sdf, firing, support, magHold, shapes } = solve();
     assert.ok(performance.now() - start < 400, "poses solve fast enough");
     // Firing hand: middle, ring and little fingertips rest on the grip.
     for (const { finger, pts } of firing.fingers.slice(1)) {
@@ -67,4 +73,29 @@ test("every class builds every weapon with hands, and reload poses share topolog
       assert.equal(mesh.supportAlt.length, support.end - support.start);
       assert.ok(mesh.every(Number.isFinite), `${classId} ${weapon}`);
     }
+});
+
+test("A2B guns: sight line above the grip, muzzle forward, optics raise the sight", () => {
+  A2B_GUNS.forEach((gun, i) => {
+    const iron = describe(i, "iron"),
+      shapes = a2bShapes(i, shapeHelpers);
+    assert.ok(
+      iron.sightHeight > shapes.grip.top[1],
+      gun.model + " sight above grip",
+    );
+    assert.ok(
+      iron.muzzle[2] < shapes.trigger.c[2] - 0.15,
+      gun.model + " muzzle ahead",
+    );
+    assert.equal(weaponSight(i, "iron"), iron.sightHeight);
+    if (gun.kind !== "pistol" && !gun.optic)
+      for (const optic of ["reflex", "scope"])
+        assert.ok(
+          weaponSight(i, optic) > iron.sightHeight,
+          gun.model + " " + optic,
+        );
+  });
+  // The LMG's feed cover hinges at its own front edge.
+  const lmg = weaponMesh(4, "graphite", "iron");
+  assert.ok(lmg.coverPivot && lmg.parts.some((p) => p.name === "cover"));
 });

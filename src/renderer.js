@@ -2,7 +2,7 @@
 import { drawCharacter } from "./characters.js";
 import { cameraMatrix } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
-import { weaponMesh } from "./weapon-models.js";
+import { weaponMesh, weaponSight } from "./weapon-models.js";
 import {
   viewmodelPose,
   GunRecoil,
@@ -381,12 +381,7 @@ export class Renderer {
       g.uniform3f(this.eye, 0, 0, 0);
       // Derive visual reload motion from the authoritative remaining reload timer.
       const pose = reloadPose(p);
-      const sightHeight =
-        p.weapon === 3 || this.customization?.optic === "scope"
-          ? 0.218
-          : this.customization?.optic === "reflex"
-            ? 0.205
-            : 0.16;
+      const sightHeight = weaponSight(p.weapon, optic);
       const view = viewmodelPose(
         p,
         now / 1000,
@@ -398,7 +393,10 @@ export class Renderer {
       );
       const finish = this.customization?.finish || "graphite";
       // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
+      // Once the sights are mostly up, switch to the variant without the stock behind them.
+      const aimed = this.aimBlend > 0.55;
       const key =
+        (aimed ? "ads:" : "") +
         p.weapon +
         ":" +
         finish +
@@ -421,6 +419,7 @@ export class Renderer {
           true,
           p.classId,
           p.team,
+          aimed,
         );
         const vao = g.createVertexArray(),
           buffer = g.createBuffer();

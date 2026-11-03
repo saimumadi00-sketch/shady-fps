@@ -1,6 +1,6 @@
 # Crosscurrent — Yard 07
 
-A browser FPS with a squad lobby, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models; weapons are original low-poly meshes.
+A browser FPS with a squad lobby, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models. First-person weapons are low-poly models from the free [Project A2B](https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release) pack; gun and reload sounds are recordings credited in `THIRD_PARTY_NOTICES.md`.
 
 ## Demo
 
