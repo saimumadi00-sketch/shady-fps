@@ -415,14 +415,18 @@ export class WeaponController {
       if (a === this.game.player) {
         const duration = a.reloadTime || WEAPONS[a.weapon].reload;
         // Play each mechanical cue when the tick crosses its phase, even during catch-up updates.
-        for (const phase of [0.34, 0.68, 0.84]) {
+        for (const [phase, cue] of [
+          [0.34, "mag-out"],
+          [0.68, "mag-in"],
+          [0.84, "rack"],
+        ]) {
           const threshold = duration * (1 - phase);
           if (
             before > threshold &&
             a.reload <= threshold &&
             (phase !== 0.84 || a.reloadEmpty)
           )
-            this.game.audio.play("reload", 0.28);
+            this.game.audio.play(cue, 0.28, a.weapon);
         }
       }
       if (a.reload <= 0) {
@@ -444,6 +448,15 @@ export class WeaponController {
       s = a.ammo[a.weapon];
     if (!a.alive || a.cooldown > 0 || a.reload > 0) return false;
     if (s.mag === 0) {
+      // Fully dry: the hammer clicks on an empty chamber, at most a few times a second.
+      if (
+        s.reserve === 0 &&
+        a === game.player &&
+        !(game.time - (a.dryAt ?? -Infinity) < 0.3)
+      ) {
+        a.dryAt = game.time;
+        game.audio.play("dry", 0.5, a.weapon);
+      }
       this.reload(a);
       return false;
     }
@@ -490,6 +503,13 @@ export class WeaponController {
       o[1] + d[1] * 0.7 - 0.12,
       o[2] + d[2] * 0.7 + right[2] * 0.16,
     );
+    // A round that strikes the world cracks off it, positioned at the point of impact.
+    if (!victim && length < w.range)
+      game.audio.play("impact", 0.35, a.weapon, {
+        x: o[0] + d[0] * length,
+        y: o[1] + d[1] * length,
+        z: o[2] + d[2] * length,
+      });
     // Falloff applies first, then the head multiplier.
     if (victim)
       game.damage.apply(

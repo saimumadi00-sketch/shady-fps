@@ -330,7 +330,7 @@ export class DamageSystem {
     }
     if (target === g.player) {
       g.hurt = 0.4;
-      g.audio.play("hurt", 0.4);
+      g.audio.play(target.hp === 0 ? "death" : "hurt", 0.4);
     }
     // Mark dead before emitting events so additional hits cannot count the kill again.
     if (target.hp === 0) {

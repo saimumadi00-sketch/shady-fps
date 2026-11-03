@@ -1,5 +1,6 @@
-// Synthesized game audio with 3D positioning. Every cue is generated from oscillators and a
-// shared noise buffer, so there are no sound files to fetch or cache.
+// Game audio with 3D positioning. Gunshots, reloads, impacts and pain use recorded samples
+// (assets/audio, cached offline); every cue also has a synthesized version, built from
+// oscillators and a shared noise buffer, that plays until the recordings have decoded.
 // World coordinates match Web Audio: +Y up, forward along -Z, so positions pass through unchanged.
 import { rayBox } from "./math.js";
 
@@ -17,6 +18,66 @@ const SHOT_TONE = [
   { body: 95, crack: 2000, tail: 0.26 }, // DMR
   { body: 115, crack: 2200, tail: 0.2 }, // LMG
 ];
+
+// Recorded cues (credits in THIRD_PARTY_NOTICES.md). They load after the first user gesture;
+// until a file has decoded, or if it fails to, the synthesized cue above plays instead.
+export const SAMPLE_DIR = "./assets/audio/";
+export const SAMPLE_FILES = Object.freeze([
+  ...["ar", "smg", "pistol", "dmr", "lmg"].map((w) => `shot-${w}.mp3`),
+  ...["ar", "pistol", "dmr", "lmg"].flatMap((w) =>
+    ["out", "in", "rack"].map((stage) => `${w}-${stage}.mp3`),
+  ),
+  "smg-rack.mp3",
+  "dry.mp3",
+  "impact-1.wav",
+  "impact-2.wav",
+  "hurt.wav",
+  "death.wav",
+]);
+const WEAPON_KEY = ["ar", "smg", "pistol", "dmr", "lmg"];
+// Per weapon: how long the recorded report rings before it is faded out (so automatic fire
+// does not stack dozens of two-second tails), its playback rate and its level.
+const SHOT_SAMPLE = [
+  { tail: 0.55, rate: 1, gain: 0.85 }, // AR, 5.56
+  { tail: 0.42, rate: 1.06, gain: 0.8 }, // SMG, 9 mm
+  { tail: 0.6, rate: 0.94, gain: 0.95 }, // Pistol, 9 mm close-mic
+  { tail: 1.1, rate: 1, gain: 0.95 }, // DMR, .308
+  { tail: 0.5, rate: 1, gain: 0.9 }, // LMG, 7.62x54R
+];
+// Which recording a cue uses for a weapon, or null to keep the synthesized one. The SMG has
+// no magazine recordings of its own and reuses the rifle's, played slightly faster and lighter.
+export function sampleFor(kind, weapon = 0) {
+  const key = WEAPON_KEY[weapon] || "ar";
+  if (kind === "shot") {
+    const s = SHOT_SAMPLE[weapon] || SHOT_SAMPLE[0];
+    return { file: `shot-${key}.mp3`, ...s, jitter: 0.03 };
+  }
+  if (kind === "mag-out" || kind === "mag-in" || kind === "rack") {
+    const stage = kind === "rack" ? "rack" : kind.slice(4);
+    const smg = key === "smg" && stage !== "rack";
+    return {
+      file: `${smg ? "ar" : key}-${stage}.mp3`,
+      rate: smg ? 1.12 : 1,
+      gain: 2.2,
+      tail: 1.2,
+      jitter: 0.02,
+    };
+  }
+  if (kind === "impact")
+    return {
+      file: Math.random() < 0.7 ? "impact-1.wav" : "impact-2.wav",
+      rate: 1,
+      gain: 1,
+      tail: 0.8,
+      jitter: 0.08,
+    };
+  if (kind === "dry") return { file: "dry.mp3", rate: 1, gain: 1.6, tail: 0.4 };
+  if (kind === "hurt")
+    return { file: "hurt.wav", rate: 1, gain: 1.4, tail: 0.9, jitter: 0.05 };
+  if (kind === "death")
+    return { file: "death.wav", rate: 1, gain: 1.3, tail: 1.9 };
+  return null;
+}
 
 // Wall muffling: a blocked sound loses its highs and much of its level, but stays audible.
 export const OCCLUDED = Object.freeze({ cutoff: 650, gain: 0.45 });
@@ -53,6 +114,26 @@ export class AudioManager {
     this.listener = { x: 0, y: 1.6, z: 0 };
     // Optional (from, to) => boolean supplied by the game; see lineOfSound().
     this.occluded = null;
+    // Decoded recordings by file name; filled in the background after unlock().
+    this.samples = new Map();
+    this.loading = false;
+  }
+  // Fetch and decode every recording once. Failures are silent: the synth covers them.
+  loadSamples() {
+    const c = this.context;
+    if (this.loading || !c || typeof fetch !== "function") return;
+    this.loading = true;
+    for (const file of SAMPLE_FILES)
+      fetch(SAMPLE_DIR + file)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then(
+          (data) =>
+            new Promise((resolve, reject) =>
+              c.decodeAudioData(data, resolve, reject),
+            ),
+        )
+        .then((buffer) => this.samples.set(file, buffer))
+        .catch(() => {});
   }
   // Create/resume audio only from an interaction permitted by browser autoplay policy.
   unlock() {
@@ -72,6 +153,7 @@ export class AudioManager {
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       }
       this.context.resume().catch(() => {});
+      this.loadSamples();
     } catch {}
   }
   // Place the listener at the camera; called once per rendered frame.
@@ -161,6 +243,31 @@ export class AudioManager {
   // Build the synthesis graph for one cue into `out`; returns its length in seconds.
   voice(kind, weapon, t, out, nodes) {
     const c = this.context;
+    // A decoded recording replaces the synthesized cue; it is faded out after `tail` seconds.
+    const sample = sampleFor(kind, weapon),
+      buffer = sample && this.samples.get(sample.file);
+    if (buffer) {
+      const s = c.createBufferSource(),
+        g = c.createGain(),
+        rate =
+          sample.rate * (1 + (Math.random() * 2 - 1) * (sample.jitter || 0)),
+        length = Math.min(sample.tail, buffer.duration / rate);
+      s.buffer = buffer;
+      s.playbackRate.value = rate;
+      g.gain.setValueAtTime(sample.gain, t);
+      g.gain.setValueAtTime(sample.gain, t + length * 0.6);
+      g.gain.linearRampToValueAtTime(0.0001, t + length);
+      s.connect(g);
+      g.connect(out);
+      s.start(t);
+      s.stop(t + length + 0.02);
+      nodes.push(s, g);
+      return length;
+    }
+    // Recording-only cues with no synthesized version yet stay silent until they load.
+    if (kind === "impact" || kind === "death" || kind === "dry") return 0;
+    if (kind === "mag-out" || kind === "mag-in" || kind === "rack")
+      kind = "reload";
     const tone = (type, from, to, duration, level, delay = 0) => {
       const o = c.createOscillator(),
         g = c.createGain();

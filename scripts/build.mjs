@@ -1,5 +1,6 @@
 // Builds the self-contained deployment directory; run from the repository root.
 import { mkdir, readFile, writeFile, rm, cp } from "node:fs/promises";
+import { SAMPLE_FILES } from "../src/audio.js";
 import { gzipSync, brotliCompressSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { build, transform } from "esbuild";
@@ -60,6 +61,8 @@ await cp("assets/yard-map.svg", "dist/assets/yard-map.svg");
 await cp("assets/fonts", "dist/assets/fonts", { recursive: true });
 await mkdir("dist/assets/maps", { recursive: true });
 await cp("assets/maps/freedm", "dist/assets/maps/freedm", { recursive: true });
+// Recorded gun, reload and impact sounds (see THIRD_PARTY_NOTICES.md).
+await cp("assets/audio", "dist/assets/audio", { recursive: true });
 await cp("THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
 const files = [
   "index.html",
@@ -70,6 +73,7 @@ const files = [
   "lobby.css",
   "assets/yard-map.svg",
   "assets/fonts/inter-latin.woff2",
+  ...SAMPLE_FILES.map((file) => "assets/audio/" + file),
 ];
 // Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.
 const hash = createHash("sha256");
@@ -95,12 +99,18 @@ let total = 0,
   brotli = 0;
 // Emit gzip/Brotli sidecars for hosts that negotiate precompressed responses.
 for (const file of files) {
-  const content = await readFile("dist/" + file),
-    gz = gzipSync(content, { level: 9 }),
+  const content = await readFile("dist/" + file);
+  total += content.length;
+  // Audio is already compressed; sidecars would only duplicate it, so it is sent as is.
+  if (file.startsWith("assets/audio/")) {
+    gzip += content.length;
+    brotli += content.length;
+    continue;
+  }
+  const gz = gzipSync(content, { level: 9 }),
     br = brotliCompressSync(content);
   await writeFile("dist/" + file + ".gz", gz);
   await writeFile("dist/" + file + ".br", br);
-  total += content.length;
   gzip += gz.length;
   brotli += br.length;
 }

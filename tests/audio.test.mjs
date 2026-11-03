@@ -1,7 +1,14 @@
 // Footstep cadence and 3D shot routing are pure logic, so they are tested without Web Audio.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FootstepTracker, STRIDE } from "../src/audio.js";
+import { existsSync } from "node:fs";
+import {
+  FootstepTracker,
+  STRIDE,
+  SAMPLE_FILES,
+  sampleFor,
+} from "../src/audio.js";
+import { WEAPONS } from "../src/weapons.js";
 import { OfflineSimulation } from "../src/game.js";
 
 const walker = (id, extra = {}) => ({
@@ -133,5 +140,57 @@ test("walls muffle positioned sounds; open ground and low crates do not", async 
   assert.ok(
     propagation(40).cutoff < propagation(5).cutoff,
     "distance dulls highs",
+  );
+});
+
+test("every weapon's shot and reload stages map to a shipped recording", () => {
+  for (const file of SAMPLE_FILES)
+    assert.ok(
+      existsSync(new URL("../assets/audio/" + file, import.meta.url)),
+      file,
+    );
+  const used = new Set();
+  WEAPONS.forEach((_, w) => {
+    for (const kind of ["shot", "mag-out", "mag-in", "rack"]) {
+      const s = sampleFor(kind, w);
+      assert.ok(SAMPLE_FILES.includes(s.file), kind + " " + w);
+      assert.ok(s.tail > 0 && s.rate > 0 && s.gain > 0);
+      used.add(s.file);
+    }
+  });
+  // Automatic weapons fade their report quickly so sustained fire cannot exhaust the voices.
+  for (const w of [0, 1, 4]) assert.ok(sampleFor("shot", w).tail <= 0.6);
+  for (const kind of ["impact", "hurt", "death", "dry"])
+    assert.ok(SAMPLE_FILES.includes(sampleFor(kind).file), kind);
+  // Footsteps, hit markers and the kill chime stay synthesized.
+  for (const kind of ["step", "land", "hit", "headshot", "kill", "reload"])
+    assert.equal(sampleFor(kind), null);
+});
+
+test("world hits sound at the impact point; an empty gun clicks dry", () => {
+  const cues = [];
+  const audio = {
+    play: (kind, volume, weapon, source) => cues.push({ kind, source }),
+  };
+  const g = new OfflineSimulation({}, audio, () => 0.5);
+  const p = g.player;
+  g.match.state = "playing";
+  p.alive = true;
+  p.cooldown = p.reload = 0;
+  p.pitch = -1.2; // straight at the floor
+  g.weapons.fire(p);
+  const impact = cues.find((c) => c.kind === "impact");
+  assert.ok(impact && impact.source, "impact is positioned");
+  assert.ok(impact.source.y < p.y + p.eye);
+  cues.length = 0;
+  p.cooldown = 0;
+  const s = p.ammo[p.weapon];
+  s.mag = s.reserve = 0;
+  g.weapons.fire(p);
+  g.weapons.fire(p);
+  assert.equal(
+    cues.filter((c) => c.kind === "dry").length,
+    1,
+    "dry fire is throttled",
   );
 });

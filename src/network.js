@@ -195,7 +195,7 @@ export class NetworkClient {
       if (g.effects.items[i]) Object.assign(g.effects.items[i], e);
     });
     if (this.ready && old === g.player && g.player.hp < oldHp)
-      g.audio.play("hurt", 0.4);
+      g.audio.play(g.player.hp <= 0 ? "death" : "hurt", 0.4);
     g.hit = Math.max(0, (g.player.hitUntil || 0) - g.time);
     g.hitKind = g.player.hitKind || "body";
     g.hurt = Math.max(0, (g.player.hurtUntil || 0) - g.time);
