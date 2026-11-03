@@ -81,13 +81,17 @@ export class NetworkClient {
   }
   async join(data, create) {
     const result = await this.request(create ? "create" : "join", data);
-    if (result.mode !== this.game.mode) {
+    if (
+      result.mode !== this.game.mode ||
+      (result.map && result.map !== this.game.mapId)
+    ) {
       // Joining by code discovers the room map. Rejoin on the correct arena without leaving a slot reserved.
       this.token = result.token;
       await this.request("leave");
       this.token = null;
       const url = new URL(location.href);
       url.searchParams.set("mode", result.mode);
+      if (result.map) url.searchParams.set("map", result.map);
       url.searchParams.set("room", result.code);
       url.searchParams.set("team", String(data.team));
       location.href = url.href;

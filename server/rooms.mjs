@@ -141,7 +141,7 @@ export class RoomService {
         new NetworkInput(),
         { play() {} },
         Math.random,
-        { mode: data.mode, humanControllers: controllers },
+        { mode: data.mode, map: data.map, humanControllers: controllers },
       );
       room = { code, game, clients: new Map(), host: null, controllers };
       room.names = game.actors.map((a) => (a.id === 0 ? "Pilot" : a.name));
@@ -265,6 +265,7 @@ export class RoomService {
     return {
       code: room.code,
       mode: g.mode,
+      map: g.mapId,
       playerId: actor.id,
       host: room.host === client.token,
       players: [...room.clients.values()].map((c) => ({

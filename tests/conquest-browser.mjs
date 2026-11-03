@@ -19,10 +19,14 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#squad-canvas").dataset.class,
   );
-  await page.selectOption("#mode", "Conquest");
+  // The lobby picks the playlist with radio tiles rather than a drop-down.
+  const conquestTile = page.getByRole("radio", { name: /Conquest/ });
+  await conquestTile.click();
+  assert.equal(await conquestTile.getAttribute("aria-checked"), "true");
   assert.match(await page.locator(".training").textContent(), /Conquest/);
   await page.click(".training");
-  await page.waitForSelector("#matchMode");
+  // Mission settings sit on a tab of the operator select, so wait for the field to exist.
+  await page.waitForSelector("#matchMode", { state: "attached" });
   assert.match(page.url(), /mode=conquest/);
   assert.equal(await page.locator("#matchMode").inputValue(), "conquest");
   await page.goto(base + "/arena.html?mode=conquest&debug=1");
@@ -114,10 +118,13 @@ try {
   );
   await page.evaluate(() => __arena.pause());
   await page.click("#back");
+  await page.click("#tab-mission");
   await page.selectOption("#matchMode", "tdm");
   await page.waitForFunction(() => window.__arena?.game.mode === "tdm");
   assert.equal(await page.locator("#target").isDisabled(), false);
   assert.equal(await page.locator("#briefMapName").textContent(), "Yard 07");
+  // Changing mode reloads the arena, which reopens the setup on its Loadout tab.
+  await page.click("#tab-mission");
   await page.selectOption("#matchMode", "conquest");
   await page.waitForFunction(() => window.__arena?.game.mode === "conquest");
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);

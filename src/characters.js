@@ -9,8 +9,12 @@ const SKINS = [
   [0.72, 0.49, 0.37],
 ];
 const INK = [0.075, 0.085, 0.13],
-  WHITE = [0.98, 0.97, 0.94];
-export function drawCharacter(add, a, time, shadows) {
+  WHITE = [0.98, 0.97, 0.94],
+  GUN = [0.16, 0.19, 0.21],
+  STEEL = [0.09, 0.11, 0.13];
+// `blockGun` builds the carried rifle from a few boxes (in matches); without it a single
+// signature box is emitted, which the lobby replaces with its detailed weapon mesh.
+export function drawCharacter(add, a, time, shadows, blockGun = false) {
   const team = TEAM_COLORS[a.team],
     skin = SKINS[a.id % SKINS.length],
     style = characterStyle(a.classId, a.id);
@@ -136,8 +140,20 @@ export function drawCharacter(add, a, time, shadows) {
     );
   }
   part(-0.1, torso + 0.12, -0.177, 0.062, 0.065, 0.018, WHITE);
-  // Retain this signature so the lobby substitutes its detailed weapon mesh.
-  part(0.22, torso - 0.06, -0.38, 0.13, 0.13, 0.65, INK);
+  if (blockGun) {
+    // The same silhouette as the lobby and first-person rifles: stock, receiver with an
+    // optic, magazine and grip, handguard and barrel, in the weapon finishes.
+    const g = torso - 0.06;
+    part(0.22, g - 0.02, -0.1, 0.07, 0.1, 0.2, GUN);
+    part(0.22, g, -0.34, 0.08, 0.11, 0.34, GUN);
+    part(0.22, g + 0.08, -0.36, 0.05, 0.05, 0.12, INK);
+    part(0.22, g - 0.12, -0.4, 0.06, 0.14, 0.07, STEEL, 0, -0.25);
+    part(0.22, g - 0.1, -0.25, 0.05, 0.11, 0.05, STEEL, 0, 0.3);
+    part(0.22, g + 0.005, -0.58, 0.075, 0.085, 0.16, INK);
+    part(0.22, g + 0.02, -0.74, 0.035, 0.035, 0.18, STEEL);
+  } else
+    // Retain this signature so the lobby substitutes its detailed weapon mesh.
+    part(0.22, torso - 0.06, -0.38, 0.13, 0.13, 0.65, INK);
   if (a.shield > 0)
     part(0, height + 0.14, 0, 0.38, 0.06, 0.38, [0.85, 0.95, 0.65]);
 }

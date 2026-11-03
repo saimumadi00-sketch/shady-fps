@@ -26,7 +26,8 @@ export class OfflineSimulation {
     this.random = random;
     this.audio = audio;
     this.mode = options.mode === "conquest" ? "conquest" : "tdm";
-    this.arena = new Arena(this.mode);
+    this.arena = new Arena(this.mode, options.map);
+    this.mapId = this.arena.mapId;
     this.nav = new NavigationSystem(this.arena);
     this.match =
       this.mode === "conquest"

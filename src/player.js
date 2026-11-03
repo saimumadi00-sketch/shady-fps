@@ -3,9 +3,13 @@ import { loadout, slotWeapon } from "./loadouts.js";
 import { clamp } from "./math.js";
 import { TacticalMovement } from "./movement.js";
 import { WEAPONS, handling, compensateRecoil } from "./weapons.js";
-// Mouse deltas are pixels; touch drags use a larger multiplier. ADS slows aim.
+// Mouse deltas are pixels; touch drags use a larger multiplier. ADS slows aim in step
+// with the weapon's zoom, so a scoped marksman rifle stays controllable.
 export function aimScale(a, input, sensitivity) {
-  return 0.0024 * sensitivity * (a.aim ? 0.65 : 1) * (input.touch ? 1.8 : 1);
+  const zoom = WEAPONS[a.weapon]?.adsZoom || 1.4;
+  return (
+    0.0024 * sensitivity * (a.aim ? 0.91 / zoom : 1) * (input.touch ? 1.8 : 1)
+  );
 }
 // Seconds a semi-automatic press stays queued, so taps during the fire interval are not lost.
 export const FIRE_BUFFER = 0.25;

@@ -13,7 +13,7 @@ The root page is the squad lobby. Pick a class, then **Play Offline Conquest** o
 
 ## Modes
 
-**Team Deathmatch — Yard 07.** 5v5, first to 30 eliminations (15/30/50 configurable), 7-minute timer (3/7/10). Higher score at timeout wins; equal scores draw.
+**Team Deathmatch — four maps**, picked under *Map* on the setup screen (or `?map=` in the URL): *Yard 07* (three lanes around freight stacks), *Rail Cut* (`railcut`, long sightlines across boxcars), *Foundry* (`foundry`, close-quarters rooms and doorways) and *Quarry* (`quarry`, rock pillars and jumpable ledges). Private rooms use the host's map. 5v5, first to 30 eliminations (15/30/50 configurable), 7-minute timer (3/7/10). Higher score at timeout wins; equal scores draw.
 
 **Conquest — FreeDM Outpost.** An adaptation of the BSD-licensed FreeDM MAP01 layout with three sectors: A / West Depot, B / Central Yard, C / East Relay.
 
@@ -127,6 +127,7 @@ To deploy statically, upload the contents of `dist/`. Serve `sw.js` and `index.h
 | `src/movement.js` | Sprint, slide/cancel, crouch clearance, gravity, weight-based speed |
 | `src/bots.js` | Staggered perception, navigation, ADS, line-of-sight firing, cover retreat |
 | `src/world.js` | Map geometry, collision, line of sight, navigation graph, sector spawn points |
+| `src/maps/tdm-maps.js` | Team Deathmatch map registry: point-symmetric box layouts, spawns, setup-screen overview |
 | `src/network.js` | Multiplayer client: input stream, local view angles, recoil prediction |
 | `server/` | HTTP room service and streaming transport |
 | `src/main.js` | Arena bootstrap, menus, fixed 60 Hz loop |

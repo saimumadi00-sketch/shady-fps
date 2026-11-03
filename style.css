@@ -10,16 +10,20 @@
   font-display: swap;
 }
 :root {
-  --ground: #000000;
-  --surface: #111111;
-  --raised: #2a2a2a;
-  --hover: #333333;
-  --border: #1a1a1a;
-  --rule: #161616;
-  --control: #444444;
-  --text: #ffffff;
-  --muted: #b4b4b4;
-  --faint: #949494;
+  --ground: #050607;
+  --surface: #0b0d0f;
+  --raised: rgba(255, 255, 255, 0.06);
+  --hover: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.09);
+  --rule: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --control: rgba(255, 255, 255, 0.22);
+  --text: #f2f2ee;
+  --muted: #b3b6b4;
+  --faint: #8a8e8c;
+  --glass: rgba(9, 11, 13, 0.74);
+  --glass-strong: rgba(9, 11, 13, 0.9);
   --accent: #3fc7b8;
   --accent-tint: #12302c;
   --enemy: #f56130;
@@ -27,10 +31,11 @@
   --warning: #e5a93b;
   --warning-tint: #2b2414;
   --negative: #e5484d;
-  --scrim: rgba(0, 0, 0, 0.6);
-  --radius-card: 20px;
-  --radius-inner: 14px;
-  --radius-control: 999px;
+  --scrim: rgba(9, 11, 13, 0.74);
+  /* Square corners and uppercase tracked labels, as in the lobby (lobby.css). */
+  --radius-card: 2px;
+  --radius-inner: 2px;
+  --radius-control: 2px;
   --gap: 14px;
   --pad: 22px;
   --control-height: 36px;
@@ -150,7 +155,9 @@ button {
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .mark {
@@ -164,8 +171,9 @@ button {
 }
 .scope {
   color: var(--faint);
-  font-weight: 400;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.14em;
 }
 .bar nav {
   display: flex;
@@ -173,9 +181,12 @@ button {
   margin-left: auto;
 }
 .bar nav a {
-  color: #bbbbbb;
+  color: var(--faint);
   text-decoration: none;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .bar nav a:hover,
@@ -183,7 +194,7 @@ button {
   color: var(--text);
 }
 
-/* ---------- Buttons: one inverted primary, grey secondaries ---------- */
+/* ---------- Buttons: one teal primary, outlined secondaries (as in the lobby) ---------- */
 .primary,
 .secondary-button,
 .hud-button {
@@ -193,9 +204,12 @@ button {
   gap: 6px;
   height: var(--control-height);
   padding: 0 18px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--radius-control);
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   white-space: nowrap;
   transition:
     background-color 0.12s,
@@ -207,11 +221,11 @@ button {
   transform: scale(0.97);
 }
 .primary {
-  background: var(--text);
-  color: var(--ground);
+  background: var(--accent);
+  color: #001412;
 }
 .primary:hover:not(:disabled) {
-  background: #e6e6e6;
+  background: #6fe0d3;
 }
 .primary:disabled {
   background: var(--raised);
@@ -220,10 +234,12 @@ button {
 }
 .secondary-button {
   background: var(--raised);
+  border-color: var(--line-strong);
   color: var(--text);
 }
 .secondary-button:hover {
   background: var(--hover);
+  border-color: var(--text);
 }
 button:disabled:not(.primary),
 select:disabled,
@@ -238,18 +254,13 @@ input:disabled {
   margin: 0 auto;
   padding: 20px 24px 40px;
 }
-.title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 16px;
-}
+
 h1 {
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 34px;
+  line-height: 38px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  text-transform: uppercase;
 }
 .summary {
   margin-top: 4px;
@@ -262,58 +273,18 @@ h1 {
 #play {
   min-width: 140px;
 }
-.board {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px 360px;
-  gap: var(--gap);
-}
-/* Loadout: preview, then class, then weapon and cosmetics, stacked in its own column. */
-.loadout-cols {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  align-items: start;
-}
-.loadout-cols .fields.stack {
-  margin: 0;
-}
-.col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-width: 0;
-}
-.card {
-  background: var(--surface);
-  border-radius: var(--radius-card);
-  padding: var(--pad);
-}
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-bottom: 14px;
-}
+
 h2 {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 24px;
   font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
-.meta {
-  color: var(--faint);
-  font-size: 13px;
-}
+
 .body {
   color: var(--text);
-}
-/* The map grows to keep both columns level; the SVG keeps its proportions inside. */
-.map-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
 }
 .map-art {
   flex: 1;
@@ -394,11 +365,7 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
 }
-.fields.stack {
-  grid-template-columns: 1fr;
-  gap: 8px;
-  margin: 16px 0;
-}
+
 .rule-fields {
   margin-top: 14px;
 }
@@ -411,12 +378,15 @@ h2 {
   flex-direction: column;
   gap: 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 16px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   min-width: 0;
 }
-.fields label.range > span {
+.fields label.range > span,
+.dialog label.range > span {
   display: flex;
   justify-content: space-between;
 }
@@ -429,7 +399,7 @@ input:not([type="range"]):not([type="checkbox"]) {
   height: var(--control-height);
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
-  background-color: var(--ground);
+  background-color: rgba(0, 0, 0, 0.35);
   color: var(--text);
   padding: 0 14px;
   font-size: 14px;
@@ -444,14 +414,14 @@ select {
 }
 select:hover,
 input:hover {
-  border-color: #5a5a5a;
+  border-color: var(--text);
 }
 input::placeholder {
   color: var(--faint);
 }
 input[type="range"] {
   width: 100%;
-  accent-color: var(--text);
+  accent-color: var(--accent);
   margin: 4px 0 0;
 }
 .check {
@@ -467,7 +437,7 @@ input[type="range"] {
   width: 18px;
   height: 18px;
   margin: 0;
-  accent-color: var(--text);
+  accent-color: var(--accent);
 }
 .weapon-info,
 .custom-note,
@@ -488,20 +458,7 @@ input[type="range"] {
   border-radius: var(--radius-inner);
   background: var(--raised);
 }
-.custom-panel {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.custom-panel summary {
-  cursor: pointer;
-  color: var(--text);
-  font-weight: 500;
-  list-style-position: inside;
-}
-.custom-panel[open] summary {
-  margin-bottom: 14px;
-}
+
 .button-row {
   display: flex;
   gap: 10px;
@@ -513,18 +470,6 @@ input[type="range"] {
 #leaveRoom {
   width: 100%;
 }
-.foot {
-  margin-top: 24px;
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  color: var(--faint);
-  font-size: 12px;
-  line-height: 18px;
-}
-.foot > span:first-child {
-  max-width: 720px;
-}
 
 /* ---------- Dialogs: pause, results, rotation and start-up errors ---------- */
 .dialog {
@@ -532,14 +477,19 @@ input[type="range"] {
   width: min(440px, 100%);
   padding: 24px;
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--glass-strong);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 .dialog h2 {
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 24px;
+  line-height: 30px;
+  letter-spacing: -0.01em;
   white-space: normal;
 }
 .dialog p {
@@ -617,8 +567,30 @@ input[type="range"] {
   font-weight: 600;
 }
 .map-label span {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
+}
+/* HUD panels: lobby glass with a hairline; the map tag carries the teal edge. */
+.map-label,
+.scoreboard,
+.health,
+.ammo,
+#feed > div,
+#hint,
+#notice:not(:empty) {
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.map-label {
+  border-left: 2px solid var(--accent);
+}
+.map-label b {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 .scoreboard {
   position: absolute;
@@ -648,8 +620,11 @@ input[type="range"] {
 }
 .scoreboard span {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 .scoreboard strong {
@@ -664,7 +639,8 @@ input[type="range"] {
   color: var(--text);
 }
 .hud-button:hover {
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--glass-strong);
+  border-color: var(--text);
 }
 .bottomline {
   position: absolute;
@@ -686,8 +662,11 @@ input[type="range"] {
 .health > span,
 .ammo > span {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 .health strong,
@@ -705,7 +684,7 @@ input[type="range"] {
 }
 .health-track {
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: rgba(255, 255, 255, 0.2);
   margin-top: 6px;
   overflow: hidden;
@@ -714,8 +693,8 @@ input[type="range"] {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 999px;
-  background: var(--text);
+  border-radius: var(--radius-control);
+  background: var(--accent);
 }
 /* Low health is the one HUD state that needs a signal colour. */
 .health.low strong,
@@ -735,11 +714,13 @@ input[type="range"] {
   font-size: 12px;
   color: var(--muted);
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: rgba(0, 0, 0, 0.45);
 }
 /* Anchor aim feedback at the exact center of the viewport. */
 #crosshair {
+  /* Set per frame from the live hip spread; the arms open as accuracy drops. */
+  --gap: 6px;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -755,24 +736,87 @@ input[type="range"] {
   width: 2px;
   height: 6px;
   left: -1px;
-  top: -12px;
+  top: calc(-6px - var(--gap));
 }
 #crosshair i:nth-child(2) {
-  top: 6px;
+  top: var(--gap);
 }
 #crosshair i:nth-child(3) {
   width: 6px;
   height: 2px;
-  left: -12px;
+  left: calc(-6px - var(--gap));
   top: -1px;
 }
 #crosshair i:nth-child(4) {
   width: 6px;
   height: 2px;
-  left: 6px;
+  left: var(--gap);
   top: -1px;
 }
 /* Four diagonal ticks around the crosshair. --pop (set per frame) scales them out on a hit. */
+/* Marksman scope: a clear round lens; around it the world stays visible but blurred and
+   dimmed, as the eye not on the glass sees it. The blur layer is masked to leave the lens sharp. */
+#scope {
+  --lens: min(38vh, 38vw);
+  position: absolute;
+  inset: 0;
+}
+#scope b {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(10px) saturate(0.7) brightness(0.62);
+  -webkit-backdrop-filter: blur(10px) saturate(0.7) brightness(0.62);
+  -webkit-mask-image: radial-gradient(
+    circle at center,
+    transparent var(--lens),
+    #000 calc(var(--lens) + 1px)
+  );
+  mask-image: radial-gradient(
+    circle at center,
+    transparent var(--lens),
+    #000 calc(var(--lens) + 1px)
+  );
+}
+/* The scope tube: a dark ring with a soft inner vignette at the lens edge. */
+#scope::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--lens) * 2);
+  height: calc(var(--lens) * 2);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 5px rgba(5, 6, 7, 0.92),
+    inset 0 0 28px 6px rgba(0, 0, 0, 0.5);
+}
+#scope::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--accent);
+}
+#scope i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(5, 6, 7, 0.85);
+}
+#scope i:nth-of-type(1) {
+  width: min(76vh, 76vw);
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+#scope i:nth-of-type(2) {
+  width: 1px;
+  height: min(76vh, 76vw);
+  transform: translate(-50%, -50%);
+}
 #hitmarker {
   --pop: 1;
   --tick: #ffffff;
@@ -783,7 +827,9 @@ input[type="range"] {
   height: 0;
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(0 0 1px #000); /* taste-skill-ignore: legibility over bright scenes */
+  filter: drop-shadow(
+    0 0 1px #000
+  ); /* taste-skill-ignore: legibility over bright scenes */
 }
 #hitmarker i {
   position: absolute;
@@ -794,13 +840,29 @@ input[type="range"] {
   background: var(--tick);
   transform-origin: 1px calc(12px * var(--pop));
 }
-#hitmarker i:nth-child(1) { transform: rotate(45deg); }
-#hitmarker i:nth-child(2) { transform: rotate(135deg); }
-#hitmarker i:nth-child(3) { transform: rotate(225deg); }
-#hitmarker i:nth-child(4) { transform: rotate(315deg); }
-#hitmarker[data-kind="head"] { --tick: #ffd34d; }
-#hitmarker[data-kind="kill"] { --tick: #ff3b30; }
-#hitmarker[data-kind="kill"] i { width: 3px; height: 11px; left: -1.5px; }
+#hitmarker i:nth-child(1) {
+  transform: rotate(45deg);
+}
+#hitmarker i:nth-child(2) {
+  transform: rotate(135deg);
+}
+#hitmarker i:nth-child(3) {
+  transform: rotate(225deg);
+}
+#hitmarker i:nth-child(4) {
+  transform: rotate(315deg);
+}
+#hitmarker[data-kind="head"] {
+  --tick: #ffd34d;
+}
+#hitmarker[data-kind="kill"] {
+  --tick: #ff3b30;
+}
+#hitmarker[data-kind="kill"] i {
+  width: 3px;
+  height: 11px;
+  left: -1.5px;
+}
 /* Damage feedback: a red edge vignette whose opacity the HUD drives. */
 #damage {
   position: absolute;
@@ -820,7 +882,7 @@ input[type="range"] {
 }
 #notice:not(:empty) {
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--scrim);
 }
 #feed {
@@ -835,7 +897,7 @@ input[type="range"] {
 }
 #feed > div {
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--scrim);
 }
 #feed span {
@@ -888,7 +950,7 @@ input[type="range"] {
   flex: 1;
   min-width: 0;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: var(--scrim);
 }
 #objectives [data-owner="cyan"] {
@@ -930,7 +992,7 @@ input[type="range"] {
   width: 100%;
   height: 4px;
   margin-top: 6px;
-  accent-color: var(--text);
+  accent-color: var(--accent);
 }
 
 /* ---------- Touch controls: the container passes events through; children opt back in ---------- */
@@ -1047,37 +1109,21 @@ input[type="range"] {
 
 /* ---------- Tablet: one column, blocks in the order a player needs them ---------- */
 @media (max-width: 1099px) {
-  .board {
-    display: flex;
-    flex-direction: column;
-  }
-  .col {
-    display: contents;
-  }
   #roomPanel {
     order: 0;
   }
-  .map-card {
-    order: 1;
-  }
+
   [aria-labelledby="match-title"] {
     order: 2;
   }
-  .loadout-card {
-    order: 3;
-  }
+
   [aria-labelledby="you-title"] {
     order: 4;
   }
   #leaveRoom {
     order: 5;
   }
-  .loadout-cols {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .loadout-cols canvas {
-    grid-column: 1 / -1;
-  }
+
   .map-art svg {
     height: auto;
     min-height: 0;
@@ -1102,16 +1148,11 @@ input[type="range"] {
   .setup-page {
     padding: 20px 16px 32px;
   }
-  .title-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
+
   #play {
     height: 48px;
   }
-  .card {
-    padding: 18px 16px;
-  }
+
   .rules div {
     padding: 10px 12px;
   }
@@ -1119,13 +1160,7 @@ input[type="range"] {
     font-size: 20px;
     line-height: 28px;
   }
-  .foot {
-    flex-direction: column;
-    gap: 8px;
-  }
-  .loadout-cols {
-    grid-template-columns: 1fr;
-  }
+
   select,
   input:not([type="range"]):not([type="checkbox"]),
   .secondary-button {
@@ -1231,66 +1266,16 @@ input[type="range"] {
     flex-direction: column;
     padding: 16px 24px 16px;
   }
-  .title-row {
-    flex: none;
-    margin-bottom: 14px;
-  }
-  .board {
-    flex: 1;
-    min-height: 0;
-    grid-template-rows: minmax(0, 1fr);
-  }
-  .col {
-    min-height: 0;
-    overflow-y: auto;
-    scrollbar-width: thin;
-  }
-  .col > .card {
-    flex: none;
-  }
-  .col > .map-card {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  /* The weapon preview is the product's own picture: it grows to fill the loadout column. */
-  .col > .loadout-card {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .loadout-card .loadout-cols {
-    flex: 1;
-    min-height: 0;
-    grid-template-rows: minmax(110px, 1fr) auto auto;
-  }
+
   #weaponPreview {
     height: 100%;
     min-height: 110px;
     object-fit: contain;
   }
-  /* The last rail card takes the remaining height and spreads its rows, rather than ending short. */
-  .col-rail > [aria-labelledby="you-title"] {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .col-rail > [aria-labelledby="you-title"] .fields {
-    flex: 1;
-    align-content: space-evenly;
-    row-gap: 10px;
-  }
+
   .map-art,
   .map-art svg {
     min-height: 120px;
-  }
-  .foot {
-    flex: none;
-    margin-top: 12px;
-  }
-  .foot > span:last-child {
-    display: none;
   }
 }
 /* Short laptop windows: one step denser so the columns still fit. */
@@ -1302,28 +1287,14 @@ input[type="range"] {
   .setup-page {
     padding: 12px 24px 12px;
   }
-  .title-row {
-    margin-bottom: 10px;
-  }
-  .card-head {
-    margin-bottom: 10px;
-  }
-  .loadout-cols {
-    gap: 10px;
-  }
-  .fields.stack {
-    gap: 6px;
-  }
+
   .fields {
     gap: 10px;
   }
   .fields label.range {
     grid-column: auto;
   }
-  .custom-panel {
-    margin-top: 10px;
-    padding-top: 10px;
-  }
+
   .rules div {
     padding: 8px 14px;
   }
@@ -1335,5 +1306,652 @@ input[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+  }
+}
+
+/* ---------- Setup screen: operator select ----------
+   The selected operator stands at full height in the centre with the codename set huge
+   behind them; the roster runs down the left, the kit / mission / settings tabs down the
+   right, and the operation with its one action, Deploy, along the bottom. Military
+   conventions: olive-black plates, khaki stencil labels, fixed-width data readouts.
+   Scoped to the setup overlay so the in-match HUD is untouched. */
+.overlay.setup {
+  --ground: #070908;
+  --surface: #0d100e;
+  --raised: #151a15;
+  --line: rgba(214, 224, 200, 0.08);
+  --line-strong: rgba(214, 224, 200, 0.2);
+  --control: rgba(214, 224, 200, 0.18);
+  --text: #e9ece3;
+  --muted: #a9b0a0;
+  --faint: #7f8777;
+  --khaki: #c8b98c;
+  --readout: ui-monospace, "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
+}
+.overlay.setup .bar {
+  background: var(--ground);
+}
+
+.overlay.setup .num,
+.overlay.setup .rules b,
+.overlay.setup #fovValue,
+.overlay.setup .map-art figcaption {
+  font-family: var(--readout);
+  font-variant-numeric: tabular-nums;
+}
+.ops-page {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 24px;
+}
+.ops {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr) 400px;
+  gap: 16px;
+  min-height: 640px;
+}
+.ops h2,
+.ops h3,
+.ops-tabs button,
+.overlay.setup .fields label,
+.op-line,
+.overlay.setup .rules span {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ops h2,
+.ops h3 {
+  margin: 0;
+  color: var(--khaki);
+}
+.overlay.setup .fields label {
+  color: var(--faint);
+}
+
+/* ---- Roster */
+.ops-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.op-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.op-card {
+  position: relative;
+  display: grid;
+  flex: 1 1 0;
+  max-height: 170px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px 8px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    transform 0.08s;
+}
+.op-card:hover:not(:disabled) {
+  background: var(--raised);
+  border-color: var(--line-strong);
+}
+.op-card:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.op-card[aria-checked="true"] {
+  background: var(--raised);
+  border-color: var(--line-strong);
+  border-left-color: var(--accent);
+}
+.op-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.op-card canvas {
+  width: 96px;
+  height: 96px;
+  background: #0a0d0b;
+}
+.op-card[aria-checked="true"] canvas {
+  background: #10231f;
+}
+.op-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.op-card strong {
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.op-card-text span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.op-card small {
+  font-family: var(--readout);
+  font-size: 11px;
+  color: var(--faint);
+}
+.op-card kbd {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: var(--readout);
+  font-size: 11px;
+  color: var(--faint);
+}
+.op-card[aria-checked="true"] kbd {
+  color: var(--accent);
+}
+.sr-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Stage */
+.ops-stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+/* The floor the operator stands on: a flat disc with a team-coloured ring. */
+.ops-stage::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  width: min(62%, 420px);
+  aspect-ratio: 4 / 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #121712;
+  box-shadow: 0 0 0 1px rgba(63, 199, 184, 0.35);
+}
+#operatorStage {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 760 / 1000;
+  cursor: grab;
+  touch-action: none;
+}
+#operatorStage:active {
+  cursor: grabbing;
+}
+.dossier {
+  position: absolute;
+  z-index: 2;
+  inset: 22px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+.op-role {
+  margin: 0;
+  color: var(--khaki);
+  font-family: var(--readout);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* The codename sits behind the operator, as large as the stage allows. */
+.ops .op-name {
+  margin: 2px 0 0;
+  font-size: clamp(64px, 8.4vw, 150px);
+  line-height: 0.9;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.op-brief {
+  position: relative;
+  z-index: 2;
+  margin: auto 0 0;
+  max-width: 250px;
+  padding: 10px 12px;
+  background: rgba(7, 9, 8, 0.86);
+  border-left: 2px solid var(--accent);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* ---- Tabs: loadout, mission, settings */
+.ops-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.ops-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+.ops-tabs button {
+  height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--faint);
+}
+.ops-tabs button:hover {
+  color: var(--text);
+}
+.ops-tabs button[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.ops-tab-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+.ops-tab-panel[hidden] {
+  display: none;
+}
+.ops-tab-panel > label.weapon-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.overlay.setup select,
+.overlay.setup input:not([type="range"]):not([type="checkbox"]) {
+  border-radius: 0;
+  background-color: var(--ground);
+  border-color: var(--control);
+}
+.overlay.setup select:hover,
+.overlay.setup input:hover {
+  border-color: var(--khaki);
+}
+.overlay.setup .weapon-info {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+.overlay.setup #weaponPreview {
+  border-radius: 0;
+  background: #101410;
+  border: 1px solid var(--line);
+  height: auto;
+  min-height: 0;
+}
+/* Weapon ratings against the best gun in the arsenal. */
+.ratings {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px 12px;
+  margin: 0;
+}
+.ratings dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ratings dd {
+  margin: 0;
+  height: 6px;
+  background: var(--raised);
+}
+.ratings i {
+  display: block;
+  height: 100%;
+  width: calc(var(--v) * 100%);
+  background: var(--accent);
+  transition: width 0.25s ease-out;
+}
+.overlay.setup .custom-note {
+  margin: 0;
+  font-size: 12px;
+}
+.overlay.setup .fields .check {
+  font-size: 13px !important;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text) !important;
+}
+
+/* Mission tab: private room, gridded map, then the rules. */
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.overlay.setup .map-art {
+  flex: none;
+  min-height: 0;
+}
+.overlay.setup .map-art svg {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 52 / 38;
+  background: #0a0d0b;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.overlay.setup .map-art .floor {
+  fill: #121712;
+}
+.map-art .grid line {
+  stroke: rgba(200, 185, 140, 0.16);
+  stroke-width: 0.08;
+}
+.map-art .grid-label text {
+  fill: var(--muted);
+  font-size: 1.5px;
+  font-weight: 600;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.overlay.setup .map-art .solid {
+  fill: #5d6552;
+}
+.overlay.setup .map-art .crate {
+  fill: #8c7f58;
+}
+.overlay.setup .map-art figcaption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+.north {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line-strong);
+  color: var(--khaki);
+  font-family: var(--readout);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.map-tagline {
+  margin: 0;
+  color: var(--khaki);
+  font-family: var(--readout);
+  font-size: 12px;
+}
+.overlay.setup #briefDescription {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* Settings tab: personal settings, the live sight picture, then the controls. */
+.sight-picture {
+  position: relative;
+  min-height: 110px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  background: #0a0d0b;
+  border: 1px solid var(--line);
+}
+.sight-picture figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-family: var(--readout);
+  font-size: 11px;
+  color: var(--faint);
+}
+.reticle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.reticle i {
+  position: absolute;
+  background: var(--crosshair-color, #a7ead4);
+}
+.reticle i:nth-child(1),
+.reticle i:nth-child(2) {
+  left: 21px;
+  width: 2px;
+  height: 14px;
+}
+.reticle i:nth-child(1) {
+  top: 0;
+}
+.reticle i:nth-child(2) {
+  bottom: 0;
+}
+.reticle i:nth-child(3),
+.reticle i:nth-child(4) {
+  top: 21px;
+  width: 14px;
+  height: 2px;
+}
+.reticle i:nth-child(3) {
+  left: 0;
+}
+.reticle i:nth-child(4) {
+  right: 0;
+}
+.signals h3 {
+  margin-bottom: 6px;
+}
+#controlsHelp {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--readout);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* ---- Deploy bar */
+.deploy-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.op-line {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 2px;
+  color: var(--khaki);
+}
+.op-line #briefMode {
+  color: var(--muted);
+}
+.op-line #briefMode::before {
+  content: "/ ";
+  color: var(--faint);
+}
+.overlay.setup .deploy-bar h1 {
+  font-size: 26px;
+  line-height: 30px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.overlay.setup .summary {
+  margin-top: 2px;
+  font-family: var(--readout);
+  font-size: 12px;
+  color: var(--muted);
+}
+.overlay.setup .summary::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+.overlay.setup .deploy-bar .rules {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  background: none;
+  border: 0;
+}
+.overlay.setup .deploy-bar .rules div {
+  display: flex;
+  flex-direction: column;
+  padding: 0 22px;
+}
+.overlay.setup .deploy-bar .rules div + div {
+  border-left: 1px solid var(--line);
+}
+.overlay.setup .rules span {
+  color: var(--faint);
+}
+.overlay.setup .rules b {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  color: var(--text);
+}
+.overlay.setup #play {
+  min-width: 220px;
+  height: 52px;
+  font-size: 14px;
+  letter-spacing: 0.24em;
+}
+
+/* ---- Large windows: the whole screen fits without scrolling. */
+@media (min-width: 1100px) and (min-height: 640px) {
+  .ops-page {
+    flex: 1;
+    min-height: 0;
+  }
+  .ops {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+/* ---- Narrow windows: roster becomes a strip, the stage shortens, Deploy stays in reach. */
+@media (max-width: 1099px) {
+  .op-card {
+    max-height: none;
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .op-card canvas {
+    width: 76px;
+    height: 76px;
+  }
+  .ops {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .op-list {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .op-card {
+    flex: 0 0 210px;
+  }
+  .ops-stage {
+    height: min(62vh, 520px);
+  }
+  .ops-panel {
+    min-height: 420px;
+  }
+  .deploy-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 18px;
+    padding: 12px 0;
+    background: var(--ground);
+  }
+  .overlay.setup .deploy-bar .rules {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .ops-page {
+    padding: 12px 16px;
+  }
+  .op-card {
+    flex-basis: 180px;
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .op-card canvas {
+    width: 56px;
+    height: 56px;
+  }
+  .ops .op-name {
+    font-size: 64px;
+  }
+  .overlay.setup .deploy-bar h1 {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .overlay.setup #play {
+    min-width: 0;
+    padding: 0 22px;
+  }
+  .overlay.setup .brand {
+    letter-spacing: 0.14em;
+  }
+  .overlay.setup .bar-inner,
+  .overlay.setup .bar nav {
+    gap: 14px;
+  }
+  .overlay.setup .bar nav a {
+    letter-spacing: 0.08em;
+  }
+  .overlay.setup .bar nav a[aria-current="page"] {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ratings i {
+    transition: none;
   }
 }

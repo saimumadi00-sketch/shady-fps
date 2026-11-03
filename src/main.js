@@ -4,10 +4,12 @@ import { InputManager } from "./input.js";
 import { SettingsManager, QualityManager, AudioManager } from "./settings.js";
 import { FootstepTracker, lineOfSound } from "./audio.js";
 import { outpostMap } from "./outpost-map.js";
+import { TDM_MAPS, tdmMap, tdmOverview } from "./maps/tdm-maps.js";
 import { OfflineSimulation } from "./game.js";
 import { Renderer } from "./renderer.js";
 import { HUDController } from "./hud.js";
 import { Customization } from "./customization.js";
+import { initOperatorSelect } from "./operator-select.js";
 import {
   CLASS_IDS,
   LOADOUTS,
@@ -91,12 +93,35 @@ try {
   const params = new URLSearchParams(location.search);
   game = new OfflineSimulation(input, audio, Math.random, {
     mode: params.get("mode"),
+    map: params.get("map"),
   });
   $("matchMode").value = game.mode;
   $("matchMode").addEventListener("change", () => {
     params.set("mode", $("matchMode").value);
     location.search = params.toString();
   });
+  // Team Deathmatch map choice; changing it reloads onto the new arena like the mode does.
+  for (const m of TDM_MAPS) {
+    const option = document.createElement("option");
+    option.value = m.id;
+    option.textContent = m.name;
+    $("matchMap").append(option);
+  }
+  $("matchMapField").hidden = game.mode === "conquest";
+  $("matchMap").value = game.mode === "conquest" ? TDM_MAPS[0].id : game.mapId;
+  $("matchMap").addEventListener("change", () => {
+    params.set("map", $("matchMap").value);
+    location.search = params.toString();
+  });
+  if (game.mode !== "conquest") {
+    const map = tdmMap(game.mapId);
+    document.title = `Crosscurrent · ${map.name}`;
+    $("mapName").textContent = $("briefMapName").textContent = map.name;
+    $("briefDescription").textContent = map.description;
+    $("tagline").textContent = map.tagline;
+    $("mapOverview").outerHTML = tdmOverview(game.arena, "mapOverview");
+    $("mapCredit").textContent = `${map.name} · drawn to scale · grid squares 5 m`;
+  }
   if (game.mode === "conquest") {
     document.title = "Crosscurrent · Conquest setup";
     $("mapName").textContent = $("briefMapName").textContent = game.arena.name;
@@ -193,6 +218,8 @@ try {
       localStorage.setItem("crosscurrent-weapon", String(selectedWeapon));
     } catch {}
   });
+  // Operator cards, stage and tabs drive the class and weapon selects above.
+  const operators = initOperatorSelect();
   $("progress").textContent = "100%";
   // Resume from a user gesture so the browser can grant pointer lock and audio access.
   async function resume() {
@@ -243,7 +270,7 @@ try {
     orientation();
   }
   $("play").disabled = false;
-  $("play").textContent = "Play match";
+  $("play").textContent = "Deploy";
   $("status").textContent = "ready: you and 9 bots, no network needed";
   $("play").onclick = start;
   $("resume").onclick = resume;
@@ -253,6 +280,7 @@ try {
   $("pauseButton").onclick = () => pause();
   if (params.has("online")) {
     $("roomPanel").hidden = false;
+    operators.showTab("mission");
     $("arenaEdition").textContent = "Private room";
     customization.values.duration = 420;
     customization.values.target = 30;
@@ -274,7 +302,7 @@ try {
     network = new NetworkClient(game, input, {
       sensitivity: () => settings.values.sensitivity,
       onState(packet) {
-        $("matchMode").disabled = true;
+        $("matchMode").disabled = $("matchMap").disabled = true;
         $("roomCode").value = packet.code;
         $("roomMessage").textContent =
           `Room ${packet.code} · ${packet.host ? "you are the host" : "the host starts the match"} · ${{ menu: "waiting", playing: "playing", ended: "ended", paused: "paused" }[packet.match.state] || packet.match.state}`;
@@ -334,6 +362,7 @@ try {
           "startingWeapon",
           "callsign",
           "matchMode",
+          "matchMap",
         ])
           $(id).disabled = false;
         $("copyRoom").hidden =
@@ -350,6 +379,7 @@ try {
           {
             code: $("roomCode").value.trim(),
             mode: game.mode,
+            map: game.mapId,
             team: Number($("roomTeam").value),
             name: $("callsign").value,
             classId: selectedClass,

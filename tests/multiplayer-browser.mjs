@@ -24,7 +24,10 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
   await host.goto(base + "/arena.html?online=1&mode=conquest&debug=1");
   await host.waitForFunction(() => !!window.__arena);
+  // Callsign is on the Settings tab; the room controls on the Mission tab.
+  await host.click("#tab-settings");
   await host.fill("#callsign", "Host");
+  await host.click("#tab-mission");
   await host.click("#createRoom");
   await host.waitForFunction(() => __arena.network?.ready);
   const code = await host.inputValue("#roomCode");
@@ -33,7 +36,9 @@ try {
     base + `/arena.html?online=1&mode=conquest&room=${code}&debug=1`,
   );
   await friend.waitForFunction(() => !!window.__arena);
+  await friend.click("#tab-settings");
   await friend.fill("#callsign", "Friend");
+  await friend.click("#tab-mission");
   await friend.selectOption("#roomTeam", "1");
   await friend.selectOption("#loadoutClass", "recon");
   await friend.click("#joinRoom");

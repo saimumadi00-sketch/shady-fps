@@ -47,6 +47,17 @@ test("rooms assign independent humans, preserve loadouts and fill remaining slot
   assert.equal(second.room.game.mode, "conquest");
   assert.equal(second.room.game.match.state, "menu");
 });
+test("rooms keep the host's TDM map and joiners learn it; unknown maps fall back", () => {
+  const service = new RoomService({ now: () => 0 });
+  const host = service.join({ mode: "tdm", map: "foundry" }, true);
+  assert.equal(host.room.game.arena.name, "Foundry");
+  // A joiner on a different map is told the room's map in the snapshot.
+  const friend = service.join({ code: host.room.code, team: 1, map: "quarry" });
+  assert.equal(friend.room, host.room);
+  assert.equal(service.snapshot(friend).map, "foundry");
+  const odd = service.join({ mode: "tdm", map: "../../etc" }, true);
+  assert.equal(odd.room.game.mapId, "yard");
+});
 test("team capacity, host transfer, disconnect bot replacement and empty cleanup", () => {
   const { service, host, friend } = setup();
   for (let i = 0; i < 4; i++) service.join({ code: host.room.code, team: 0 });

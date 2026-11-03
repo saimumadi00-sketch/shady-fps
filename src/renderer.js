@@ -3,8 +3,13 @@ import { drawCharacter } from "./characters.js";
 import { cameraMatrix } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
 import { weaponMesh } from "./weapon-models.js";
-import { viewmodelPose, GunRecoil } from "./viewmodel.js";
-import { WEAPONS } from "./weapons.js";
+import {
+  viewmodelPose,
+  GunRecoil,
+  ViewmodelMotion,
+  easeAim,
+} from "./viewmodel.js";
+import { WEAPONS, aimZoom, isScoped } from "./weapons.js";
 import { CameraPunch, CombatFx, punchStrength } from "./combat-fx.js";
 // The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
@@ -16,9 +21,10 @@ layout(location=3) in vec3 size;
 layout(location=4) in vec3 color;
 layout(location=5) in float angle;
 layout(location=6) in float pitch;
+layout(location=7) in float roll;
 uniform mat4 vp;uniform vec3 eye;
 out vec3 tint;out float dist;out vec3 surfacePosition;out vec3 surfaceNormal;
-void main(){float c=cos(angle),s=sin(angle);float cp=cos(pitch),sp=sin(pitch);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c)*mat3(1,0,0,0,cp,sp,0,-sp,cp);vec3 world=rot*(vertex*size)+offset;vec3 n=normalize(rot*normal);tint=color;surfacePosition=world;surfaceNormal=n;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
+void main(){float c=cos(angle),s=sin(angle);float cp=cos(pitch),sp=sin(pitch);float cr=cos(roll),sr=sin(roll);mat3 rot=mat3(c,0,-s,0,1,0,s,0,c)*mat3(1,0,0,0,cp,sp,0,-sp,cp)*mat3(cr,sr,0,-sr,cr,0,0,0,1);vec3 world=rot*(vertex*size)+offset;vec3 n=normalize(rot*normal);tint=color;surfacePosition=world;surfaceNormal=n;dist=length(world-eye);gl_Position=vp*vec4(world,1.);}`;
 // Distance fog blends distant geometry into the sky color without textures or postprocessing.
 const FS = `#version 300 es
 precision highp float;
@@ -256,8 +262,12 @@ export class Renderer {
     this.gunRecoil ??= new GunRecoil();
     this.punch ??= new CameraPunch();
     this.fx ??= new CombatFx();
+    this.motion ??= new ViewmodelMotion();
     if (this.viewWeapon !== p.weapon || !inGame || !p.alive) {
-      this.aimBlend = 0;
+      this.aimBlend = this.aimProgress = 0;
+      this.motion.reset();
+      // Each new weapon (and each spawn) is drawn up into view over its equip time.
+      this.motion.raise(WEAPONS[p.weapon]?.equipTime);
       this.viewWeapon = p.weapon;
       this.gunRecoil.reset();
       this.punch.reset();
@@ -286,10 +296,27 @@ export class Renderer {
     }
     this.fx.scan(game.effects, cam);
     this.fx.update(elapsed);
-    const aimTarget = p.aim && p.reload <= 0 && inGame ? 1 : 0;
-    this.aimBlend +=
-      (aimTarget - (this.aimBlend || 0)) * (1 - Math.exp(-elapsed * 22));
-    const fov = (baseFov * (1 - 0.31 * this.aimBlend) * Math.PI) / 180;
+    // ADS raises over the weapon's own ADS time (lowering is 1.5x quicker, as in the
+    // simulation) along an eased curve; reloading drops back to the hip.
+    const aimTarget = p.aim && p.reload <= 0 && inGame ? 1 : 0,
+      adsTime = WEAPONS[p.weapon]?.adsTime || 0.2;
+    this.aimProgress = Math.max(
+      0,
+      Math.min(
+        1,
+        (this.aimProgress || 0) + ((aimTarget ? 1 : -1.5) * elapsed) / adsTime,
+      ),
+    );
+    this.aimBlend = easeAim(this.aimProgress);
+    if (inGame && p.alive) this.motion.update(elapsed, p);
+    // Magnify by the weapon's ADS zoom (narrowing tan(fov/2), so zoom is a true factor).
+    // Fully aimed through a scope, the HUD shows the scope overlay instead of the gun.
+    const optic = this.customization?.optic || "iron",
+      zoom = 1 + (aimZoom(p.weapon, optic) - 1) * this.aimBlend,
+      fov = 2 * Math.atan(Math.tan((baseFov * Math.PI) / 360) / zoom);
+    this.zoom = zoom;
+    this.scoped =
+      inGame && p.alive && isScoped(p.weapon, optic) && this.aimBlend > 0.85;
     cameraMatrix(
       this.matrix,
       cam.x,
@@ -327,7 +354,7 @@ export class Renderer {
         dz = a.z - cam.z; // Cheap conservative horizontal view culling.
       if (inGame && dx * Math.sin(cam.yaw) - dz * Math.cos(cam.yaw) < -3)
         continue;
-      drawCharacter(add, a, time, quality.shadows);
+      drawCharacter(add, a, time, quality.shadows, true);
     }
     // Respect the adaptive visual-effect budget and the instance buffer's capacity.
     const capacity = this.dynamic.length / 11;
@@ -336,7 +363,7 @@ export class Renderer {
       Math.min(quality.effects * 5, capacity - n),
     );
     this.draw(this.dynamicBatch, n, this.dynamic);
-    if (inGame && p.alive && game.match.state !== "ended") {
+    if (inGame && p.alive && game.match.state !== "ended" && !this.scoped) {
       // Keep nearby world geometry from clipping through the first-person weapon.
       g.clear(g.DEPTH_BUFFER_BIT);
       g.uniform1f(this.firstPerson, 1);
@@ -367,9 +394,9 @@ export class Renderer {
         pose,
         sightHeight,
         this.gunRecoil,
+        this.motion,
       );
       const finish = this.customization?.finish || "graphite";
-      const optic = this.customization?.optic || "iron";
       // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
       const key =
         p.weapon +
@@ -380,7 +407,9 @@ export class Renderer {
         ":" +
         (p.flash > 0) +
         ":" +
-        p.classId;
+        p.classId +
+        ":" +
+        p.team;
       let model = this.weaponModels.get(key);
       // Build and upload each chosen weapon variant once; reuse its buffer on later frames.
       if (!model) {
@@ -391,6 +420,7 @@ export class Renderer {
           p.flash > 0,
           true,
           p.classId,
+          p.team,
         );
         const vao = g.createVertexArray(),
           buffer = g.createBuffer();
@@ -426,7 +456,10 @@ export class Renderer {
       g.vertexAttrib3f(3, 1, 1, 1);
       g.vertexAttrib1f(5, view.yaw);
       g.vertexAttrib1f(6, view.pitch);
+      g.vertexAttrib1f(7, view.roll);
       g.drawArrays(g.TRIANGLES, 0, model.count);
+      // Generic attribute values are global state: leave world instances unrolled.
+      g.vertexAttrib1f(7, 0);
       this.drawCalls++;
     }
   }

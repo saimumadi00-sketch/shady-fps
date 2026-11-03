@@ -2,6 +2,7 @@
 // Original low-poly firearm meshes. Dimensions are visual game units.
 // Generate packed position/normal/color vertices for one weapon and optional gameplay hands.
 import { characterStyle } from "./model-style.js";
+import { buildHands } from "./viewmodel-hands.js";
 export function weaponMesh(
   index,
   finish = "graphite",
@@ -9,6 +10,7 @@ export function weaponMesh(
   firing = false,
   hands = false,
   classId = ["assault", "engineer", "assault", "recon", "support"][index],
+  team = 0,
 ) {
   const out = [],
     parts = [];
@@ -130,17 +132,38 @@ export function weaponMesh(
         box(0.044, 0.085, 0.07 + i * 0.012, 0.003, 0.054, 0.005, edge);
     });
   } else {
+    // Receiver: the lower runs back to the stock; the upper stops short of it, leaving a
+    // step for the charging handle, so the rear reads as a rifle rather than a flat block.
+    const half = (lmg ? 0.14 : 0.105) / 2;
     profile(
       [
         [-0.22, -0.045],
         [0.18, -0.045],
-        [0.21, 0.045],
+        [0.21, 0.0],
+        [0.21, 0.03],
+        [0.17, 0.035],
+        [0.17, 0.085],
         [0.13, 0.105],
         [-0.21, 0.105],
       ],
-      lmg ? 0.14 : 0.105,
+      half * 2,
       body,
     );
+    // Upper/lower split line, takedown pins, bolt catch, magazine release, forward assist.
+    for (const side of [-1, 1]) {
+      box(side * (half + 0.001), 0.033, -0.02, 0.003, 0.004, 0.38, steel);
+      for (const z of [-0.17, 0.15])
+        box(side * (half + 0.002), 0.012, z, 0.004, 0.013, 0.013, edge);
+    }
+    box(-(half + 0.004), 0.0, -0.025, 0.008, 0.03, 0.018, edge);
+    box(half + 0.004, -0.02, -0.03, 0.008, 0.014, 0.014, edge);
+    tube(half + 0.009, 0.068, 0.135, 0.011, 0.04, steel);
+    // Charging handle in the step, with its latch on the left.
+    box(0, 0.058, 0.185, 0.072, 0.018, 0.03, steel);
+    box(-0.03, 0.058, 0.19, 0.02, 0.022, 0.036, edge);
+    // Receiver end plate and castle nut where the stock attaches.
+    tube(0, 0.034, 0.216, 0.03, 0.012, steel);
+    tube(0, 0.034, 0.228, 0.023, 0.014, edge);
     // Angled pistol grip and stock, separate from the magazine.
     profile(
       [
@@ -234,10 +257,17 @@ export function weaponMesh(
     for (let i = 0; i < 13; i++)
       box(0, 0.113, -0.2 + i * 0.027, 0.075, 0.012, 0.012, steel);
   }
-  // Open trigger guard, iron sights, optional optic.
-  box(0, -0.095, 0.014, 0.024, 0.012, 0.09, steel);
-  box(0, -0.066, -0.028, 0.024, 0.065, 0.014, steel);
-  box(0, -0.057, 0.024, 0.012, 0.042, 0.012, edge);
+  // Open trigger guard, iron sights, optional optic. A pistol's guard hugs the frame, so the
+  // firing hand can ride high on the grip; rifles hang theirs under the receiver.
+  if (pistol) {
+    box(0, -0.05, 0.014, 0.024, 0.012, 0.09, steel);
+    box(0, -0.035, -0.028, 0.024, 0.042, 0.014, steel);
+    box(0, -0.031, 0.024, 0.012, 0.026, 0.012, edge);
+  } else {
+    box(0, -0.095, 0.014, 0.024, 0.012, 0.09, steel);
+    box(0, -0.066, -0.028, 0.024, 0.065, 0.014, steel);
+    box(0, -0.057, 0.024, 0.012, 0.042, 0.012, edge);
+  }
   for (const side of [-1, 1])
     box(side * 0.027, 0.143, pistol ? 0.11 : 0.13, 0.015, 0.038, 0.021, steel);
   box(0, 0.14, pistol ? -0.18 : front + 0.03, 0.018, 0.048, 0.018, steel);
@@ -269,254 +299,49 @@ export function weaponMesh(
     );
   }
   // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
-  if (hands) {
-    const outfit = characterStyle(classId);
-    const glove = outfit.cloth,
-      padding = outfit.accent,
-      seam = [0.12, 0.15, 0.16],
-      sleeve = outfit.cloth;
-    // Rounded, tapered forms keep wrists and fingers distinct from weapon geometry.
-    function ellipsoid(center, radii, color) {
-      const start = out.length;
-      const small = Math.max(...radii) <= 0.02;
-      const latitudeSteps = small ? 4 : 6;
-      const segments = small ? 10 : 20;
-      const point = (latitude, longitude) => {
-        const a = (Math.PI * latitude) / latitudeSteps;
-        const b = (2 * Math.PI * longitude) / segments;
-        return [
-          center[0] + radii[0] * Math.sin(a) * Math.cos(b),
-          center[1] + radii[1] * Math.cos(a),
-          center[2] + radii[2] * Math.sin(a) * Math.sin(b),
-        ];
-      };
-      for (let i = 0; i < latitudeSteps; i++)
-        for (let j = 0; j < segments; j++) {
-          const a = point(i, j),
-            b = point(i + 1, j),
-            c = point(i + 1, j + 1),
-            d = point(i, j + 1);
-          if (i > 0) tri(a, b, d, color);
-          if (i < latitudeSteps - 1) tri(b, c, d, color);
-        }
-      // Smooth glove shading uses surface normals rather than triangle face normals.
-      for (let k = start; k < out.length; k += 9) {
-        const normal = radii.map((r, i) => (out[k + i] - center[i]) / (r * r));
-        const length = Math.hypot(...normal) || 1;
-        for (let i = 0; i < 3; i++) out[k + 3 + i] = normal[i] / length;
-      }
-    }
-    function tapered(a, b, radiusA, radiusB, color, flatten = 1) {
-      const axis = b.map((v, i) => v - a[i]);
-      const length = Math.hypot(...axis);
-      const n = axis.map((v) => v / length);
-      const reference = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-      let u = [
-        n[1] * reference[2] - n[2] * reference[1],
-        n[2] * reference[0] - n[0] * reference[2],
-        n[0] * reference[1] - n[1] * reference[0],
-      ];
-      const unit = Math.hypot(...u);
-      u = u.map((v) => v / unit);
-      const v = [
-        n[1] * u[2] - n[2] * u[1],
-        n[2] * u[0] - n[0] * u[2],
-        n[0] * u[1] - n[1] * u[0],
-      ];
-      const ring = (p, r, i) =>
-        p.map(
-          (x, k) =>
-            x +
-            r *
-              (Math.cos((i * Math.PI) / 6) * u[k] +
-                Math.sin((i * Math.PI) / 6) * v[k] * flatten),
-        );
-      for (let i = 0; i < 12; i++) {
-        const p = ring(a, radiusA, i),
-          q = ring(a, radiusA, i + 1),
-          r = ring(b, radiusB, i + 1),
-          s = ring(b, radiusB, i);
-        tri(p, q, r, color);
-        tri(p, r, s, color);
-        tri(a, q, p, color);
-        tri(b, s, r, color);
-      }
-    }
-    function finger(points, radius = 0.012) {
-      for (let i = 0; i < points.length - 1; i++)
-        tapered(points[i], points[i + 1], radius, radius * 0.92, glove);
-      for (const point of points)
-        ellipsoid(point, [radius * 0.85, radius * 0.85, radius * 0.85], glove);
-    }
-    function arm(wrist, elbow) {
-      const axis = elbow.map((v, i) => v - wrist[i]);
-      const length = Math.hypot(...axis);
-      const n = axis.map((v) => v / length);
-      const u0 = [n[2], 0, -n[0]],
-        ul = Math.hypot(...u0);
-      const u = u0.map((v) => v / ul);
-      const v = [
-        n[1] * u[2] - n[2] * u[1],
-        n[2] * u[0] - n[0] * u[2],
-        n[0] * u[1] - n[1] * u[0],
-      ];
-      const rings = [];
-      // Continuous rounded cross-sections follow a curved forearm with restrained fabric folds.
-      for (let j = 0; j <= 14; j++) {
-        const t = j / 14;
-        const center = wrist.map((x, i) => x + axis[i] * t);
-        center[1] += Math.sin(t * Math.PI) * 0.032;
-        const radius =
-          0.036 +
-          0.04 * Math.sin((t * Math.PI) / 2) +
-          0.0025 * Math.sin(t * 36) * Math.sin(t * Math.PI);
-        rings.push(
-          Array.from({ length: 20 }, (_, i) => {
-            const a = (i * Math.PI) / 10;
-            const normal = u.map(
-              (x, k) => x * Math.cos(a) + v[k] * Math.sin(a) * 0.86,
-            );
-            return { p: center.map((x, k) => x + radius * normal[k]), normal };
-          }),
-        );
-      }
-      const emit = (a, b, c, color) => {
-        const start = out.length;
-        tri(a.p, b.p, c.p, color);
-        [a, b, c].forEach((point, i) => {
-          const len = Math.hypot(...point.normal);
-          for (let k = 0; k < 3; k++)
-            out[start + i * 9 + 3 + k] = point.normal[k] / len;
-        });
-      };
-      for (let j = 0; j < 14; j++)
-        for (let i = 0; i < 20; i++) {
-          const next = (i + 1) % 20;
-          const color = j < 2 ? seam : sleeve;
-          emit(rings[j][i], rings[j][next], rings[j + 1][next], color);
-          emit(rings[j][i], rings[j + 1][next], rings[j + 1][i], color);
-        }
-    }
-    part("grip", () => {
-      // Palm sits against the right side of the pistol grip; curled fingers cross its front.
-      // A tapered dorsal silhouette reads as a hand rather than an oval mitten.
-      profile(
-        [
-          [0.115, -0.067],
-          [0.165, -0.063],
-          [0.19, -0.1],
-          [0.205, -0.162],
-          [0.181, -0.192],
-          [0.143, -0.183],
-          [0.111, -0.127],
-        ],
-        0.063,
-        glove,
-        0.06,
-      );
-      for (let i = 0; i < 3; i++)
-        ellipsoid(
-          [0.093, -0.094 - i * 0.026, 0.153 + i * 0.007],
-          [0.008, 0.01, 0.023],
-          padding,
-        );
-      for (let i = 0; i < 3; i++) {
-        ellipsoid(
-          [0.101, -0.098 - i * 0.027, 0.143 + i * 0.011],
-          [0.009, 0.01, 0.02],
-          padding,
-        );
-        tapered(
-          [0.104, -0.095 - i * 0.027, 0.13],
-          [0.105, -0.095 - i * 0.027, 0.16],
-          0.002,
-          0.002,
-          seam,
-        );
-      }
-      for (let i = 0; i < 3; i++) {
-        const y = -0.105 - i * 0.027,
-          z = 0.09 + i * 0.012;
-        finger([
-          [0.068, y, z + 0.035],
-          [0.058, y, z],
-          [-0.028, y, z - 0.008],
-          [-0.044, y, z + 0.02],
-        ]);
-      }
-      // Index rests along the trigger guard, clear of the receiver and sightline.
-      finger(
-        [
-          [0.074, -0.08, 0.14],
-          [0.065, -0.065, 0.055],
-          [0.026, -0.06, 0.035],
-        ],
-        0.011,
-      );
-      finger(
-        [
-          [0.062, -0.07, 0.18],
-          [0.022, -0.042, 0.15],
-          [-0.022, -0.059, 0.13],
-        ],
-        0.014,
-      );
-      arm([0.067, -0.19, 0.2], [0.3, -0.44, 0.44]);
-    });
-    part("support", () => {
-      if (pistol) {
-        // A two-handed pistol grip cups the firing hand rather than the barrel.
-        ellipsoid([-0.055, -0.135, 0.13], [0.039, 0.061, 0.051], glove);
-        for (let i = 0; i < 3; i++) {
-          const y = -0.115 - i * 0.025;
-          finger(
-            [
-              [-0.069, y, 0.13],
-              [-0.047, y, 0.075],
-              [0.026, y, 0.071],
-            ],
-            0.011,
-          );
-        }
-        finger(
-          [
-            [-0.067, -0.075, 0.15],
-            [-0.054, -0.052, 0.075],
-            [-0.042, -0.045, 0.032],
-          ],
-          0.013,
-        );
-        arm([-0.068, -0.19, 0.19], [-0.3, -0.44, 0.44]);
-      } else {
-        const z = smg ? -0.235 : -0.31;
-        ellipsoid([-0.072, -0.04, z], [0.048, 0.06, 0.076], glove);
-        ellipsoid([-0.109, -0.033, z], [0.013, 0.033, 0.05], padding);
-        for (let i = 0; i < 4; i++) {
-          const fingerZ = z - 0.045 + i * 0.028;
-          finger(
-            [
-              [-0.073, -0.054, fingerZ],
-              [-0.041, -0.093, fingerZ],
-              [0.036, -0.082, fingerZ],
-              [0.057, -0.027, fingerZ],
-            ],
-            0.011,
-          );
-        }
-        finger(
-          [
-            [-0.093, -0.022, z + 0.045],
-            [-0.075, 0.062, z + 0.025],
-            [-0.025, 0.085, z - 0.045],
-          ],
-          0.014,
-        );
-        arm([-0.085, -0.115, z + 0.035], [-0.3, -0.43, 0.44]);
-      }
-    });
-  }
+  // The support hand's magazine grip is kept as a same-topology alternate for reloads.
+  let sink = out,
+    supportAlt = null;
+  if (hands)
+    ({ supportAlt } = buildHands(
+      (a, na, b, nb, c, nc, col) =>
+        sink.push(
+          ...a,
+          ...na,
+          ...col,
+          ...b,
+          ...nb,
+          ...col,
+          ...c,
+          ...nc,
+          ...col,
+        ),
+      part,
+      {
+        kind: pistol
+          ? "pistol"
+          : smg
+            ? "smg"
+            : dmr
+              ? "dmr"
+              : lmg
+                ? "lmg"
+                : "rifle",
+        outfit: characterStyle(classId),
+        team,
+      },
+      (fn) => {
+        const kept = sink;
+        sink = [];
+        fn();
+        const captured = sink;
+        sink = kept;
+        return captured;
+      },
+    ));
   const result = new Float32Array(out);
   result.parts = parts;
+  if (supportAlt) result.supportAlt = new Float32Array(supportAlt);
   return result;
 }
 

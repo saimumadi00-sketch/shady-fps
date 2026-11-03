@@ -29,6 +29,8 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.08,
       kick: 0.019,
       adsTime: 0.22,
+      // Magnification while fully aimed (the marksman rifle looks through its scope).
+      adsZoom: 1.4,
       equipTime: 0.28,
       weight: 3.5,
       adsMove: 0.65,
@@ -55,6 +57,8 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.1,
       kick: 0.012,
       adsTime: 0.14,
+      // Magnification while fully aimed (the marksman rifle looks through its scope).
+      adsZoom: 1.25,
       equipTime: 0.18,
       weight: 2.2,
       adsMove: 0.85,
@@ -81,6 +85,8 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.1,
       kick: 0.026,
       adsTime: 0.12,
+      // Magnification while fully aimed (the marksman rifle looks through its scope).
+      adsZoom: 1.15,
       equipTime: 0.15,
       weight: 1.2,
       adsMove: 0.8,
@@ -107,6 +113,8 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.04,
       kick: 0.045,
       adsTime: 0.34,
+      // Magnification while fully aimed (the marksman rifle looks through its scope).
+      adsZoom: 3.5,
       equipTime: 0.4,
       weight: 4.6,
       adsMove: 0.4,
@@ -133,6 +141,8 @@ export const WEAPONS = Object.freeze(
       recoilX: 0.15,
       kick: 0.024,
       adsTime: 0.38,
+      // Magnification while fully aimed (the marksman rifle looks through its scope).
+      adsZoom: 1.35,
       equipTime: 0.55,
       weight: 7.5,
       adsMove: 0.4,
@@ -305,7 +315,11 @@ export function recoverRecoil(state, weapon, dt) {
 }
 // Clear burst state, e.g. for a new life.
 export function resetRecoil(state) {
-  state.recoilShot = state.recoilRest = state.recoverPitch = state.recoverYaw = 0;
+  state.recoilShot =
+    state.recoilRest =
+    state.recoverPitch =
+    state.recoverYaw =
+      0;
 }
 export class EffectPool {
   // Allocate a fixed ring of effect slots to keep combat allocation bounded.
@@ -509,3 +523,16 @@ export class WeaponController {
     return true;
   }
 }
+
+// Aim magnification for a weapon: its own ADS zoom, or at least 2.5x through a fitted
+// scope on any long gun. Optics stay cosmetic for accuracy; only the view changes.
+export function aimZoom(index, optic) {
+  const w = WEAPONS[index];
+  if (!w) return 1;
+  return optic === "scope" && index !== 2
+    ? Math.max(w.adsZoom, 2.5)
+    : w.adsZoom;
+}
+// Whether aiming this weapon looks through a scope (full-screen overlay, no viewmodel).
+export const isScoped = (index, optic) =>
+  index === 3 || (optic === "scope" && index !== 2);

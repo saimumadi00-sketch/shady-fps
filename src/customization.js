@@ -57,6 +57,17 @@ export class Customization {
         this.refresh();
       });
     }
+    // The pause menu has its own field-of-view slider, mirrored with the setup one, so it
+    // can be tuned mid-match (the renderer reads the value every frame).
+    const pauseFov = document.getElementById("pauseFov");
+    if (pauseFov) {
+      pauseFov.value = String(this.values.fov);
+      pauseFov.addEventListener("input", () => {
+        const fov = document.getElementById("fov");
+        fov.value = pauseFov.value;
+        fov.dispatchEvent(new Event("input"));
+      });
+    }
     document
       .getElementById("startingWeapon")
       .addEventListener("change", () => this.refresh());
@@ -70,6 +81,11 @@ export class Customization {
       v.crosshair,
     );
     document.getElementById("fovValue").textContent = v.fov + "°";
+    const pauseFov = document.getElementById("pauseFov");
+    if (pauseFov) {
+      pauseFov.value = String(v.fov);
+      document.getElementById("pauseFovValue").textContent = v.fov + "°";
+    }
     const conquest = document.getElementById("matchMode")?.value === "conquest";
     document.getElementById("ruleTarget").textContent = conquest
       ? 150

@@ -1,6 +1,6 @@
 // DOM presentation of simulation state; this module never changes combat outcomes.
 import { loadout } from "./loadouts.js";
-import { WEAPONS } from "./weapons.js";
+import { WEAPONS, spreadFor } from "./weapons.js";
 export class HUDController {
   // Cache frequently updated elements to avoid repeated selector lookups.
   constructor() {
@@ -22,6 +22,8 @@ export class HUDController {
       "stats",
       "death",
       "countdown",
+      "crosshair",
+      "scope",
     ])
       this.nodes[id] = document.getElementById(id);
     this.healthPanel = document.querySelector(".health");
@@ -105,6 +107,24 @@ export class HUDController {
           : a.shield > 0
             ? "Spawn shield · firing ends it"
             : game.controlHint || "1 primary · 2 pistol · Q or wheel to swap";
+    // Hip crosshair: arms sit at the true spread cone and fade out as the sights come up.
+    const cross = n.crosshair;
+    if (cross) {
+      const aim = renderer?.aimBlend || 0,
+        vfov = ((renderer?.customization?.fov || 83) * Math.PI) / 180,
+        cone =
+          ((Math.tan(spreadFor(a)) * (renderer?.zoom || 1)) /
+            Math.tan(vfov / 2)) *
+          (window.innerHeight / 2),
+        gap = Math.max(5, Math.min(48, cone || 6));
+      this.crossGap =
+        (this.crossGap ?? gap) + (gap - (this.crossGap ?? gap)) * 0.3;
+      cross.style.setProperty("--gap", this.crossGap.toFixed(1) + "px");
+      cross.style.opacity =
+        a.sprinting || a.reload > 0 ? 0.35 : Math.max(0, 1 - aim * 2.5);
+    }
+    // Scope overlay while fully aimed through a scope (the renderer hides the gun then).
+    if (n.scope) n.scope.hidden = !renderer?.scoped;
     // The marker pops out on each hit and eases back; kills hold longer and read red.
     const marker = n.hitmarker,
       kind = game.hit > 0 ? game.hitKind || "body" : "";

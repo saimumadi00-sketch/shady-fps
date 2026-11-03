@@ -18,11 +18,14 @@ try {
   await page.waitForFunction(() => !!window.__arena);
   await page.selectOption("#finish", "sand");
   await page.selectOption("#optic", "reflex");
+  // Personal settings and match rules live on their own tabs of the operator select.
+  await page.click("#tab-settings");
   await page.fill("#callsign", "Ranger");
   await page.locator("#fov").fill("95");
+  await page.selectOption("#crosshairColor", "#ffbf69");
+  await page.click("#tab-mission");
   await page.selectOption("#target", "15");
   await page.selectOption("#duration", "180");
-  await page.selectOption("#crosshairColor", "#ffbf69");
   await page.screenshot({ path: "artifacts/armory-menu.png", fullPage: true });
   // A new page load must recover saved preferences before Play applies them to the simulation.
   await page.reload();

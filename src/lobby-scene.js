@@ -51,8 +51,16 @@ export function createLobbyScene(squadCanvas, weaponCanvas) {
   }
   squad.camera.position.set(0, 2.75, 9.4);
   squad.camera.lookAt(0, 1.15, 0);
-  preview.camera.position.set(0, 0.2, 1.45);
+  preview.camera.position.set(0, 0.16, 1.2);
   preview.camera.lookAt(0, 0, 0);
+  // The metallic dark finishes read almost black against the dark card: add a soft front
+  // fill and a teal rim so the inspection gun stands out like the squad scene's rifles.
+  const fill = new THREE.DirectionalLight(0xf2f2ee, 1.4);
+  fill.position.set(0.4, 0.8, 2);
+  preview.scene.add(fill);
+  const edge = new THREE.DirectionalLight(0x3fc7b8, 0.9);
+  edge.position.set(-1.5, 1.2, -1.5);
+  preview.scene.add(edge);
   function mesh(parent, geometry, mat, x = 0, y = 0, z = 0) {
     const m = new THREE.Mesh(geometry, mat);
     m.position.set(x, y, z);

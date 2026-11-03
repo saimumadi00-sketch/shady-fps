@@ -32,6 +32,8 @@
       <canvas id="canvas" aria-label="First-person game view"></canvas>
       <!-- Live match HUD; JavaScript reads simulation state and updates these stable element IDs. -->
       <div id="hud" hidden>
+        <!-- First child, so the scope overlay sits beneath every other HUD element. -->
+        <div id="scope" aria-hidden="true" hidden><b></b><i></i><i></i></div>
         <div class="topline">
           <div class="map-label">
             <b id="mapName">Yard 07</b
@@ -52,7 +54,9 @@
         <div id="objectives" hidden aria-label="Conquest sector status"></div>
         <div id="feed" aria-live="polite"></div>
         <div id="crosshair"><i></i><i></i><i></i><i></i></div>
-        <div id="hitmarker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div id="hitmarker" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+        </div>
         <div id="damage"></div>
         <div id="notice" aria-live="polite"></div>
         <div class="bottomline">
@@ -106,226 +110,200 @@
             </nav>
           </div>
         </header>
-        <div class="setup-page">
-          <div class="title-row">
-            <div>
-              <h1 id="briefMapName">Yard 07</h1>
-              <p class="summary">
-                <span id="briefMode">Team Deathmatch</span> ·
-                <span id="status">Preparing the arena…</span>
-              </p>
-            </div>
-            <button id="play" class="primary" disabled>
-              Loading <span id="progress">0%</span>
-            </button>
-          </div>
+        <div class="setup-page ops-page">
+          <div class="ops">
+            <!-- Roster: one card per operator, drawn from the in-game character models. -->
+            <aside class="ops-roster" aria-labelledby="roster-title">
+              <h2 id="roster-title">Select operator</h2>
+              <div
+                id="operatorList"
+                class="op-list"
+                role="radiogroup"
+                aria-labelledby="roster-title"
+              ></div>
+              <!-- The class list the game logic reads; the operator cards drive it. -->
+              <label class="sr-select"
+                >Class<select
+                  id="loadoutClass"
+                  aria-describedby="classInfo"
+                  tabindex="-1"
+                ></select
+              ></label>
+            </aside>
 
-          <div class="board">
-            <div class="col col-main">
-              <section class="card map-card" aria-labelledby="map-title">
-                <div class="card-head">
-                  <h2 id="map-title">Map</h2>
-                  <span class="meta" id="tagline"
-                    >Three lanes, ten fighters, one yard</span
+            <!-- Stage: the selected operator at full height; drag or use arrow keys to turn. -->
+            <section class="ops-stage" aria-labelledby="operatorName">
+              <canvas
+                id="operatorStage"
+                width="760"
+                height="1000"
+                tabindex="0"
+                aria-label="Selected operator. Drag or use the arrow keys to turn."
+              ></canvas>
+              <div class="dossier">
+                <p id="operatorRole" class="op-role">Assault · rifleman</p>
+                <h2 id="operatorName" class="op-name">NOVA</h2>
+                <p id="classInfo" class="op-brief" aria-live="polite"></p>
+              </div>
+            </section>
+
+            <!-- Kit, mission and settings as tabs, so the operator stays the focus. -->
+            <aside class="ops-panel">
+              <div class="ops-tabs" role="tablist" aria-label="Setup">
+                <button
+                  role="tab"
+                  id="tab-loadout"
+                  aria-controls="panel-loadout"
+                  aria-selected="true"
+                >
+                  Loadout</button
+                ><button
+                  role="tab"
+                  id="tab-mission"
+                  aria-controls="panel-mission"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Mission</button
+                ><button
+                  role="tab"
+                  id="tab-settings"
+                  aria-controls="panel-settings"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Settings
+                </button>
+              </div>
+
+              <section
+                id="panel-loadout"
+                class="ops-tab-panel"
+                role="tabpanel"
+                aria-labelledby="tab-loadout"
+              >
+                <canvas
+                  id="weaponPreview"
+                  width="720"
+                  height="300"
+                  aria-label="Selected weapon preview"
+                ></canvas>
+                <label class="weapon-choice"
+                  >Weapon
+                  <select
+                    id="startingWeapon"
+                    aria-describedby="startingWeaponInfo"
+                  ></select>
+                </label>
+                <p
+                  id="startingWeaponInfo"
+                  class="weapon-info"
+                  aria-live="polite"
+                ></p>
+                <dl id="weaponRatings" class="ratings"></dl>
+                <div class="fields">
+                  <label
+                    >Finish<select id="finish">
+                      <option value="graphite">Graphite</option>
+                      <option value="sand">Desert sand</option>
+                      <option value="olive">Olive drab</option>
+                    </select></label
                   >
+                  <label
+                    >Sight<select id="optic">
+                      <option value="iron">Factory sights</option>
+                      <option value="reflex">Reflex sight</option>
+                      <option value="scope">Scope</option>
+                    </select></label
+                  >
+                </div>
+                <p class="custom-note">
+                  Finish and sight are cosmetic; the marksman rifle always has a
+                  scope.
+                </p>
+              </section>
+
+              <section
+                id="panel-mission"
+                class="ops-tab-panel"
+                role="tabpanel"
+                aria-labelledby="tab-mission"
+                hidden
+              >
+                <div id="roomPanel" class="room" hidden>
+                  <h3>Private room</h3>
+                  <div class="fields">
+                    <label
+                      >Your team<select id="roomTeam">
+                        <option value="0">Cyan</option>
+                        <option value="1">Ember</option>
+                      </select></label
+                    >
+                    <label
+                      >Room code<input
+                        id="roomCode"
+                        maxlength="8"
+                        autocomplete="off"
+                        placeholder="8 characters"
+                    /></label>
+                  </div>
+                  <div class="button-row">
+                    <button id="createRoom" class="secondary-button">
+                      Create room
+                    </button>
+                    <button id="joinRoom" class="secondary-button">
+                      Join room
+                    </button>
+                  </div>
+                  <p id="roomMessage" aria-live="polite">
+                    Open this page from your multiplayer server.
+                  </p>
+                  <p id="roomRoster"></p>
+                  <div class="button-row">
+                    <button id="copyRoom" class="secondary-button" hidden>
+                      Copy invite link
+                    </button>
+                    <button id="startRoom" class="secondary-button" hidden>
+                      Start shared match
+                    </button>
+                  </div>
+                  <button id="leaveRoom" class="secondary-button" hidden>
+                    Leave room
+                  </button>
                 </div>
                 <figure class="map-art">
                   <svg
                     id="mapOverview"
                     viewBox="-26 -21 52 41"
                     role="img"
-                    aria-label="Yard 07: four freight stacks split the yard into north, middle and south lanes around a central block. Cyan spawns on the west edge, Ember on the east."
+                    aria-label="Yard 07 map"
                   >
-                    <rect
-                      class="floor"
-                      x="-25"
-                      y="-19"
-                      width="50"
-                      height="38"
-                    />
-                    <g class="solid">
-                      <rect x="-16.5" y="-9" width="9" height="4" />
-                      <rect x="7.5" y="-9" width="9" height="4" />
-                      <rect x="-16.5" y="5" width="9" height="4" />
-                      <rect x="7.5" y="5" width="9" height="4" />
-                      <rect x="-1.7" y="-2.4" width="3.4" height="4.8" />
-                    </g>
-                    <g class="crate">
-                      <rect x="-6.3" y="-14.05" width="2.6" height="2.1" />
-                      <rect x="3.7" y="11.95" width="2.6" height="2.1" />
-                      <rect x="-7.3" y="1.95" width="2.6" height="2.1" />
-                      <rect x="4.7" y="-4.05" width="2.6" height="2.1" />
-                      <rect x="-20.3" y="-3.05" width="2.6" height="2.1" />
-                      <rect x="17.7" y="0.95" width="2.6" height="2.1" />
-                    </g>
-                    <rect
-                      class="team-a"
-                      x="-23"
-                      y="-15.5"
-                      width="1.6"
-                      height="31"
-                      rx="0.4"
-                    />
-                    <rect
-                      class="team-b"
-                      x="21.4"
-                      y="-15.5"
-                      width="1.6"
-                      height="31"
-                      rx="0.4"
-                    />
-                    <text class="team-a" x="-23" y="-16.6">Cyan</text>
-                    <text class="team-b" x="23" y="-16.6" text-anchor="end">
-                      Ember
-                    </text>
+                    <rect class="floor" x="-25" y="-19" width="50" height="38" />
                   </svg>
-                  <figcaption id="mapCredit">
-                    Yard 07, drawn to scale
+                  <figcaption>
+                    <span class="north" aria-hidden="true">N</span>
+                    <span id="mapCredit">Yard 07, drawn to scale</span>
                   </figcaption>
                 </figure>
+                <p class="map-tagline" id="tagline">
+                  Three lanes, ten fighters, one yard
+                </p>
                 <p id="briefDescription" class="body">
                   A sunlit freight terminal. Take a flank, hold the crossing and
                   keep your team ahead.
                 </p>
-                <div class="rules">
-                  <div>
-                    <span id="ruleTargetLabel">Kills to win</span
-                    ><b id="ruleTarget" class="num">30</b>
-                  </div>
-                  <div>
-                    <span>Time limit</span
-                    ><b id="ruleDuration" class="num">07:00</b>
-                  </div>
-                  <div><span>Respawn</span><b class="num">3 s</b></div>
-                </div>
-              </section>
-            </div>
-            <div class="col col-loadout">
-              <section
-                class="card loadout-card"
-                aria-labelledby="loadout-title"
-              >
-                <div class="card-head">
-                  <h2 id="loadout-title">Loadout</h2>
-                  <span class="meta"
-                    >Finish and sight are cosmetic; the marksman rifle always
-                    has a scope</span
-                  >
-                </div>
-                <div class="loadout-cols">
-                  <canvas
-                    id="weaponPreview"
-                    width="720"
-                    height="300"
-                    aria-label="Selected weapon preview"
-                  ></canvas>
-                  <div class="fields stack">
-                    <label class="weapon-choice"
-                      >Class<select
-                        id="loadoutClass"
-                        aria-describedby="classInfo"
-                      ></select
-                    ></label>
-                    <p
-                      id="classInfo"
-                      class="weapon-info"
-                      aria-live="polite"
-                    ></p>
-                  </div>
-                  <div class="fields stack">
-                    <label class="weapon-choice"
-                      >Starting weapon
-                      <select
-                        id="startingWeapon"
-                        aria-describedby="startingWeaponInfo"
-                      ></select>
-                    </label>
-                    <p
-                      id="startingWeaponInfo"
-                      class="weapon-info"
-                      aria-live="polite"
-                    ></p>
-                    <div class="fields">
-                      <label
-                        >Finish<select id="finish">
-                          <option value="graphite">Graphite</option>
-                          <option value="sand">Desert sand</option>
-                          <option value="olive">Olive drab</option>
-                        </select></label
-                      >
-                      <label
-                        >Sight<select id="optic">
-                          <option value="iron">Factory sights</option>
-                          <option value="reflex">Reflex sight</option>
-                          <option value="scope">Scope</option>
-                        </select></label
-                      >
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div class="col col-rail">
-              <div id="roomPanel" class="card" hidden>
-                <div class="card-head">
-                  <h2>Private room</h2>
-                  <span class="meta">Bots fill vacant slots</span>
-                </div>
-                <div class="fields">
-                  <label
-                    >Your team<select id="roomTeam">
-                      <option value="0">Cyan</option>
-                      <option value="1">Ember</option>
-                    </select></label
-                  >
-                  <label
-                    >Room code<input
-                      id="roomCode"
-                      maxlength="8"
-                      autocomplete="off"
-                      placeholder="8 characters"
-                  /></label>
-                </div>
-                <div class="button-row">
-                  <button id="createRoom" class="secondary-button">
-                    Create room
-                  </button>
-                  <button id="joinRoom" class="secondary-button">
-                    Join room
-                  </button>
-                </div>
-                <p id="roomMessage" aria-live="polite">
-                  Open this page from your multiplayer server.
-                </p>
-                <p id="roomRoster"></p>
-                <div class="button-row">
-                  <button id="copyRoom" class="secondary-button" hidden>
-                    Copy invite link
-                  </button>
-                  <button id="startRoom" class="secondary-button" hidden>
-                    Start shared match
-                  </button>
-                </div>
-              </div>
-              <button id="leaveRoom" class="secondary-button" hidden>
-                Leave room
-              </button>
-
-              <section class="card" aria-labelledby="match-title">
-                <div class="card-head">
-                  <h2 id="match-title">Match</h2>
-                  <span class="meta">5 vs 5 · bots fill every open slot</span>
-                </div>
                 <div class="fields">
                   <label class="wide"
                     >Game mode<select id="matchMode">
-                      <option value="tdm">Team Deathmatch · Yard 07</option>
+                      <option value="tdm">Team Deathmatch</option>
                       <option value="conquest">
                         Conquest · FreeDM Outpost
                       </option>
                     </select></label
                   >
+                  <label class="wide" id="matchMapField"
+                    >Map<select id="matchMap"></select
+                  ></label>
                   <label
                     >Bot difficulty<select id="difficulty">
                       <option value="easy">Easy</option>
@@ -345,9 +323,9 @@
                   <label
                     ><span id="scoreLimitLabel">Score limit</span
                     ><select id="target">
-                      <option value="15">15 kills · quick</option>
-                      <option value="30" selected>30 kills · standard</option>
-                      <option value="50">50 kills · extended</option>
+                      <option value="15">15 kills</option>
+                      <option value="30" selected>30 kills</option>
+                      <option value="50">50 kills</option>
                     </select></label
                   ><label
                     >Time limit<select id="duration">
@@ -359,11 +337,13 @@
                 </div>
               </section>
 
-              <section class="card" aria-labelledby="you-title">
-                <div class="card-head">
-                  <h2 id="you-title">You</h2>
-                  <span class="meta">Saved on this device</span>
-                </div>
+              <section
+                id="panel-settings"
+                class="ops-tab-panel"
+                role="tabpanel"
+                aria-labelledby="tab-settings"
+                hidden
+              >
                 <div class="fields">
                   <label
                     >Callsign<input
@@ -401,19 +381,45 @@
                     resolution</label
                   >
                 </div>
+                <figure class="sight-picture" aria-label="Crosshair preview">
+                  <div class="reticle"><i></i><i></i><i></i><i></i></div>
+                  <figcaption>Sight picture</figcaption>
+                </figure>
+                <div class="signals">
+                  <h3>Controls</h3>
+                  <p id="controlsHelp">
+                    WASD move · Mouse aim · Click fire · R reload · Space jump ·
+                    Shift sprint · C or Ctrl crouch and slide · Right click aim
+                    · 1 primary, 2 pistol · Q or wheel swap · Esc pause
+                  </p>
+                </div>
               </section>
-            </div>
+            </aside>
           </div>
 
-          <footer class="foot">
-            <span id="controlsHelp"
-              >WASD move · Mouse aim · Click fire · R reload · Space jump ·
-              Shift sprint · C or Ctrl crouch and slide · Right click aim · 1
-              primary, 2 pistol · Q or wheel swap · Esc pause</span
-            >
-            <span
-              >WebGL 2 · runs offline, no downloads after the first visit</span
-            >
+          <!-- Deploy bar: the operation, its rules and the one action. -->
+          <footer class="deploy-bar">
+            <div class="op-title">
+              <p class="op-line">
+                <span>Operation</span>
+                <span id="briefMode">Team Deathmatch</span>
+              </p>
+              <h1><span id="briefMapName">Yard 07</span></h1>
+              <p class="summary"><span id="status">Preparing the arena…</span></p>
+            </div>
+            <div class="rules">
+              <div>
+                <span id="ruleTargetLabel">Kills to win</span
+                ><b id="ruleTarget" class="num">30</b>
+              </div>
+              <div>
+                <span>Time limit</span><b id="ruleDuration" class="num">07:00</b>
+              </div>
+              <div><span>Respawn</span><b class="num">3 s</b></div>
+            </div>
+            <button id="play" class="primary" disabled>
+              Loading <span id="progress">0%</span>
+            </button>
           </footer>
         </div>
       </section>
@@ -430,6 +436,12 @@
             ></select>
           </label>
           <p id="pauseWeaponInfo" class="weapon-info" aria-live="polite"></p>
+          <label class="range"
+            ><span
+              >Field of view
+              <output id="pauseFovValue" class="num">83°</output></span
+            ><input id="pauseFov" type="range" min="65" max="105" value="83"
+          /></label>
           <button id="resume" class="primary">Resume match</button
           ><button id="back" class="secondary-button">Return to setup</button>
         </div>

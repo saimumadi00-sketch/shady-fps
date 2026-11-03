@@ -86,6 +86,7 @@ export function createMultiplayerServer({
             token: joined.token,
             code: joined.room.code,
             mode: joined.room.game.mode,
+            map: joined.room.game.mapId,
           });
         }
         if (!client)
