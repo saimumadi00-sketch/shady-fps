@@ -2,6 +2,20 @@
 
 A browser FPS with a squad lobby, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models; weapons are original low-poly meshes.
 
+## Demo
+
+![Team Deathmatch on Yard 07: pushing down the lane, a burst, a reload and a headshot](docs/media/gameplay.webp)
+
+| Squad lobby | Operator select |
+|---|---|
+| ![Squad lobby with the party on the dock, mode list and party chat](docs/media/lobby.webp) | ![Operator select: NOVA, weapon stats, finish and sight](docs/media/setup.webp) |
+| **Team Deathmatch — Foundry** | **Conquest — FreeDM Outpost** |
+| ![Firing across Foundry's rooms, impacts on the wall](docs/media/tdm.webp) | ![Contesting Central Yard with sector status along the top](docs/media/conquest.webp) |
+
+![Phone in landscape on Quarry: joystick, Sprint, and the Fire, Aim, Reload, Jump, Crouch and Swap buttons](docs/media/mobile.webp)
+
+*Captured from the production build in headless Chromium, with a test script at the controls (software rendering, so the fps counter reads lower than on real hardware). Play it yourself in under a minute: see below.*
+
 ## Play locally
 
 - **PyCharm / Python:** run `main.py`. It serves the production build and opens the browser.
