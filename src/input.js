@@ -233,6 +233,7 @@ export class TouchInputController {
         l = Math.max(1, Math.hypot(x, y) / 38);
       input.moveX = clamp(x / l / 38, -1, 1);
       input.moveY = clamp(-y / l / 38, -1, 1);
+      if (this.sprintLock && input.moveY > 0.5) this.sprintRan = true;
       this.stick.style.transform = `translate(${x / l}px,${y / l}px)`;
     };
     bind(
@@ -251,12 +252,17 @@ export class TouchInputController {
           this.joy = null;
           input.moveX = input.moveY = 0;
           this.stick.style.transform = "";
+          // Sprint lock lasts one run: letting go of the stick after running ends it.
+          if (this.sprintRan) this.setSprint(false);
         }
       },
     );
     // Map touch actions to the same gameplay commands as keyboard and mouse.
+    this.toggles = {};
+    this.fireDrag = null;
     document.querySelectorAll("[data-action]").forEach((el) => {
       const a = el.dataset.action;
+      if (el.hasAttribute("aria-pressed")) this.toggles[a] = el;
       bind(
         el,
         (e) => {
@@ -265,26 +271,66 @@ export class TouchInputController {
             input.fire = true;
             input.firePresses++;
             input.actions.add("fire");
+            // The thumb holding FIRE can also steer, so aiming continues during a burst.
+            this.fireDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
           } else if (a === "aim") input.aim = !input.aim;
           else if (a === "crouch") input.touchCrouch = !input.touchCrouch;
+          else if (a === "sprint") this.setSprint(!this.sprintLock);
           else
             input.actions.add(
               { reload: "KeyR", jump: "Space", switch: "switch" }[a],
             );
+          this.sync();
         },
-        () => {},
+        (e) => {
+          const f = this.fireDrag;
+          if (f && e.pointerId === f.id) {
+            input.dx += e.clientX - f.x;
+            input.dy += e.clientY - f.y;
+            f.x = e.clientX;
+            f.y = e.clientY;
+          }
+        },
         (e) => {
           if (this.buttons.get(e.pointerId) === "fire") input.fire = false;
+          if (this.fireDrag?.id === e.pointerId) this.fireDrag = null;
           this.buttons.delete(e.pointerId);
         },
       );
     });
   }
+  // Sprint lock holds a virtual Shift, so movement (and the online server) treat it like the
+  // desktop key; sprinting itself still needs the stick pushed forward and no ADS.
+  setSprint(on) {
+    this.sprintLock = on;
+    this.sprintRan = false;
+    if (on) this.input.keys.add("ShiftLeft");
+    else this.input.keys.delete("ShiftLeft");
+    this.sync();
+  }
+  // Light up toggles that are on. The game can turn them off itself (a jump cancels a slide's
+  // crouch, a pause clears input), so this also runs with every HUD refresh.
+  sync() {
+    const i = this.input;
+    if (this.sprintLock && (i.aim || i.touchCrouch)) this.setSprint(false);
+    const state = {
+      aim: i.aim,
+      crouch: i.touchCrouch,
+      sprint: !!this.sprintLock,
+    };
+    for (const [a, el] of Object.entries(this.toggles)) {
+      const on = String(!!state[a]);
+      if (el.getAttribute("aria-pressed") !== on)
+        el.setAttribute("aria-pressed", on);
+    }
+  }
   // Forget pointer ownership and return the joystick to its neutral visual state.
   reset() {
-    this.look = this.joy = null;
+    this.look = this.joy = this.fireDrag = null;
     this.buttons.clear();
     this.stick.style.transform = "";
     this.input.touchCrouch = false;
+    this.sprintLock = this.sprintRan = false;
+    this.sync?.();
   }
 }

@@ -1079,6 +1079,17 @@ input[type="range"] {
   right: 185px;
   bottom: 123px;
 }
+/* Sprint lock sits above the stick, where the movement thumb can tap it before a run. */
+#sprint {
+  left: calc(max(28px, env(safe-area-inset-left)) + 27px);
+  bottom: 250px;
+}
+/* Toggles (aim, crouch, sprint) stay lit while they are on. */
+#touch button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 55%, rgba(0, 0, 0, 0.5));
+  border-color: var(--accent);
+  color: #fff;
+}
 /* Hide desktop instructions when real touch input selects the mobile control mode. */
 .touch-mode #hint {
   display: none;
@@ -1226,6 +1237,10 @@ input[type="range"] {
   #switch {
     bottom: 145px;
   }
+  #sprint {
+    left: calc(max(28px, env(safe-area-inset-left)) + 22px);
+    bottom: 212px;
+  }
 }
 @media (max-height: 500px) {
   #objectives {
@@ -1326,7 +1341,8 @@ input[type="range"] {
   --muted: #a9b0a0;
   --faint: #7f8777;
   --khaki: #c8b98c;
-  --readout: ui-monospace, "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
+  --readout:
+    ui-monospace, "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
 }
 .overlay.setup .bar {
   background: var(--ground);

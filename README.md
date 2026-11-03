@@ -30,17 +30,17 @@ Domination is a lobby preview only. Lobby squadmates, rankings, matchmaking and 
 | Action | Desktop | Touch |
 |---|---|---|
 | Move | WASD | Left joystick |
-| Look | Mouse | Drag the right side |
+| Look | Mouse | Drag the right side, or drag while holding FIRE |
 | Fire | Left mouse | FIRE |
-| Aim down sights | Hold right mouse | ADS (toggle) |
-| Reload | R | RLD |
+| Aim down sights | Hold right mouse | AIM (toggle, lights up while on) |
+| Reload | R | RELOAD |
 | Jump | Space | JUMP |
-| Sprint | Shift while moving forward | Push joystick fully forward |
-| Crouch / slide | C or Ctrl; press while sprinting to slide | SLIDE |
+| Sprint | Shift while moving forward | SPRINT (locks until you let go of the stick after a run), or push the joystick fully forward |
+| Crouch / slide | C or Ctrl; press while sprinting to slide | CROUCH (toggle); tap while sprinting to slide |
 | Slide cancel | Space during a slide | JUMP during a slide |
 | Primary / sidearm | 1 / 2 | — |
 | Swap weapon | Q or mouse wheel | SWAP |
-| Pause | Escape | Pause icon |
+| Pause | Escape | PAUSE (top right) |
 
 If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Run and gun:** every weapon fires while sprinting or sliding with no sprint-to-fire delay, and firing does not break the sprint; the hip cone widens 1.4x while sprinting and 1.7x while sliding. Aiming down sights still ends a sprint.
 

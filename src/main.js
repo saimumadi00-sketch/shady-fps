@@ -70,7 +70,7 @@ function controls() {
       "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1 primary / 2 pistol · Q or wheel swap · Esc pause";
   if (input.touch)
     $("controlsHelp").textContent =
-      "Left stick move / push fully to sprint · Right drag aim · FIRE shoot · ADS aim · RLD reload · JUMP · SLIDE crouch / slide while sprinting · JUMP cancel · SWAP weapon";
+      "Left stick move · SPRINT locks a run (or push the stick fully) · Drag the right side to look · Hold FIRE and drag to steer while shooting · AIM toggles sights · CROUCH, or slide while sprinting · JUMP, also cancels a slide · RELOAD · SWAP primary / pistol · PAUSE top right";
   orientation();
 }
 // Pause touch gameplay in portrait so hidden controls cannot leave the player vulnerable.
@@ -120,7 +120,8 @@ try {
     $("briefDescription").textContent = map.description;
     $("tagline").textContent = map.tagline;
     $("mapOverview").outerHTML = tdmOverview(game.arena, "mapOverview");
-    $("mapCredit").textContent = `${map.name} · drawn to scale · grid squares 5 m`;
+    $("mapCredit").textContent =
+      `${map.name} · drawn to scale · grid squares 5 m`;
   }
   if (game.mode === "conquest") {
     document.title = "Crosscurrent · Conquest setup";
@@ -513,6 +514,7 @@ try {
     hudTime += raw;
     if (hudTime > 0.05) {
       hud.update(game, quality, renderer);
+      if (input.touch) input.touchController.sync();
       hudTime = 0;
     }
   }

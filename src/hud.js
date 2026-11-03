@@ -132,13 +132,19 @@ export class HUDController {
     marker.style.opacity = game.hit > 0 ? Math.min(1, game.hit * 12) : 0;
     marker.style.setProperty("--pop", 1 + Math.min(game.hit, 0.13) * 3);
     n.damage.style.opacity = game.hurt * 0.9;
+    // Name the controls of the device in use: keys on desktop, button labels on touch.
+    const touch = document.body.classList.contains("touch-mode");
     n.notice.textContent =
       game.noticeTime > 0
         ? game.notice
         : a.sliding
-          ? "Sliding · Space or Jump to cancel"
+          ? touch
+            ? "Sliding · JUMP to cancel"
+            : "Sliding · Space to cancel"
           : a.sprinting
-            ? "Sprinting · C, Ctrl or Slide"
+            ? touch
+              ? "Sprinting · CROUCH to slide"
+              : "Sprinting · C or Ctrl to slide"
             : "";
     n.death.hidden = a.alive || m.state === "ended" || m.state === "menu";
     n.countdown.textContent = Math.max(1, Math.ceil(a.respawn));
