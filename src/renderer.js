@@ -2,7 +2,7 @@
 import { drawCharacter } from "./characters.js";
 import { cameraMatrix } from "./math.js";
 import { reloadPose, animateWeapon } from "./reload-animation.js";
-import { weaponMesh, weaponSight } from "./weapon-models.js";
+import { weaponMesh, weaponAim } from "./weapon-models.js";
 import {
   viewmodelPose,
   GunRecoil,
@@ -381,7 +381,7 @@ export class Renderer {
       g.uniform3f(this.eye, 0, 0, 0);
       // Derive visual reload motion from the authoritative remaining reload timer.
       const pose = reloadPose(p);
-      const sightHeight = weaponSight(p.weapon, optic);
+      const sightHeight = weaponAim(p.weapon, optic);
       const view = viewmodelPose(
         p,
         now / 1000,

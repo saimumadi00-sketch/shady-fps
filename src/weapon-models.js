@@ -176,3 +176,8 @@ export function previewWeapon(canvas, index, finish, optic) {
 
 // Height of the sight line above the viewmodel origin, for aiming down sights.
 export const weaponSight = (index, optic) => describe(index, optic).sightHeight;
+// The sight point itself (height, sideways offset and depth), for aiming down sights.
+export const weaponAim = (index, optic) => {
+  const { aim } = describe(index, optic);
+  return { height: aim[1], x: aim[0], z: aim[2] };
+};

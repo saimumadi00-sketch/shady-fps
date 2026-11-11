@@ -772,8 +772,10 @@ export function buildHands(emit, part, opts, capture) {
       forearm(
         pose,
         [-0.04, -0.05, 0.06],
-        reload ? [-0.34, -0.42, 0.3] : [-0.36, -0.33, z0 + 0.52],
-        reload ? [-0.42, -0.58, 0.86] : [-0.42, -0.5, 0.86],
+        // The support elbow hangs below and left of the handguard, so the forearm rises to
+        // the hand from the lower left instead of crossing the view from the chest.
+        reload ? [-0.34, -0.42, 0.3] : [-0.5, -0.36, z0 + 0.42],
+        reload ? [-0.42, -0.58, 0.86] : [-0.64, -0.58, 0.86],
       );
   };
   part("support", () => supportArm(support, false));

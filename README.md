@@ -1,12 +1,12 @@
 # Crosscurrent — Yard 07
 
-A browser FPS with a squad lobby, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models. First-person weapons are low-poly models from the free [Project A2B](https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release) pack; gun and reload sounds are recordings credited in `THIRD_PARTY_NOTICES.md`.
+A browser FPS with an operator-select front end, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models. First-person weapons are low-poly models from the free [Project A2B](https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release) pack; gun and reload sounds are recordings credited in `THIRD_PARTY_NOTICES.md`.
 
 ## Demo
 
 ![Team Deathmatch on Yard 07: pushing down the lane, a burst, a reload and a headshot](docs/media/gameplay.webp)
 
-| Squad lobby | Operator select |
+| Squad lobby (earlier build) | Operator select (earlier build) |
 |---|---|
 | ![Squad lobby with the party on the dock, mode list and party chat](docs/media/lobby.webp) | ![Operator select: NOVA, weapon stats, finish and sight](docs/media/setup.webp) |
 | **Team Deathmatch — Foundry** | **Conquest — FreeDM Outpost** |
@@ -23,7 +23,7 @@ A browser FPS with a squad lobby, offline 5v5 against bots, and private server-a
 - If port 8080 is busy: `python main.py --port 8081` or `PORT=8081 npm run preview` (PowerShell: `$env:PORT=8081; npm run preview`).
 - `file://` URLs are not supported; use any static HTTP server.
 
-The root page is the squad lobby. Pick a class, then **Play Offline Conquest** or Team Deathmatch. Desktop play captures the mouse; Escape pauses. Touch controls are detected automatically (landscape required in matches).
+The root page opens the operator plate: pick an operator from the file tabs on the right (or press 1–4), change sight, finish and weapon on the call-outs beside them, choose mode, map and bot difficulty on the bottom strip, then **Deploy**. **Mission** (map, rules, private room) and **Settings** open in a drawer over the plate. Desktop play captures the mouse; Escape pauses. Touch controls are detected automatically (landscape required in matches).
 
 ## Modes
 
@@ -37,7 +37,7 @@ The root page is the squad lobby. Pick a class, then **Play Offline Conquest** o
 
 Bots pick capture targets (spreading across sectors), defend, fight while advancing, and retreat to cover when wounded. Easy/Normal/Hard change reaction time, aim error, speed and perception rate.
 
-Domination is a lobby preview only. Lobby squadmates, rankings, matchmaking and progression are simulated.
+There are no simulated systems in the front end: no fake ranks, levels, party chat or matchmaking.
 
 ## Controls
 
@@ -56,7 +56,7 @@ Domination is a lobby preview only. Lobby squadmates, rankings, matchmaking and 
 | Swap weapon | Q or mouse wheel | SWAP |
 | Pause | Escape | PAUSE (top right) |
 
-If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Run and gun:** every weapon fires while sprinting or sliding with no sprint-to-fire delay, and firing does not break the sprint; the hip cone widens 1.4x while sprinting and 1.7x while sliding. Aiming down sights still ends a sprint.
+Keyboard keys can be rebound under **Settings › Key bindings** (the Settings tab of the front end); a key that is already taken swaps with the action that had it. Settings also holds mouse, aim-down-sights and touch look sensitivity, invert Y, volume, field of view, graphics and reduced motion. If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Run and gun:** every weapon fires while sprinting or sliding with no sprint-to-fire delay, and firing does not break the sprint; the hip cone widens 1.4x while sprinting and 1.7x while sliding. Aiming down sights still ends a sprint.
 
 ## Classes and weapons
 
@@ -86,7 +86,7 @@ Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 - Movement speed scales with the carried primary's weight (also while the pistol is drawn); ADS strafe speed is per weapon.
 - 100 HP; regenerate 8 HP/s after 6 s without damage. 3 s respawn with a 1.5 s spawn shield that firing ends. No friendly fire; teammates block shots.
 
-Lobby attachments, finishes and optics are cosmetic. The second weapon listed per class in the lobby is a preview variant that deploys with the class primary.
+Finishes and optics are cosmetic.
 
 ## Private multiplayer
 
@@ -119,8 +119,6 @@ Browser suites run against the preview server (install once with `npx playwright
 
 ```sh
 npm run test:browser            # desktop/mobile flows, tactical movement, mouse fallback, weapons, customization, reload
-npm run test:lobby
-npm run test:lobby-performance
 npm run test:conquest
 npm run test:multiplayer        # starts its own server; two clients plus touch TDM
 ```
@@ -145,7 +143,7 @@ To deploy statically, upload the contents of `dist/`. Serve `sw.js` and `index.h
 | `src/network.js` | Multiplayer client: input stream, local view angles, recoil prediction |
 | `server/` | HTTP room service and streaming transport |
 | `src/main.js` | Arena bootstrap, menus, fixed 60 Hz loop |
-| `src/lobby*.js` | Squad lobby UI and 3D scene |
+| `src/operator-select.js`, `src/operator-render.js` | Front end: operator plate, kit call-outs, roster tabs, drawer |
 | `src/renderer.js`, `characters.js`, `weapon-models.js`, `combat-fx.js` | Rendering only; never decides hits |
 
 Map provenance and license: `assets/maps/freedm/`; regenerate the adaptation with `npm run import:conquest-map`. Third-party notices: `THIRD_PARTY_NOTICES.md`.

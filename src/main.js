@@ -9,6 +9,8 @@ import { OfflineSimulation } from "./game.js";
 import { Renderer } from "./renderer.js";
 import { HUDController } from "./hud.js";
 import { Customization } from "./customization.js";
+import { settingsPanelHTML, mountKeybinds } from "./settings-panel.js";
+import { actionKeys, keyLabel } from "./bindings.js";
 import { initOperatorSelect } from "./operator-select.js";
 import {
   CLASS_IDS,
@@ -62,16 +64,14 @@ function controls() {
   document.body.classList.toggle("touch-mode", input.touch);
   if (game) game.controlHint = input.touch ? "Swap: primary or pistol" : "";
   $("touch").hidden = !input.touch || !input.active;
+  const b = input.bindings;
   $("hint").textContent =
     input.mouseFallback && !input.touch
       ? "Mouse capture unavailable: hold the right button and drag to aim"
-      : "Mouse aim · Shift then C to slide · Space cancels";
-  if (!input.touch)
-    $("controlsHelp").textContent =
-      "Mouse aim · Right mouse ADS · WASD move · Shift sprint · C / Ctrl slide while sprinting · Space jump / slide cancel · R reload · 1 primary / 2 pistol · Q or wheel swap · Esc pause";
-  if (input.touch)
-    $("controlsHelp").textContent =
-      "Left stick move · SPRINT locks a run (or push the stick fully) · Drag the right side to look · Hold FIRE and drag to steer while shooting · AIM toggles sights · CROUCH, or slide while sprinting · JUMP, also cancels a slide · RELOAD · SWAP primary / pistol · PAUSE top right";
+      : `Mouse aim · ${actionKeys(b, "sprint")} then ${actionKeys(b, "crouch")} to slide · ${keyLabel(b.jump)} cancels`;
+  $("controlsHelp").textContent = input.touch
+    ? "Left stick move · SPRINT locks a run (or push the stick fully) · Drag the right side to look · Hold FIRE and drag to steer while shooting · AIM toggles sights · CROUCH, or slide while sprinting · JUMP, also cancels a slide · RELOAD · SWAP primary / pistol · PAUSE top right"
+    : "";
   orientation();
 }
 // Pause touch gameplay in portrait so hidden controls cannot leave the player vulnerable.
@@ -86,10 +86,13 @@ function orientation() {
   if (!portrait && rotationPaused) rotationPaused = false;
 }
 try {
+  // The shared Settings panel must exist before SettingsManager binds its controls.
+  $("settingsMount").innerHTML = settingsPanelHTML();
   const settings = new SettingsManager(),
     quality = new QualityManager(settings),
     audio = new AudioManager(settings);
   input = new InputManager($("canvas"), pause, controls);
+  mountKeybinds(document, settings);
   $("progress").textContent = "30%";
   const params = new URLSearchParams(location.search);
   game = new OfflineSimulation(input, audio, Math.random, {
@@ -145,6 +148,22 @@ try {
   // Walls between the listener and a sound muffle it.
   audio.occluded = lineOfSound(game.arena);
   const hud = new HUDController();
+  // Settings that change live mid-match: keys, look inversion, HUD read-outs, motion.
+  const applySettings = () => {
+    const v = settings.values,
+      b = v.bindings;
+    input.bindings = b;
+    input.setBindings(b);
+    input.invertY = v.invertY;
+    hud.showStats = v.showStats || params.has("debug");
+    hud.keyHint = `${keyLabel(b.primary)} primary · ${keyLabel(b.sidearm)} pistol · ${keyLabel(b.swap)} or wheel to swap`;
+    hud.slideKey = actionKeys(b, "crouch");
+    hud.jumpKey = keyLabel(b.jump);
+    document.body.classList.toggle("reduced-motion", v.reducedMotion);
+    controls();
+  };
+  settings.onChange(applySettings);
+  applySettings();
   // Restore only a valid arsenal index; unavailable storage must not block play.
   let selectedWeapon = 0;
   try {
@@ -179,7 +198,8 @@ try {
         const w = WEAPONS[index];
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = `${kit.weapons.indexOf(index) === 0 ? "Primary" : "Sidearm"} · ${w.label}`;
+        option.textContent =
+          kit.weapons.indexOf(index) === 0 ? w.label : `${w.label} (sidearm)`;
         $(id).append(option);
       });
       $(id).value = String(selectedWeapon);
@@ -208,7 +228,7 @@ try {
       } catch {}
     });
   }
-  const customization = new Customization();
+  const customization = new Customization(settings);
   renderer.customization = customization.values;
   $("loadoutClass").addEventListener("change", () => {
     selectedClass = $("loadoutClass").value;
@@ -316,7 +336,7 @@ try {
       $("difficulty").disabled =
         true;
     network = new NetworkClient(game, input, {
-      sensitivity: () => settings.values.sensitivity,
+      sensitivity: () => settings.aim,
       onState(packet) {
         $("matchMode").disabled = $("matchMap").disabled = true;
         $("roomCode").value = packet.code;
@@ -397,7 +417,7 @@ try {
             mode: game.mode,
             map: game.mapId,
             team: Number($("roomTeam").value),
-            name: $("callsign").value,
+            name: settings.values.callsign || "You",
             classId: selectedClass,
             weapon: selectedWeapon,
           },
@@ -489,7 +509,7 @@ try {
       accumulator += Math.min(raw, 0.25);
       // Catch up simulation ticks without tying movement speed to monitor refresh rate.
       while (accumulator >= fixed) {
-        if (!network) game.update(fixed, settings.values.sensitivity);
+        if (!network) game.update(fixed, settings.aim);
         else {
           game.hit = Math.max(0, game.hit - fixed);
           game.hurt = Math.max(0, game.hurt - fixed);

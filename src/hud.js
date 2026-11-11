@@ -28,6 +28,9 @@ export class HUDController {
       this.nodes[id] = document.getElementById(id);
     this.healthPanel = document.querySelector(".health");
     this.lastFeed = "";
+    // Set from Settings: the performance line is off by default, the hint follows key bindings.
+    this.showStats = false;
+    this.keyHint = "1 primary · 2 pistol · Q or wheel to swap";
     this.objectives = document.getElementById("objectives");
     this.sectorNodes = [];
   }
@@ -106,7 +109,7 @@ export class HUDController {
             : "Out of ammo · resupply at base or eliminate"
           : a.shield > 0
             ? "Spawn shield · firing ends it"
-            : game.controlHint || "1 primary · 2 pistol · Q or wheel to swap";
+            : game.controlHint || this.keyHint;
     // Hip crosshair: arms sit at the true spread cone and fade out as the sights come up.
     const cross = n.crosshair;
     if (cross) {
@@ -140,11 +143,11 @@ export class HUDController {
         : a.sliding
           ? touch
             ? "Sliding · JUMP to cancel"
-            : "Sliding · Space to cancel"
+            : `Sliding · ${this.jumpKey || "Space"} to cancel`
           : a.sprinting
             ? touch
               ? "Sprinting · CROUCH to slide"
-              : "Sprinting · C or Ctrl to slide"
+              : `Sprinting · ${this.slideKey || "C or Ctrl"} to slide`
             : "";
     n.death.hidden = a.alive || m.state === "ended" || m.state === "menu";
     n.countdown.textContent = Math.max(1, Math.ceil(a.respawn));
@@ -157,6 +160,8 @@ export class HUDController {
       n.feed.replaceChildren(
         ...events.map((e) => {
           let div = document.createElement("div");
+          // Kills by your side carry an edge marker, so the team never reads from hue alone.
+          if (e.team === (a.team ?? 0)) div.className = "ours";
           let killer = document.createElement("span");
           killer.className = e.team === 0 ? "cyan" : "orange";
           killer.textContent = e.killer;
@@ -171,7 +176,9 @@ export class HUDController {
       );
       this.lastFeed = key;
     }
-    n.stats.textContent = `${quality.fps} fps · ${Math.round(quality.scale * 100)}% resolution · ${renderer.drawCalls} draw calls · ${game.online ? game.networkLabel || "Connecting" : "Offline"}`;
+    n.stats.textContent = !this.showStats
+      ? ""
+      : `${quality.fps} fps · ${Math.round(quality.scale * 100)}% resolution · ${renderer.drawCalls} draw calls · ${game.online ? game.networkLabel || "Connecting" : "Offline"}`;
   }
   // Build a safely escaped scoreboard sorted by team and eliminations.
   end(game) {
@@ -193,15 +200,18 @@ export class HUDController {
       (a, b) => a.team - b.team || b.kills - a.kills,
     )) {
       let tr = document.createElement("tr");
-      for (const text of [
+      for (const [i, text] of [
         a.name,
         loadout(a.classId).name,
         a.team === 0 ? "Cyan" : "Ember",
         a.kills,
         a.deaths,
-      ]) {
+      ].entries()) {
         const td = document.createElement("td");
         td.textContent = text;
+        // Team names read in their team colour; kills and deaths align as numbers.
+        if (i === 2) td.className = a.team === 0 ? "cyan" : "orange";
+        if (i > 2) td.className = "num";
         tr.append(td);
       }
       table.append(tr);

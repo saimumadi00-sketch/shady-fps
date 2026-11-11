@@ -1,0 +1,808 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T14:04:45.118Z",
+  "title": "Design System: Crosscurrent",
+  "extensions": {
+    "colorMeta": {
+      "signal-teal": {
+        "role": "primary",
+        "displayName": "Signal Teal",
+        "canonical": "#3fc7b8",
+        "oklch": "oklch(75.4% 0.117 184.4)",
+        "tonalRamp": [
+          "#040e0c",
+          "#002b27",
+          "#004d45",
+          "#007165",
+          "#009689",
+          "#64b6ab",
+          "#a9d5ce",
+          "#e2f3f0"
+        ]
+      },
+      "signal-teal-bright": {
+        "role": "primary",
+        "displayName": "Signal Teal Bright",
+        "canonical": "#6fe0d3",
+        "oklch": "oklch(83.7% 0.105 185.5)",
+        "tonalRamp": [
+          "#040d0c",
+          "#042b27",
+          "#004b45",
+          "#006f65",
+          "#009489",
+          "#6cb4ab",
+          "#add4ce",
+          "#e3f2f0"
+        ]
+      },
+      "signal-teal-ink": {
+        "role": "primary",
+        "displayName": "Signal Teal Ink",
+        "canonical": "#001412",
+        "oklch": "oklch(17.2% 0.030 186.8)",
+        "tonalRamp": [
+          "#090c0b",
+          "#1e2625",
+          "#344341",
+          "#4c6360",
+          "#6c8683",
+          "#97a9a7",
+          "#c2cdcc",
+          "#ebefef"
+        ]
+      },
+      "signal-teal-deep": {
+        "role": "primary",
+        "displayName": "Signal Teal Deep",
+        "canonical": "#12302c",
+        "oklch": "oklch(28.5% 0.037 183.9)",
+        "tonalRamp": [
+          "#090c0b",
+          "#1c2625",
+          "#314441",
+          "#476460",
+          "#688882",
+          "#94aaa6",
+          "#c1cecb",
+          "#ebf0ef"
+        ]
+      },
+      "rust": {
+        "role": "secondary",
+        "displayName": "Rust",
+        "canonical": "#f56130",
+        "oklch": "oklch(67.6% 0.192 37.9)",
+        "tonalRamp": [
+          "#150704",
+          "#411304",
+          "#741b00",
+          "#ac2000",
+          "#da470c",
+          "#eb8465",
+          "#f8baa7",
+          "#ffe8e1"
+        ]
+      },
+      "rust-deep": {
+        "role": "secondary",
+        "displayName": "Rust Deep",
+        "canonical": "#351a10",
+        "oklch": "oklch(25.3% 0.047 40.8)",
+        "tonalRamp": [
+          "#0e0a09",
+          "#2c211d",
+          "#4f3a33",
+          "#74554a",
+          "#99776b",
+          "#b89e95",
+          "#d6c7c1",
+          "#f3edeb"
+        ]
+      },
+      "rust-text": {
+        "role": "secondary",
+        "displayName": "Rust Text",
+        "canonical": "#ff8a5c",
+        "oklch": "oklch(75.3% 0.155 41.6)",
+        "tonalRamp": [
+          "#130805",
+          "#3c1809",
+          "#6b2808",
+          "#9e3800",
+          "#ca5a2a",
+          "#de8d6e",
+          "#efbeac",
+          "#fdeae3"
+        ]
+      },
+      "amber-warning": {
+        "role": "tertiary",
+        "displayName": "Amber Warning",
+        "canonical": "#e5a93b",
+        "oklch": "oklch(77.3% 0.140 78.6)",
+        "tonalRamp": [
+          "#100a03",
+          "#322000",
+          "#5a3800",
+          "#855100",
+          "#ad7300",
+          "#c69d5a",
+          "#dfc7a2",
+          "#f6eddf"
+        ]
+      },
+      "amber-deep": {
+        "role": "tertiary",
+        "displayName": "Amber Deep",
+        "canonical": "#2b2414",
+        "oklch": "oklch(26.4% 0.029 86.8)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#26241e",
+          "#443f34",
+          "#645d4c",
+          "#887f6d",
+          "#aaa496",
+          "#cecac2",
+          "#f0eeeb"
+        ]
+      },
+      "alarm-red": {
+        "role": "tertiary",
+        "displayName": "Alarm Red",
+        "canonical": "#e5484d",
+        "oklch": "oklch(62.6% 0.193 23.0)",
+        "tonalRamp": [
+          "#160606",
+          "#421011",
+          "#76151c",
+          "#ae1327",
+          "#dc3f46",
+          "#ed807c",
+          "#f9b7b3",
+          "#ffe7e5"
+        ]
+      },
+      "alarm-text": {
+        "role": "tertiary",
+        "displayName": "Alarm Text",
+        "canonical": "#ff8589",
+        "oklch": "oklch(75.4% 0.148 19.2)",
+        "tonalRamp": [
+          "#130708",
+          "#3c1618",
+          "#6b252a",
+          "#9d333c",
+          "#c9555c",
+          "#de8a8a",
+          "#efbcbb",
+          "#fde9e8"
+        ]
+      },
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Night Ground",
+        "canonical": "#050607",
+        "oklch": "oklch(12.1% 0.004 245.5)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232425",
+          "#3f4041",
+          "#5c5e60",
+          "#7e8082",
+          "#a3a5a6",
+          "#cacacb",
+          "#eeeeef"
+        ]
+      },
+      "night-surface": {
+        "role": "neutral",
+        "displayName": "Night Surface",
+        "canonical": "#0b0d0f",
+        "oklch": "oklch(15.8% 0.005 248.2)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232425",
+          "#3e4042",
+          "#5b5e60",
+          "#7e8083",
+          "#a3a5a7",
+          "#c9cbcc",
+          "#eeeeef"
+        ]
+      },
+      "bone": {
+        "role": "neutral",
+        "displayName": "Bone",
+        "canonical": "#f2f2ee",
+        "oklch": "oklch(96.0% 0.005 106.5)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242423",
+          "#40403e",
+          "#5e5e5b",
+          "#80807d",
+          "#a5a5a2",
+          "#cacac9",
+          "#eeeeee"
+        ]
+      },
+      "ash": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "canonical": "#b3b6b4",
+        "oklch": "oklch(77.3% 0.004 157.1)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232424",
+          "#3e403f",
+          "#5c5e5d",
+          "#7e817f",
+          "#a3a5a4",
+          "#c9cbca",
+          "#eeeeee"
+        ]
+      },
+      "slate": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#8a8e8c",
+        "oklch": "oklch(64.3% 0.006 164.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232424",
+          "#3e403f",
+          "#5b5f5d",
+          "#7d817f",
+          "#a2a5a4",
+          "#c9cbca",
+          "#eeeeee"
+        ]
+      },
+      "olive-black": {
+        "role": "neutral",
+        "displayName": "Olive Black",
+        "canonical": "#070908",
+        "oklch": "oklch(13.7% 0.005 165.2)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232424",
+          "#3e403f",
+          "#5b5e5d",
+          "#7e817f",
+          "#a3a5a4",
+          "#c9cbca",
+          "#eeeeee"
+        ]
+      },
+      "olive-plate": {
+        "role": "neutral",
+        "displayName": "Olive Plate",
+        "canonical": "#0d100e",
+        "oklch": "oklch(16.9% 0.006 156.5)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232423",
+          "#3e403f",
+          "#5b5f5c",
+          "#7d817f",
+          "#a2a5a3",
+          "#c9cbca",
+          "#eeefee"
+        ]
+      },
+      "olive-raised": {
+        "role": "neutral",
+        "displayName": "Olive Raised",
+        "canonical": "#151a15",
+        "oklch": "oklch(21.1% 0.012 145.1)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232523",
+          "#3d413d",
+          "#5a5f5a",
+          "#7c827c",
+          "#a1a6a1",
+          "#c9cbc8",
+          "#eeefee"
+        ]
+      },
+      "field-paper": {
+        "role": "neutral",
+        "displayName": "Field Paper",
+        "canonical": "#e9ece3",
+        "oklch": "oklch(93.8% 0.012 121.7)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242422",
+          "#3f403c",
+          "#5c5f57",
+          "#7f8179",
+          "#a3a5a0",
+          "#cacbc7",
+          "#eeefed"
+        ]
+      },
+      "sage": {
+        "role": "neutral",
+        "displayName": "Sage",
+        "canonical": "#a9b0a0",
+        "oklch": "oklch(74.7% 0.024 126.3)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#232520",
+          "#3d4138",
+          "#5a6052",
+          "#7c8374",
+          "#a2a79c",
+          "#c9ccc5",
+          "#eeefec"
+        ]
+      },
+      "moss": {
+        "role": "neutral",
+        "displayName": "Moss",
+        "canonical": "#7f8777",
+        "oklch": "oklch(61.2% 0.025 128.9)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#222520",
+          "#3d4238",
+          "#596052",
+          "#7b8373",
+          "#a1a79b",
+          "#c8ccc5",
+          "#eeefec"
+        ]
+      },
+      "stencil-khaki": {
+        "role": "neutral",
+        "displayName": "Stencil Khaki",
+        "canonical": "#c8b98c",
+        "oklch": "oklch(78.7% 0.063 91.8)",
+        "tonalRamp": [
+          "#0d0b07",
+          "#282416",
+          "#483f25",
+          "#6a5d35",
+          "#8e7f54",
+          "#aea486",
+          "#d0cab9",
+          "#f1eee8"
+        ]
+      },
+      "reticle-mint": {
+        "role": "primary",
+        "displayName": "Reticle Mint",
+        "canonical": "#a7ead4",
+        "oklch": "oklch(88.6% 0.074 172.2)",
+        "tonalRamp": [
+          "#070d0b",
+          "#142922",
+          "#20483d",
+          "#2d6a59",
+          "#4e8f7b",
+          "#84b0a1",
+          "#b8d1c8",
+          "#e7f1ed"
+        ]
+      },
+      "smoked-glass": {
+        "role": "neutral",
+        "displayName": "Smoked Glass",
+        "canonical": "rgba(9, 11, 13, 0.74)",
+        "tonalRamp": [
+          "rgba(9, 11, 13, 0.3)",
+          "rgba(9, 11, 13, 0.45)",
+          "rgba(9, 11, 13, 0.6)",
+          "rgba(9, 11, 13, 0.74)",
+          "rgba(9, 11, 13, 0.82)",
+          "rgba(9, 11, 13, 0.9)",
+          "rgba(9, 11, 13, 0.95)",
+          "rgba(9, 11, 13, 1)"
+        ]
+      },
+      "smoked-glass-dense": {
+        "role": "neutral",
+        "displayName": "Smoked Glass Dense",
+        "canonical": "rgba(9, 11, 13, 0.9)",
+        "tonalRamp": [
+          "rgba(9, 11, 13, 0.3)",
+          "rgba(9, 11, 13, 0.45)",
+          "rgba(9, 11, 13, 0.6)",
+          "rgba(9, 11, 13, 0.74)",
+          "rgba(9, 11, 13, 0.82)",
+          "rgba(9, 11, 13, 0.9)",
+          "rgba(9, 11, 13, 0.95)",
+          "rgba(9, 11, 13, 1)"
+        ]
+      },
+      "glass-raised": {
+        "role": "neutral",
+        "displayName": "Glass Raised",
+        "canonical": "rgba(255, 255, 255, 0.06)",
+        "tonalRamp": [
+          "rgba(255, 255, 255, 0.04)",
+          "rgba(255, 255, 255, 0.06)",
+          "rgba(255, 255, 255, 0.09)",
+          "rgba(255, 255, 255, 0.12)",
+          "rgba(255, 255, 255, 0.18)",
+          "rgba(255, 255, 255, 0.22)",
+          "rgba(255, 255, 255, 0.35)",
+          "rgba(255, 255, 255, 0.5)"
+        ]
+      },
+      "glass-hover": {
+        "role": "neutral",
+        "displayName": "Glass Hover",
+        "canonical": "rgba(255, 255, 255, 0.12)",
+        "tonalRamp": [
+          "rgba(255, 255, 255, 0.04)",
+          "rgba(255, 255, 255, 0.06)",
+          "rgba(255, 255, 255, 0.09)",
+          "rgba(255, 255, 255, 0.12)",
+          "rgba(255, 255, 255, 0.18)",
+          "rgba(255, 255, 255, 0.22)",
+          "rgba(255, 255, 255, 0.35)",
+          "rgba(255, 255, 255, 0.5)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(255, 255, 255, 0.09)",
+        "tonalRamp": [
+          "rgba(255, 255, 255, 0.04)",
+          "rgba(255, 255, 255, 0.06)",
+          "rgba(255, 255, 255, 0.09)",
+          "rgba(255, 255, 255, 0.12)",
+          "rgba(255, 255, 255, 0.18)",
+          "rgba(255, 255, 255, 0.22)",
+          "rgba(255, 255, 255, 0.35)",
+          "rgba(255, 255, 255, 0.5)"
+        ]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong",
+        "canonical": "rgba(255, 255, 255, 0.22)",
+        "tonalRamp": [
+          "rgba(255, 255, 255, 0.04)",
+          "rgba(255, 255, 255, 0.06)",
+          "rgba(255, 255, 255, 0.09)",
+          "rgba(255, 255, 255, 0.12)",
+          "rgba(255, 255, 255, 0.18)",
+          "rgba(255, 255, 255, 0.22)",
+          "rgba(255, 255, 255, 0.35)",
+          "rgba(255, 255, 255, 0.5)"
+        ]
+      },
+      "olive-hairline": {
+        "role": "neutral",
+        "displayName": "Olive Hairline",
+        "canonical": "rgba(214, 224, 200, 0.08)",
+        "tonalRamp": [
+          "rgba(214, 224, 200, 0.04)",
+          "rgba(214, 224, 200, 0.06)",
+          "rgba(214, 224, 200, 0.09)",
+          "rgba(214, 224, 200, 0.12)",
+          "rgba(214, 224, 200, 0.18)",
+          "rgba(214, 224, 200, 0.22)",
+          "rgba(214, 224, 200, 0.35)",
+          "rgba(214, 224, 200, 0.5)"
+        ]
+      },
+      "olive-hairline-strong": {
+        "role": "neutral",
+        "displayName": "Olive Hairline Strong",
+        "canonical": "rgba(214, 224, 200, 0.2)",
+        "tonalRamp": [
+          "rgba(214, 224, 200, 0.04)",
+          "rgba(214, 224, 200, 0.06)",
+          "rgba(214, 224, 200, 0.09)",
+          "rgba(214, 224, 200, 0.12)",
+          "rgba(214, 224, 200, 0.18)",
+          "rgba(214, 224, 200, 0.22)",
+          "rgba(214, 224, 200, 0.35)",
+          "rgba(214, 224, 200, 0.5)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Codename",
+        "purpose": "The selected operator's codename behind the 3D figure only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles (QUICK PLAY); the operation name at 26px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Operator names on cards, rank names, HUD secondary figures."
+      },
+      "hud-figure": {
+        "displayName": "HUD Figure",
+        "purpose": "Health and ammo; tabular so the HUD never jitters."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions, chat, weapon notes."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tracked captions, eyebrows, key hints; buttons at 12px."
+      },
+      "stencil": {
+        "displayName": "Stencil",
+        "purpose": "Dossier headings and tabs in Stencil Khaki or Moss."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Monospace typed data on the dossier plate: weapon lines, rules, summary."
+      }
+    },
+    "shadows": [
+      {
+        "name": "reticle-edge",
+        "value": "drop-shadow(0 1px 1px #000)",
+        "purpose": "Crosshair legibility over any scene; the only shadow in the system."
+      },
+      {
+        "name": "floor-ring",
+        "value": "0 0 0 1px rgba(63, 199, 184, 0.35)",
+        "purpose": "Teal ring around the operator floor disc."
+      },
+      {
+        "name": "tab-underline",
+        "value": "inset 0 -2px #3fc7b8",
+        "purpose": "Selected lobby sub-tab marker."
+      },
+      {
+        "name": "touch-ring",
+        "value": "0 0 0 1px rgba(0, 0, 0, 0.6)",
+        "purpose": "Dark outer hairline on touch buttons, paired with a 55% white border."
+      },
+      {
+        "name": "glass-blur-panel",
+        "value": "backdrop-filter: blur(14px)",
+        "purpose": "Lobby panels and dialogs over the live scene."
+      },
+      {
+        "name": "glass-blur-hud",
+        "value": "backdrop-filter: blur(10px)",
+        "purpose": "HUD plates in a match."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fast",
+        "value": "120ms ease",
+        "purpose": "Colour and border transitions on buttons, tiles and cards."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97) over 80ms",
+        "purpose": "Every button press; operator cards use scale(0.985)."
+      },
+      {
+        "name": "panel-in",
+        "value": "220ms ease-out, translateX(-10px) with fade",
+        "purpose": "Lobby section panel entering."
+      },
+      {
+        "name": "toast",
+        "value": "200ms, translateY(12px) with fade",
+        "purpose": "Toast rising above the footer."
+      },
+      {
+        "name": "rating-bar",
+        "value": "width 250ms ease-out",
+        "purpose": "Weapon rating bars when the loadout changes."
+      },
+      {
+        "name": "search-blink",
+        "value": "1s steps(2) infinite",
+        "purpose": "Square status light while matchmaking."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: none",
+        "purpose": "All transitions off under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "large-window",
+        "value": "(min-width: 1100px) and (min-height: 640px)"
+      },
+      {
+        "name": "lobby-wide",
+        "value": "(max-width: 1400px)"
+      },
+      {
+        "name": "tablet",
+        "value": "(max-width: 1099px)"
+      },
+      {
+        "name": "lobby-compact",
+        "value": "(max-width: 1023px), (max-height: 600px)"
+      },
+      {
+        "name": "phone",
+        "value": "(max-width: 720px)"
+      },
+      {
+        "name": "lobby-phone",
+        "value": "(max-width: 520px)"
+      },
+      {
+        "name": "narrow-phone",
+        "value": "(max-width: 420px)"
+      },
+      {
+        "name": "short-landscape",
+        "value": "(max-height: 600px) and (min-width: 600px)"
+      },
+      {
+        "name": "very-short",
+        "value": "(max-height: 500px)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one Signal Teal action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Find Match</button>",
+      "css": ".ds-btn-primary { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; border: 1px solid transparent; border-radius: 2px; background: #3fc7b8; color: #001412; cursor: pointer; transition: background-color 0.12s, transform 0.08s; } .ds-btn-primary:hover { background: #6fe0d3; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #3fc7b8; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Glass button with a strong hairline, for every non-primary action.",
+      "html": "<button class=\"ds-btn-secondary\">Ready Up</button>",
+      "css": ".ds-btn-secondary { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; border: 1px solid rgba(255,255,255,0.22); border-radius: 2px; background: rgba(255,255,255,0.06); color: #f2f2ee; cursor: pointer; transition: background-color 0.12s, border-color 0.12s, transform 0.08s; } .ds-btn-secondary:hover { background: rgba(255,255,255,0.12); border-color: #f2f2ee; } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #3fc7b8; outline-offset: 2px; }"
+    },
+    {
+      "name": "Deploy Button",
+      "kind": "button",
+      "refersTo": "button-deploy",
+      "description": "The operator-select screen's single large action.",
+      "html": "<button class=\"ds-btn-deploy\">Deploy</button>",
+      "css": ".ds-btn-deploy { font-family: Inter, system-ui, sans-serif; min-width: 220px; height: 52px; border: 0; border-radius: 2px; background: #3fc7b8; color: #001412; font-size: 14px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer; transition: background-color 0.12s, transform 0.08s; } .ds-btn-deploy:hover { background: #6fe0d3; } .ds-btn-deploy:active { transform: scale(0.97); } .ds-btn-deploy:focus-visible { outline: 2px solid #e9ece3; outline-offset: 2px; }"
+    },
+    {
+      "name": "Call-out (single row)",
+      "kind": "custom",
+      "refersTo": "callout",
+      "description": "Operator-plate call-out: label left, control right, joined to the kit by a teal leader line.",
+      "html": "<div class=\"ds-plate\"><svg class=\"ds-lead\" viewBox=\"0 0 120 40\"><polyline points=\"4,30 100,30 100,20 120,20\"/><rect x=\"0.5\" y=\"26.5\" width=\"7\" height=\"7\"/></svg><div class=\"ds-callout\"><span>Sight <small>cosmetic</small></span><select><option>Reflex sight</option></select></div></div>",
+      "css": ".ds-plate { font-family: Inter, system-ui, sans-serif; display: flex; align-items: flex-start; padding: 16px; background: #0b0e0c; } .ds-lead { width: 120px; height: 40px; flex: none; } .ds-lead polyline { fill: none; stroke: #3fc7b8; stroke-width: 1; } .ds-lead rect { fill: #3fc7b8; } .ds-callout { display: grid; grid-template-columns: 112px 180px; align-items: center; column-gap: 8px; padding: 10px 12px; background: #0d100e; border: 1px solid rgba(214,224,200,0.2); } .ds-callout span { color: #c8b98c; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; } .ds-callout small { color: #7f8777; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; } .ds-callout select { font-family: Inter, system-ui, sans-serif; height: 36px; padding: 0 10px; border: 1px solid rgba(214,224,200,0.18); border-radius: 0; background: #070908; color: #e9ece3; font-size: 14px; } .ds-callout select:hover { border-color: #c8b98c; } .ds-callout select:focus-visible { outline: 2px solid #e9ece3; outline-offset: 2px; }"
+    },
+    {
+      "name": "File Tab Rail",
+      "kind": "nav",
+      "refersTo": "file-tab",
+      "description": "Roster rail: the selected operator's tab protrudes onto the plate with a 3px teal edge.",
+      "html": "<div class=\"ds-rail\"><button class=\"ds-file ds-file-on\"><strong>NOVA</strong><span>Assault</span><small>Assault rifle</small></button><button class=\"ds-file\"><strong>HEX</strong><span>Engineer</span><small>Submachine gun</small></button></div>",
+      "css": ".ds-rail { font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; width: 208px; margin-left: 40px; background: #0a0d0b; border-left: 1px solid rgba(214,224,200,0.08); } .ds-file { font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 1px; min-height: 96px; justify-content: flex-end; padding: 12px 16px; border: 0; border-bottom: 1px solid rgba(214,224,200,0.08); background: #0a0d0b; color: #7f8777; text-align: left; cursor: pointer; transition: background-color 0.12s; } .ds-file strong { color: #a9b0a0; font-size: 20px; font-weight: 600; letter-spacing: 0.12em; } .ds-file span { color: #a9b0a0; font-size: 13px; } .ds-file small { font-size: 12px; } .ds-file:hover { background: #0d100e; } .ds-file:focus-visible { outline: 2px solid #e9ece3; outline-offset: -2px; } .ds-file-on { margin-left: -24px; background: #151a15; border-left: 3px solid #3fc7b8; } .ds-file-on strong { color: #e9ece3; }"
+    },
+    {
+      "name": "Front-end Tabs",
+      "kind": "nav",
+      "refersTo": "nav-tabs",
+      "description": "Operator / Mission / Settings in the bar, 2px teal bar under the active tab.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-tab-on\">Operator</button><button class=\"ds-tab\">Mission</button><button class=\"ds-tab\">Settings</button></nav>",
+      "css": ".ds-tabs { display: flex; height: 48px; padding-left: 12px; background: #070908; border-left: 1px solid rgba(214,224,200,0.08); border-bottom: 1px solid rgba(214,224,200,0.08); } .ds-tab { font-family: Inter, system-ui, sans-serif; height: 100%; padding: 0 16px; border: 0; background: none; color: #7f8777; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; } .ds-tab:hover, .ds-tab-on { color: #e9ece3; } .ds-tab-on { box-shadow: inset 0 -2px #3fc7b8; } .ds-tab:focus-visible { outline: 2px solid #e9ece3; outline-offset: -2px; }"
+    },
+    {
+      "name": "Dossier Select",
+      "kind": "input",
+      "refersTo": "input-select",
+      "description": "Square native select on the olive plate; border turns khaki on hover.",
+      "html": "<label class=\"ds-field\"><span>Weapon</span><select class=\"ds-select\"><option>Primary · Assault rifle</option></select></label>",
+      "css": ".ds-field { font-family: Inter, system-ui, sans-serif; display: grid; gap: 8px; width: 320px; padding: 16px; background: #0d100e; } .ds-field span { color: #7f8777; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; } .ds-select { font-family: Inter, system-ui, sans-serif; height: 36px; padding: 0 10px; border: 1px solid rgba(214,224,200,0.18); border-radius: 0; background: #070908; color: #e9ece3; font-size: 14px; } .ds-select:hover { border-color: #c8b98c; } .ds-select:focus-visible { outline: 2px solid #e9ece3; outline-offset: 2px; }"
+    },
+    {
+      "name": "Operator Card",
+      "kind": "card",
+      "refersTo": "operator-card",
+      "description": "Dossier roster entry; selected gains a 3px teal edge.",
+      "html": "<button class=\"ds-op ds-op-on\"><i></i><span><strong>NOVA</strong><em>Assault</em><small>Assault rifle</small></span><kbd>1</kbd></button>",
+      "css": ".ds-op { font-family: Inter, system-ui, sans-serif; position: relative; display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 14px; width: 290px; padding: 8px 12px 8px 8px; border: 1px solid rgba(214,224,200,0.08); border-left: 3px solid transparent; background: #0d100e; color: #e9ece3; text-align: left; cursor: pointer; transition: background-color 0.12s, border-color 0.12s, transform 0.08s; } .ds-op:hover { background: #151a15; border-color: rgba(214,224,200,0.2); } .ds-op:active { transform: scale(0.985); } .ds-op-on { background: #151a15; border-color: rgba(214,224,200,0.2); border-left-color: #3fc7b8; } .ds-op i { width: 72px; height: 72px; background: #10231f; } .ds-op span { display: flex; flex-direction: column; gap: 1px; } .ds-op strong { font-size: 20px; line-height: 24px; font-weight: 600; letter-spacing: 0.1em; } .ds-op em { font-style: normal; font-size: 13px; color: #a9b0a0; } .ds-op small { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11px; color: #7f8777; } .ds-op kbd { position: absolute; top: 8px; right: 10px; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 11px; color: #3fc7b8; } .ds-op:focus-visible { outline: 2px solid #e9ece3; outline-offset: 2px; }"
+    },
+    {
+      "name": "HUD Readout",
+      "kind": "custom",
+      "refersTo": "hud-readout",
+      "description": "Smoked-glass health plate with tabular figure and teal track.",
+      "html": "<div class=\"ds-hud\"><span>Health</span><strong>87<small> / 100</small></strong><div class=\"ds-track\"><i></i></div></div>",
+      "css": ".ds-hud { font-family: Inter, system-ui, sans-serif; min-width: 160px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.09); border-radius: 2px; background: rgba(9,11,13,0.74); backdrop-filter: blur(10px); color: #f2f2ee; } .ds-hud span { display: block; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #b3b6b4; } .ds-hud strong { display: block; font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; } .ds-hud small { font-size: 14px; font-weight: 400; color: #b3b6b4; } .ds-track { height: 4px; margin-top: 6px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; } .ds-track i { display: block; width: 87%; height: 100%; background: #3fc7b8; }"
+    },
+    {
+      "name": "Touch Controls",
+      "kind": "button",
+      "refersTo": "touch-fire",
+      "description": "Thumb controls: circular translucent buttons, rust-ringed FIRE.",
+      "html": "<div class=\"ds-touch-bg\"><button class=\"ds-touch\">Jump</button><button class=\"ds-fire\">Fire</button></div>",
+      "css": ".ds-touch-bg { display: flex; align-items: center; gap: 12px; padding: 16px; background: #91a5a6; } .ds-touch, .ds-fire { font-family: Inter, system-ui, sans-serif; border-radius: 50%; color: #fff; font-weight: 500; cursor: pointer; box-shadow: 0 0 0 1px rgba(0,0,0,0.6); } .ds-touch { width: 56px; height: 56px; border: 1px solid rgba(255,255,255,0.55); background: rgba(0,0,0,0.45); font-size: 12px; } .ds-fire { width: 80px; height: 80px; border: 1px solid #f56130; background: rgba(53,26,16,0.7); font-size: 14px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Field Dossier",
+    "overview": "Every screen is a briefing handed to an operator before deployment. Codenames are set huge, labels are stencilled in tracked uppercase, data reads off in fixed-width figures, and every surface is a square, near-black plate. There is no rounded friendliness and no ornament. Personality comes from the operators and the places, presented like files on a desk: NOVA, HEX, ROOK and GHOST, then Yard 07 and Foundry.\n\nThe dossier has two dialects, chosen by what sits behind the panel. **Field glass** is used wherever a panel floats over a live 3D scene (the in-match HUD, pause and results dialogs). It uses neutral smoked glass with a hairline border, so the world stays visible behind it. **Dossier plate** is used on solid full-page screens: the front end (the operator plate) and its drawer. It uses flat olive-black plates, khaki stencil headings and monospace readouts, so it reads as paperwork rather than an overlay. Both share one type family, one signal colour, square corners and the same button grammar.\n\nDensity is closer to a console shooter front end than to a website: fixed viewport, no page scroll on large windows, keyboard hints in the footer, and one decisive action per screen (Find Match, Deploy). The interface stays still and quiet so the operators carry the colour and the motion.",
+    "keyCharacteristics": [
+      "Near-black ground; colour reserved for team data and the one primary action.",
+      "Square plates (2px or 0) everywhere; circles only for touch controls and the operator floor disc.",
+      "Uppercase, widely tracked Inter for labels and headings; tabular figures for every number.",
+      "A 2-3px Signal Teal edge marks the active panel, the selected item or the current tab.",
+      "The 3D scene is always the backdrop; menus sit at its edges and never cover the squad."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Signal Teal appears on one primary action per screen, plus the edges and bars that mark what is selected. If two buttons are teal, one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Team Truth Rule",
+        "body": "Teal is always your side and Rust is always the other side, on every map, HUD and scoreboard. Neither is used as a decorative accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Small Signal Rule",
+        "body": "Team and alarm colours below 18px use their Text variants, so they hold 4.5:1 on glass over the brightest sky.",
+        "section": "colors"
+      },
+      {
+        "name": "The Khaki Boundary Rule",
+        "body": "Stencil Khaki and the olive neutrals belong to the dossier-plate dialect. They don't leak onto glass panels over the live scene.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number that changes (timer, health, ammo, score, ping, level, XP) uses tabular figures so the HUD never jitters.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Extremes Rule",
+        "body": "Type is either very large and tight or small and widely tracked. Medium-weight, mid-size sentence-case headings don't exist in this system.",
+        "section": "typography"
+      },
+      {
+        "name": "The Figure First Rule",
+        "body": "On the operator plate the operator is the largest thing on screen. Call-outs sit beside the figure and point at it; only the Mission / Settings drawer may cover the plate, and it never covers the roster.",
+        "section": "layout"
+      },
+      {
+        "name": "The No-Glow Rule",
+        "body": "No glows, text shadows or coloured blooms. A HUD readout earns legibility from its scrim, not from light effects.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep one Signal Teal primary action per screen and mark selection with a 2-3px teal edge, not a teal fill.",
+      "**Do** use Signal Teal for your team and Rust for the enemy, everywhere, without exception.",
+      "**Do** set every changing number in tabular figures, and use the monospace readout stack on the dossier plate.",
+      "**Do** use field glass (Smoked Glass, blur, hairline) over a live scene, and the olive dossier plate on solid full-page screens.",
+      "**Do** keep corners square (2px, or 0 on the dossier) and reserve circles for touch controls.",
+      "**Do** keep the operator the largest thing on the plate, with every call-out joined to its kit by a leader line.",
+      "**Do** honour `prefers-reduced-motion` and the Reduced motion setting: transitions and panel slides switch off.",
+      "**Do** keep every touch control at 44px or more with at least 8px between thumb targets (the in-match cluster uses 12px).",
+      "**Do** use Rust Text and Alarm Text for small signal-coloured text."
+    ],
+    "donts": [
+      "**Don't** add glows, text shadows, coloured blooms or drop shadows to panels; the only shadow is the crosshair's 1px edge.",
+      "**Don't** use Rust, Amber or Alarm Red as decorative accents or on calls to action.",
+      "**Don't** bring Stencil Khaki or olive neutrals onto glass panels over the scene.",
+      "**Don't** round plates beyond 2px or introduce pill-shaped buttons.",
+      "**Don't** set mid-size sentence-case headings; type is either huge and tight or small, uppercase and tracked.",
+      "**Don't** set a small label as its own block above a heading; the codename leads and the class and role sit under it."
+    ]
+  }
+}

@@ -15,19 +15,15 @@ try {
   const page = await context.newPage(),
     errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // The root forwards to the front end; picking Conquest on the operation strip reloads it.
   await page.goto(base + "/");
-  await page.waitForFunction(
-    () => document.querySelector("#squad-canvas").dataset.class,
-  );
-  // The lobby picks the playlist with radio tiles rather than a drop-down.
-  const conquestTile = page.getByRole("radio", { name: /Conquest/ });
-  await conquestTile.click();
-  assert.equal(await conquestTile.getAttribute("aria-checked"), "true");
-  assert.match(await page.locator(".training").textContent(), /Conquest/);
-  await page.click(".training");
-  // Mission settings sit on a tab of the operator select, so wait for the field to exist.
-  await page.waitForSelector("#matchMode", { state: "attached" });
-  assert.match(page.url(), /mode=conquest/);
+  await page.waitForSelector("#matchMode");
+  assert.match(page.url(), /arena\.html/);
+  await Promise.all([
+    page.waitForURL(/mode=conquest/),
+    page.selectOption("#matchMode", "conquest"),
+  ]);
+  await page.waitForSelector("#matchMode");
   assert.equal(await page.locator("#matchMode").inputValue(), "conquest");
   await page.goto(base + "/arena.html?mode=conquest&debug=1");
   await page.waitForFunction(() => !!window.__arena);
@@ -167,7 +163,7 @@ try {
   assert.deepEqual(errors, []);
   await mobile.close();
   console.log(
-    "PASS Conquest: lobby launch, imported map, capture/tickets HUD, movement/fire, pause, victory/restart, mode switching, offline reload and mobile layout",
+    "PASS Conquest: root forward and mode switch, imported map, capture/tickets HUD, movement/fire, pause, victory/restart, mode switching, offline reload and mobile layout",
   );
 } finally {
   await browser.close();

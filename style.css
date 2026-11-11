@@ -31,6 +31,9 @@
   --warning: #e5a93b;
   --warning-tint: #2b2414;
   --negative: #e5484d;
+  /* Text-size variants of the signal colours: 4.5:1 or better on HUD glass over the bright sky. */
+  --enemy-text: #ff8a5c;
+  --negative-text: #ff8589;
   --scrim: rgba(9, 11, 13, 0.74);
   /* Square corners and uppercase tracked labels, as in the lobby (lobby.css). */
   --radius-card: 2px;
@@ -528,10 +531,21 @@ input[type="range"] {
   height: 36px;
   border-top: 1px solid var(--border);
 }
-#roster td:not(:first-child),
-#roster th:not(:first-child) {
+/* Text columns read left; only kills and deaths align right as figures. */
+#roster td:nth-child(n + 4),
+#roster th:nth-child(n + 4) {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+#roster td:nth-child(2),
+#roster td:nth-child(3) {
+  color: var(--muted);
+}
+#roster td.cyan {
+  color: var(--accent);
+}
+#roster td.orange {
+  color: var(--enemy-text);
 }
 #rotate {
   z-index: 25;
@@ -697,9 +711,11 @@ input[type="range"] {
   background: var(--accent);
 }
 /* Low health is the one HUD state that needs a signal colour. */
-.health.low strong,
-.health.low small {
+.health.low strong {
   color: var(--negative);
+}
+.health.low small {
+  color: var(--negative-text);
 }
 .health.low .health-track i {
   background: var(--negative);
@@ -900,15 +916,29 @@ input[type="range"] {
   border-radius: var(--radius-control);
   background: var(--scrim);
 }
+/* Kills scored by your team carry the teal edge, so the side reads without relying on hue. */
+#feed > div.ours {
+  border-left: 3px solid var(--accent);
+}
 #feed span {
   font-weight: 600;
 }
+#feed .orange {
+  color: var(--enemy-text);
+}
+/* Performance readout: off unless enabled in Settings or ?debug=1; on a scrim when shown. */
 #stats {
   position: absolute;
-  bottom: 4px;
-  left: 24px;
+  top: calc(max(20px, env(safe-area-inset-top)) + 64px);
+  left: max(24px, env(safe-area-inset-left));
+  padding: 2px 8px;
+  border-radius: var(--radius-control);
+  background: var(--glass-strong);
+  color: var(--muted);
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
+}
+#stats:empty {
+  display: none;
 }
 #death {
   position: absolute;
@@ -982,7 +1012,7 @@ input[type="range"] {
   color: var(--accent);
 }
 #objectives [data-owner="ember"] small {
-  color: var(--enemy);
+  color: var(--enemy-text);
 }
 #objectives [data-contested="true"] small {
   color: var(--warning);
@@ -1005,10 +1035,19 @@ input[type="range"] {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+/* The right-thumb cluster is a grid anchored to FIRE with 12 px between every pair of
+   buttons: FIRE / Aim / Reload on the lower row, Jump / Crouch / Swap above. Reload never
+   touches FIRE, so a missed shot cannot start a reload. */
+#touch {
+  --fire-right: max(36px, calc(env(safe-area-inset-right) + 16px));
+  --fire-bottom: 130px;
+}
 #touch button {
   pointer-events: auto;
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  /* Two-tone ring: the light edge reads on dark walls, the dark hairline on bright sky. */
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
   background: rgba(0, 0, 0, 0.45);
   color: #fff;
   border-radius: 50%;
@@ -1051,8 +1090,8 @@ input[type="range"] {
   background: rgba(255, 255, 255, 0.45);
 }
 #touch #fire {
-  right: 36px;
-  bottom: 130px;
+  right: var(--fire-right);
+  bottom: var(--fire-bottom);
   width: 80px;
   height: 80px;
   font-size: 14px;
@@ -1060,24 +1099,24 @@ input[type="range"] {
   background: rgba(53, 26, 16, 0.7);
 }
 #aim {
-  right: 128px;
-  bottom: 165px;
+  right: calc(var(--fire-right) + 92px);
+  bottom: calc(var(--fire-bottom) + 24px);
 }
 #reload {
-  right: 123px;
-  bottom: 100px;
+  right: calc(var(--fire-right) + 160px);
+  bottom: calc(var(--fire-bottom) + 24px);
 }
 #jump {
-  right: 31px;
-  bottom: 222px;
+  right: calc(var(--fire-right) + 12px);
+  bottom: calc(var(--fire-bottom) + 92px);
 }
 #crouch {
-  right: 96px;
-  bottom: 247px;
+  right: calc(var(--fire-right) + 80px);
+  bottom: calc(var(--fire-bottom) + 92px);
 }
 #switch {
-  right: 185px;
-  bottom: 123px;
+  right: calc(var(--fire-right) + 148px);
+  bottom: calc(var(--fire-bottom) + 92px);
 }
 /* Sprint lock sits above the stick, where the movement thumb can tap it before a run. */
 #sprint {
@@ -1096,6 +1135,26 @@ input[type="range"] {
 }
 .touch-mode #hud {
   padding: 12px 18px;
+}
+/* On touch the right edge belongs to the thumb buttons, so the kill feed sits centred under
+   the scoreboard (below the sector strip in Conquest) and keeps only the three newest kills. */
+.touch-mode #feed {
+  top: 64px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+  font-size: 12px;
+}
+.touch-mode #objectives:not([hidden]) ~ #feed {
+  top: 112px;
+}
+.touch-mode #feed > div:nth-last-child(n + 4) {
+  display: none;
+}
+.touch-mode .hud-button {
+  height: 44px;
+  min-width: 72px;
 }
 .touch-mode .bottomline {
   bottom: 20px;
@@ -1219,23 +1278,8 @@ input[type="range"] {
   .touch-mode .bottomline {
     bottom: 16px;
   }
-  #touch #fire {
-    bottom: 118px;
-  }
-  #aim {
-    bottom: 178px;
-  }
-  #reload {
-    bottom: 108px;
-  }
-  #jump {
-    bottom: 207px;
-  }
-  #crouch {
-    bottom: 246px;
-  }
-  #switch {
-    bottom: 145px;
+  #touch {
+    --fire-bottom: 118px;
   }
   #sprint {
     left: calc(max(28px, env(safe-area-inset-left)) + 22px);
@@ -1387,180 +1431,6 @@ input[type="range"] {
 }
 .overlay.setup .fields label {
   color: var(--faint);
-}
-
-/* ---- Roster */
-.ops-roster {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 0;
-}
-.op-list {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.op-card {
-  position: relative;
-  display: grid;
-  flex: 1 1 0;
-  max-height: 170px;
-  grid-template-columns: 96px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-  padding: 8px 12px 8px 8px;
-  border: 1px solid var(--line);
-  border-left: 3px solid transparent;
-  background: var(--surface);
-  color: var(--text);
-  text-align: left;
-  transition:
-    background-color 0.12s,
-    border-color 0.12s,
-    transform 0.08s;
-}
-.op-card:hover:not(:disabled) {
-  background: var(--raised);
-  border-color: var(--line-strong);
-}
-.op-card:active:not(:disabled) {
-  transform: scale(0.985);
-}
-.op-card[aria-checked="true"] {
-  background: var(--raised);
-  border-color: var(--line-strong);
-  border-left-color: var(--accent);
-}
-.op-card:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.op-card canvas {
-  width: 96px;
-  height: 96px;
-  background: #0a0d0b;
-}
-.op-card[aria-checked="true"] canvas {
-  background: #10231f;
-}
-.op-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.op-card strong {
-  font-size: 20px;
-  line-height: 24px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-.op-card-text span {
-  font-size: 13px;
-  color: var(--muted);
-}
-.op-card small {
-  font-family: var(--readout);
-  font-size: 11px;
-  color: var(--faint);
-}
-.op-card kbd {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  font-family: var(--readout);
-  font-size: 11px;
-  color: var(--faint);
-}
-.op-card[aria-checked="true"] kbd {
-  color: var(--accent);
-}
-.sr-select {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* ---- Stage */
-.ops-stage {
-  position: relative;
-  display: grid;
-  place-items: end center;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--line);
-}
-/* The floor the operator stands on: a flat disc with a team-coloured ring. */
-.ops-stage::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 5%;
-  width: min(62%, 420px);
-  aspect-ratio: 4 / 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: #121712;
-  box-shadow: 0 0 0 1px rgba(63, 199, 184, 0.35);
-}
-#operatorStage {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  width: auto;
-  max-width: 100%;
-  max-height: 100%;
-  aspect-ratio: 760 / 1000;
-  cursor: grab;
-  touch-action: none;
-}
-#operatorStage:active {
-  cursor: grabbing;
-}
-.dossier {
-  position: absolute;
-  z-index: 2;
-  inset: 22px 24px 22px;
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
-}
-.op-role {
-  margin: 0;
-  color: var(--khaki);
-  font-family: var(--readout);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-/* The codename sits behind the operator, as large as the stage allows. */
-.ops .op-name {
-  margin: 2px 0 0;
-  font-size: clamp(64px, 8.4vw, 150px);
-  line-height: 0.9;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-.op-brief {
-  position: relative;
-  z-index: 2;
-  margin: auto 0 0;
-  max-width: 250px;
-  padding: 10px 12px;
-  background: rgba(7, 9, 8, 0.86);
-  border-left: 2px solid var(--accent);
-  color: var(--text);
-  font-size: 13px;
-  line-height: 19px;
 }
 
 /* ---- Tabs: loadout, mission, settings */
@@ -1732,8 +1602,8 @@ input[type="range"] {
 .map-tagline {
   margin: 0;
   color: var(--khaki);
-  font-family: var(--readout);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 .overlay.setup #briefDescription {
   margin: 0;
@@ -1792,15 +1662,122 @@ input[type="range"] {
 .reticle i:nth-child(4) {
   right: 0;
 }
-.signals h3 {
-  margin-bottom: 6px;
+/* The shared Settings panel (src/settings-panel.js), grouped like a shooter options menu:
+   Profile, Controls, Key bindings, Audio, Video. Stencil headings, monospace read-outs. */
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-#controlsHelp {
+.set-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.set-group + .set-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+/* Group headings carry the stencil; field labels read as plain sentence-case rows, the same
+   voice as the key-binding list, so a heading never looks like one more field. */
+.set-field,
+.set-range {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.set-range > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.set-range output {
+  color: var(--text);
+  font-family: var(--readout);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.set-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  color: var(--text);
+  font-size: 13px;
+}
+.set-check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.set-note {
   margin: 0;
   color: var(--muted);
   font-family: var(--readout);
   font-size: 12px;
-  line-height: 20px;
+  line-height: 18px;
+}
+.set-note:empty {
+  display: none;
+}
+.keybinds {
+  display: grid;
+  gap: 4px;
+}
+.keybind {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.keycap {
+  min-width: 72px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--readout);
+  font-size: 12px;
+  transition: border-color 0.12s;
+}
+.keycap:hover {
+  border-color: var(--khaki, var(--text));
+}
+.keycap[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#resetBindings {
+  align-self: flex-start;
+}
+/* Device-specific rows: key bindings and mouse sliders on desktop, look speed on touch. */
+.touch-mode .keys-group,
+.touch-mode .desktop-only,
+body:not(.touch-mode) .touch-only {
+  display: none;
+}
+@media (pointer: coarse) {
+  .set-check {
+    min-height: 44px;
+  }
+  .set-range input,
+  .dialog label.range input {
+    height: 44px;
+  }
+}
+/* Settings › Reduced motion: the same effect as the operating-system preference. */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  transition: none !important;
+  animation: none !important;
 }
 
 /* ---- Deploy bar */
@@ -1876,11 +1853,398 @@ input[type="range"] {
   letter-spacing: 0.24em;
 }
 
-/* ---- Large windows: the whole screen fits without scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  .ratings i {
+    transition: none;
+  }
+}
+
+/* ---------- Front end: the specimen plate ----------
+   The chosen operator stands at full height on a gridded field-manual plate holding their class
+   weapon, the squad dimmed behind. Each piece of kit is labelled by a teal leader line that ends
+   on the model in a 7 px square terminal and runs to the call-out that changes it. The roster is
+   a rail of file tabs on the right; the selected tab protrudes onto the plate. Mission and
+   Settings open in a drawer over the plate. Mode, map, bots, rules and Deploy run along the
+   bottom strip. */
+.sr-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.overlay.setup .bar-inner {
+  max-width: none;
+  gap: 28px;
+}
+.overlay.setup .bar nav {
+  margin-left: auto;
+}
+/* Operator / Mission / Settings sit in the bar, at the bar's full height. */
+.overlay.setup .ops-tabs {
+  display: flex;
+  align-self: stretch;
+  padding-left: 12px;
+  border: 0;
+  border-left: 1px solid var(--line);
+}
+.overlay.setup .ops-tabs button {
+  height: 100%;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.overlay.setup .ops-tabs button:hover {
+  color: var(--text);
+}
+.overlay.setup .ops-tabs button[aria-selected="true"] {
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.ops-page {
+  padding: 0;
+  gap: 0;
+}
+.ops {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 208px;
+  min-height: 560px;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---- The plate */
+.plate {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(214, 224, 200, 0.035) 1px, transparent 1px) 0 0 / 40px
+      40px,
+    linear-gradient(90deg, rgba(214, 224, 200, 0.035) 1px, transparent 1px) 0
+      0 / 40px 40px,
+    linear-gradient(#0b0e0c, var(--ground));
+}
+#operatorStage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: pan-y;
+}
+#operatorStage:active {
+  cursor: grabbing;
+}
+.dossier {
+  position: absolute;
+  z-index: 2;
+  top: 28px;
+  left: 32px;
+  max-width: 340px;
+  pointer-events: none;
+}
+.op-role {
+  margin: 2px 0 0;
+  color: var(--khaki);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ops .op-name {
+  margin: 0;
+  color: var(--text);
+  font-size: 56px;
+  line-height: 60px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.op-brief {
+  margin: 8px 0 0;
+  max-width: 300px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.leaders {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.leaders polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.leaders rect {
+  fill: var(--accent);
+}
+
+/* ---- Call-outs: each one the control for the piece of kit its leader line touches. */
+.callouts {
+  position: absolute;
+  z-index: 3;
+  top: 24px;
+  right: 40px;
+  bottom: 24px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+/* Centred in the column while it fits; scrolls from the top when it does not. */
+.callouts > :first-child {
+  margin-top: auto;
+}
+.callouts > :last-child {
+  margin-bottom: auto;
+}
+.callout-tag {
+  margin-left: 6px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* Single-row call-outs: the label on the left, the control or value on the right. */
+.callout.callout-row,
+.callout.callout-row label {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  justify-items: stretch;
+  column-gap: 8px;
+  text-align: left;
+}
+.callout.callout-row label {
+  grid-column: 1 / -1;
+}
+.callout {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+}
+.callout label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+.callout label,
+.callout-label {
+  color: var(--khaki);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.callout b {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.overlay.setup .callout select {
+  height: 36px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.overlay.setup #weaponPreview {
+  display: block;
+  width: 100%;
+  height: 84px;
+  min-height: 0;
+  object-fit: contain;
+  background: #0a0d0b;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.overlay.setup .callout .weapon-info {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--readout);
+  font-size: 12px;
+  line-height: 17px;
+}
+.callout .ratings {
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 6px 10px;
+}
+.callout .ratings dt {
+  font-size: 12px;
+}
+
+/* ---- Roster rail: file tabs; the selected one protrudes onto the plate. */
+.ops-roster {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: #0a0d0b;
+}
+.ops-roster h2 {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.op-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.op-card {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1px;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: #0a0d0b;
+  color: var(--faint);
+  text-align: left;
+  transition:
+    background-color 0.12s,
+    margin 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.op-card strong {
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.op-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.op-card small {
+  font-size: 12px;
+  color: var(--faint);
+}
+.op-card kbd {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: var(--readout);
+  font-size: 11px;
+  color: var(--faint);
+}
+.op-card:hover:not(:disabled) {
+  background: var(--surface);
+}
+.op-card[aria-checked="true"] {
+  z-index: 4;
+  margin-left: -24px;
+  background: var(--raised);
+  border-left: 3px solid var(--accent);
+}
+.op-card[aria-checked="true"] strong {
+  color: var(--text);
+}
+.op-card[aria-checked="true"] kbd {
+  color: var(--accent);
+}
+.op-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* With the drawer open the selected tab stays in the rail instead of reaching under it. */
+.ops:has(.ops-drawer:not([hidden])) .op-card[aria-checked="true"] {
+  margin-left: 0;
+}
+
+/* ---- Drawer: Mission and Settings over the plate, beside the roster. */
+.ops-drawer {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  right: 208px;
+  bottom: 0;
+  width: min(480px, calc(100% - 208px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--surface);
+  border-left: 1px solid var(--line-strong);
+}
+.ops-drawer .ops-tab-panel {
+  flex: none;
+  padding: 0;
+  overflow: visible;
+}
+#closeDrawer {
+  align-self: flex-start;
+}
+
+/* ---- Operation strip */
+.overlay.setup .deploy-bar {
+  grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) auto auto;
+  gap: 24px;
+  padding: 12px 24px;
+  border-top: 0;
+}
+.strip-fields {
+  display: flex;
+  gap: 12px;
+}
+.overlay.setup .op-title {
+  min-width: 0;
+}
+.overlay.setup .strip-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 220px;
+  color: var(--khaki);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.overlay.setup .strip-fields select {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.overlay.setup .deploy-bar .rules {
+  grid-template-columns: repeat(2, auto);
+}
+
+/* ---- Large windows: the whole front end fits without scrolling. */
 @media (min-width: 1100px) and (min-height: 640px) {
   .ops-page {
     flex: 1;
     min-height: 0;
+    padding: 0;
   }
   .ops {
     flex: 1;
@@ -1888,86 +2252,407 @@ input[type="range"] {
     grid-template-rows: minmax(0, 1fr);
   }
 }
-/* ---- Narrow windows: roster becomes a strip, the stage shortens, Deploy stays in reach. */
+@media (min-width: 1100px) and (max-width: 1359px) {
+  .overlay.setup .deploy-bar .rules {
+    display: none;
+  }
+}
+@media (min-width: 1100px) and (max-height: 820px) {
+  .overlay.setup .callout .weapon-info {
+    display: none;
+  }
+  .callouts {
+    gap: 8px;
+  }
+  .callout {
+    padding: 7px 12px;
+  }
+  .overlay.setup #weaponPreview {
+    height: 60px;
+  }
+  .callout .ratings {
+    gap: 3px 10px;
+  }
+  .callout .ratings dt {
+    font-size: 11px;
+    line-height: 15px;
+  }
+  .ops .op-name {
+    font-size: 44px;
+    line-height: 48px;
+  }
+}
+
+/* ---- Narrow windows: the roster becomes four tabs across the top, the call-outs stack under
+   the operator, the drawer covers the page, and the strip stays in reach at the bottom. */
 @media (max-width: 1099px) {
-  .op-card {
-    max-height: none;
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-  .op-card canvas {
-    width: 76px;
-    height: 76px;
-  }
   .ops {
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
   }
+  .ops-roster {
+    order: -1;
+    border-left: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .ops-roster h2 {
+    display: none;
+  }
   .op-list {
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .op-card {
-    flex: 0 0 210px;
+    min-height: 72px;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
   }
-  .ops-stage {
-    height: min(62vh, 520px);
+  .op-card[aria-checked="true"] {
+    margin-left: 0;
+    border-left: 0;
+    box-shadow: inset 0 3px var(--accent);
   }
-  .ops-panel {
-    min-height: 420px;
+  .op-card small {
+    display: none;
   }
-  .deploy-bar {
+  .plate {
+    display: flex;
+    flex-direction: column;
+  }
+  #operatorStage {
+    position: relative;
+    inset: auto;
+    height: min(64vh, 560px);
+  }
+  .callouts {
+    position: static;
+    width: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 24px 24px;
+    overflow: visible;
+  }
+  .callout-weapon {
+    grid-column: 1 / -1;
+  }
+  .ops-drawer {
+    position: fixed;
+    inset: 49px 0 0;
+    width: auto;
+  }
+  .overlay.setup .deploy-bar {
     position: sticky;
     bottom: 0;
-    z-index: 3;
+    z-index: 5;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px 18px;
-    padding: 12px 0;
+    gap: 10px 16px;
+    padding: 12px max(16px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
     background: var(--ground);
+    border-top: 1px solid var(--line);
+  }
+  .strip-fields {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .overlay.setup .strip-fields label {
+    flex: 1;
+    width: auto;
+    min-width: 0;
   }
   .overlay.setup .deploy-bar .rules {
     display: none;
   }
 }
 @media (max-width: 560px) {
-  .ops-page {
-    padding: 12px 16px;
-  }
-  .op-card {
-    flex-basis: 180px;
-    grid-template-columns: 56px minmax(0, 1fr);
-  }
-  .op-card canvas {
-    width: 56px;
-    height: 56px;
+  .dossier {
+    left: 16px;
+    top: 16px;
   }
   .ops .op-name {
-    font-size: 64px;
+    font-size: 40px;
+    line-height: 44px;
   }
-  .overlay.setup .deploy-bar h1 {
-    font-size: 20px;
-    line-height: 24px;
+  .op-brief {
+    display: none;
   }
-  .overlay.setup #play {
-    min-width: 0;
-    padding: 0 22px;
+  .op-card {
+    padding: 10px;
   }
-  .overlay.setup .brand {
-    letter-spacing: 0.14em;
-  }
-  .overlay.setup .bar-inner,
-  .overlay.setup .bar nav {
-    gap: 14px;
-  }
-  .overlay.setup .bar nav a {
+  .op-card strong {
+    font-size: 15px;
     letter-spacing: 0.08em;
   }
-  .overlay.setup .bar nav a[aria-current="page"] {
+  .op-card span {
+    font-size: 11px;
+  }
+  .callouts {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px 16px;
+  }
+  .overlay.setup .deploy-bar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .strip-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    order: 0;
+  }
+  .overlay.setup .strip-fields label {
+    max-width: none;
+  }
+  .overlay.setup .strip-fields label:first-child {
+    grid-column: 1 / -1;
+  }
+  .overlay.setup #play {
+    position: fixed;
+    z-index: 8;
+    left: 16px;
+    right: 16px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    min-width: 0;
+  }
+  .overlay.setup .bar-inner {
+    gap: 12px;
+    padding: 0 12px;
+  }
+  .overlay.setup .bar nav,
+  .overlay.setup .scope,
+  .overlay.setup .brand > span {
+    display: none;
+  }
+  .overlay.setup .ops-tabs {
+    margin-left: auto;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .overlay.setup .ops-tabs button {
+    padding: 0 10px;
+    letter-spacing: 0.1em;
+  }
+}
+
+/* ---- Phones held sideways: plate and rail side by side in one screen, the operator at full
+   height beside a compact call-out column, the strip one row along the bottom. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .overlay.setup {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+  }
+  .overlay.setup .bar {
+    flex: none;
+  }
+  .overlay.setup .bar nav {
+    display: none;
+  }
+  .setup-page.ops-page {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+  .ops {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) 136px;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .ops-roster {
+    order: 0;
+    border-left: 1px solid var(--line);
+    border-bottom: 0;
+  }
+  .ops-roster h2 {
+    display: none;
+  }
+  .op-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .op-card {
+    min-height: 44px;
+    padding: 6px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .op-card[aria-checked="true"] {
+    margin-left: -14px;
+    border-left: 3px solid var(--accent);
+    box-shadow: none;
+  }
+  .op-card strong {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .op-card span {
+    font-size: 11px;
+    line-height: 14px;
+  }
+  .op-card small,
+  .op-card kbd,
+  .op-brief,
+  .op-role {
+    display: none;
+  }
+  .plate {
+    display: block;
+  }
+  #operatorStage {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+  }
+  .dossier {
+    top: 10px;
+    left: max(14px, env(safe-area-inset-left));
+  }
+  .ops .op-name {
+    font-size: 30px;
+    line-height: 34px;
+  }
+  .callouts {
+    position: absolute;
+    top: 8px;
+    right: 22px;
+    bottom: 8px;
+    width: 250px;
+    display: flex;
+    gap: 6px;
+    padding: 0;
+    overflow-y: auto;
+  }
+  .callout {
+    padding: 6px 8px;
+  }
+  .callout.callout-row,
+  .callout.callout-row label {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+  .callout-tag {
+    display: none;
+  }
+  .overlay.setup #weaponPreview,
+  .overlay.setup .callout .weapon-info,
+  .callout .ratings {
+    display: none;
+  }
+  .ops-drawer {
+    position: absolute;
+    inset: 0 136px 0 auto;
+    width: min(440px, calc(100% - 136px));
+  }
+  .overlay.setup .deploy-bar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 6px max(14px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  .strip-fields {
+    order: 0;
+    grid-column: auto;
+    gap: 8px;
+  }
+  .overlay.setup .strip-fields label {
+    flex: 1;
+    width: auto;
+    font-size: 0;
+    gap: 0;
+  }
+  .overlay.setup .op-title,
+  .overlay.setup .deploy-bar .rules {
+    display: none;
+  }
+  .overlay.setup .deploy-bar h1 {
+    font-size: 16px;
+    line-height: 20px;
+  }
+  .overlay.setup #play {
+    min-width: 150px;
+    height: 44px;
+  }
+}
+
+/* ---- Touch screens: every control meets the 44 px thumb target, whatever the layout. */
+@media (pointer: coarse) {
+  select,
+  input:not([type="range"]):not([type="checkbox"]),
+  .primary,
+  .secondary-button,
+  .keycap {
+    min-height: 44px;
+  }
+  .bar nav a,
+  .bar .brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .ops-tabs button {
+    height: 44px;
+  }
+  .op-card kbd {
     display: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .ratings i {
-    transition: none;
+
+/* ---- Pause on phones held sideways: weapon on the left, tuning and the two actions on the
+   right, so Resume is on screen without scrolling. */
+@media (max-height: 500px) and (min-width: 600px) {
+  #pause .dialog {
+    width: min(760px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "main tuning"
+      "main resume"
+      "main back";
+    align-items: start;
+    column-gap: 24px;
   }
+  #pause .pause-main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #pause .pause-tuning {
+    grid-area: tuning;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #resume {
+    grid-area: resume;
+  }
+  #back {
+    grid-area: back;
+  }
+}
+.pause-main,
+.pause-tuning {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- Browser surfaces in the palette: selection, caret and scrollbars. */
+::selection {
+  background: rgba(63, 199, 184, 0.32);
+  color: var(--text);
+}
+input,
+textarea {
+  caret-color: var(--accent);
+}
+* {
+  scrollbar-color: var(--line-strong) transparent;
 }

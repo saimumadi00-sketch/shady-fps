@@ -1,5 +1,6 @@
 // Normalizes keyboard, captured mouse, fallback dragging, and multi-pointer touch into one input state.
 import { clamp } from "./math.js";
+import { DEFAULT_BINDINGS, bindingMap } from "./bindings.js";
 export class InputManager {
   // Install browser listeners once; active gates prevent menu interactions from firing the weapon.
   constructor(canvas, onPause, onTouch) {
@@ -22,29 +23,40 @@ export class InputManager {
     this.moveY = 0;
     this.touchCrouch = false;
     this.onTouch = onTouch;
+    // Player key bindings; set from Settings. Rebound keys arrive as the default codes.
+    this.invertY = false;
+    this.setBindings(DEFAULT_BINDINGS);
     // Keep held keys separate from one-shot actions so jumps and semi-auto shots use press edges.
     window.addEventListener("keydown", (e) => {
       if (!this.active) return;
-      if (["Space", "ControlLeft", "ControlRight", "Tab"].includes(e.code))
+      const code = this.translate(e.code);
+      if (
+        ["Space", "ControlLeft", "ControlRight", "Tab"].includes(e.code) ||
+        (code && code !== e.code)
+      )
         e.preventDefault();
-      if (!this.keys.has(e.code)) {
-        this.actions.add(e.code);
-        // Q toggles between the primary and sidearm like the touch SWAP button.
-        if (e.code === "KeyQ") this.actions.add("switch");
-      }
-      this.keys.add(e.code);
       if (e.code === "Escape") onPause();
+      if (!code) return;
+      if (!this.keys.has(code)) {
+        this.actions.add(code);
+        // The swap key toggles between the primary and sidearm like the touch SWAP button.
+        if (code === "KeyQ") this.actions.add("switch");
+      }
+      this.keys.add(code);
     });
-    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    window.addEventListener("keyup", (e) => {
+      const code = this.translate(e.code);
+      if (code) this.keys.delete(code);
+    });
     // Captured aim uses relative deltas; fallback drag uses client-coordinate differences.
     document.addEventListener("mousemove", (e) => {
       if (this.active && document.pointerLockElement === canvas) {
         this.dx += e.movementX;
-        this.dy += e.movementY;
+        this.dy += this.invertY ? -e.movementY : e.movementY;
       } else if (this.active && this.mouseFallback && this.mouseDrag) {
         if (this.lastMouse) {
           this.dx += e.clientX - this.lastMouse.x;
-          this.dy += e.clientY - this.lastMouse.y;
+          this.dy += (this.invertY ? -1 : 1) * (e.clientY - this.lastMouse.y);
         }
         this.lastMouse = { x: e.clientX, y: e.clientY };
       }
@@ -133,6 +145,19 @@ export class InputManager {
     );
     this.touchController = new TouchInputController(this);
   }
+  // Install a binding map (see bindings.js); held keys are dropped so none stay stuck.
+  setBindings(bindings) {
+    this.bindings = bindings;
+    const { map, reserved } = bindingMap(bindings);
+    this.keyMap = map;
+    this.reservedKeys = reserved;
+    this.keys.clear();
+  }
+  // Physical key -> the default code gameplay reads, or null for a default key rebound away.
+  translate(code) {
+    if (this.keyMap.has(code)) return this.keyMap.get(code);
+    return this.reservedKeys.has(code) ? null : code;
+  }
   // Read and remove a one-shot action so catch-up ticks cannot repeat it.
   consume(k) {
     const v = this.actions.has(k);
@@ -216,7 +241,7 @@ export class TouchInputController {
       (e) => {
         if (e.pointerId === this.look) {
           input.dx += e.clientX - this.lastX;
-          input.dy += e.clientY - this.lastY;
+          input.dy += (input.invertY ? -1 : 1) * (e.clientY - this.lastY);
           this.lastX = e.clientX;
           this.lastY = e.clientY;
         }
@@ -286,7 +311,7 @@ export class TouchInputController {
           const f = this.fireDrag;
           if (f && e.pointerId === f.id) {
             input.dx += e.clientX - f.x;
-            input.dy += e.clientY - f.y;
+            input.dy += (input.invertY ? -1 : 1) * (e.clientY - f.y);
             f.x = e.clientX;
             f.y = e.clientY;
           }
