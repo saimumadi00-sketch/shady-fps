@@ -29,28 +29,41 @@ void main(){float c=cos(angle),s=sin(angle);float cp=cos(pitch),sp=sin(pitch);fl
 const FS = `#version 300 es
 precision highp float;
 in vec3 tint;in float dist;in vec3 surfacePosition;in vec3 surfaceNormal;
-uniform float surfaceDetail;uniform float firstPerson;out vec4 pixel;
+uniform float surfaceDetail;uniform float firstPerson;uniform float muzzle;uniform vec3 eye;out vec4 pixel;
 void main(){
   vec3 n=normalize(surfaceNormal);
-  float sun=max(0.,dot(n,normalize(vec3(-.4,.85,.3))));
+  vec3 sunDir=normalize(vec3(-.45,.8,.35));
+  float sun=max(0.,dot(n,sunDir));
   float sky=.5+.5*n.y;
-  vec3 lighting=mix(vec3(.28,.30,.29),vec3(.47,.51,.54),sky)+vec3(.72,.68,.60)*sun;
+  // Overcast field light: dim, cool ambient under a low, slightly warm sun.
+  vec3 lighting=mix(vec3(.20,.22,.22),vec3(.43,.47,.50),sky)+vec3(.74,.68,.57)*sun;
   // Restrained grain avoids the previous cloudy concrete pattern.
   float grain=fract(sin(dot(floor(surfacePosition*95.),vec3(12.9898,78.233,39.425)))*43758.5453)-.5;
-  float variation=1.+surfaceDetail*grain*.012;
+  float variation=1.+surfaceDetail*grain*.018;
   // Fade the grain at distance to avoid sparkling on low-resolution displays.
   variation=mix(1.,variation,1.-smoothstep(8.,35.,dist));
-  float baseShade=mix(.83,1.,smoothstep(0.,.7,surfacePosition.y));
+  // Walls darken toward the ground, where dirt and contact shadow gather.
+  float baseShade=mix(.74,1.,smoothstep(0.,.9,surfacePosition.y));
   baseShade=mix(baseShade,1.,max(firstPerson,abs(n.y)));
   float luminance=dot(tint,vec3(.2126,.7152,.0722));
-  vec3 material=mix(tint,vec3(luminance),.18*(1.-firstPerson));
+  // Muted, weathered colour in the world; the gun and hands keep theirs.
+  vec3 material=mix(tint,vec3(luminance),.3*(1.-firstPerson));
   vec3 shaded=material*lighting*variation*baseShade;
+  // The local muzzle flash lights nearby surfaces for the instant of each shot.
+  vec3 toEye=normalize(eye-surfacePosition);
+  float reach=1.-smoothstep(0.,11.,dist);
+  shaded+=material*vec3(1.6,1.15,.6)*muzzle*reach*reach*(.35+.65*max(0.,dot(n,toEye)))*(1.-firstPerson);
+  shaded+=tint*vec3(1.1,.8,.42)*muzzle*.3*firstPerson;
   // A small steel highlight gives firearm edges definition without glossy gloves.
-  vec3 halfLight=normalize(normalize(vec3(-.4,.85,.3))+normalize(-surfacePosition));
+  vec3 halfLight=normalize(sunDir+normalize(-surfacePosition));
   float steel=firstPerson*(1.-step(.17,tint.r));
   shaded+=vec3(.075)*steel*pow(max(0.,dot(n,halfLight)),24.);
-  float fog=smoothstep(28.,100.,dist)*(1.-firstPerson);
-  pixel=vec4(mix(shaded,vec3(.61,.66,.68),fog*.65),1.);
+  // Gentle filmic contrast and a faint olive cast, like graded field footage.
+  vec3 c=clamp(shaded,0.,1.);
+  shaded=mix(c,c*c*(3.-2.*c),.4)*vec3(.97,1.,.955);
+  // Haze closes in sooner than clear air would, flattening distant cover into the sky.
+  float fog=smoothstep(18.,85.,dist)*(1.-firstPerson);
+  pixel=vec4(mix(shaded,vec3(.5,.55,.56),fog*.72),1.);
 }`;
 export class Renderer {
   // Allocate reusable CPU buffers before creating GPU resources.
@@ -100,6 +113,7 @@ export class Renderer {
     this.eye = gl.getUniformLocation(this.program, "eye");
     this.surfaceDetail = gl.getUniformLocation(this.program, "surfaceDetail");
     this.firstPerson = gl.getUniformLocation(this.program, "firstPerson");
+    this.muzzle = gl.getUniformLocation(this.program, "muzzle");
     const vertices = [];
     // Describe the six cube faces once; indexed corner expansion emits two triangles per face.
     const faces = [
@@ -173,7 +187,7 @@ export class Renderer {
     this.weaponModels.clear();
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
-    gl.clearColor(0.61, 0.66, 0.68, 1);
+    gl.clearColor(0.5, 0.55, 0.56, 1);
   }
   // Create a VAO with shared cube vertices and per-instance position, size, color, and yaw.
   batch(data, usage) {
@@ -288,8 +302,24 @@ export class Renderer {
         this.punch.kick(punchStrength(p.weapon), this.aimBlend || 0);
         this.fx.eject({ ...cam, floor: p.y }, p.weapon);
       }
+    // Taking a round jolts the view (presentation only; aim is untouched). Skipped when the
+    // player asked for reduced motion.
+    const hurt = game.hurt || 0;
+    if (
+      inGame &&
+      p.alive &&
+      hurt > (this.seenHurt || 0) + 0.05 &&
+      !document.body.classList.contains("reduced-motion")
+    )
+      this.punch.kick(1.8, 0);
+    this.seenHurt = hurt;
     this.gunRecoil.update(elapsed);
     this.punch.update(elapsed);
+    // Muzzle flash light: full on the frame of the shot, gone within the flash's 55 ms.
+    g.uniform1f(
+      this.muzzle,
+      inGame && p.alive ? Math.min(1, Math.max(0, p.flash || 0) / 0.055) : 0,
+    );
     if (inGame) {
       cam.pitch += this.punch.pitch;
       cam.yaw += this.punch.yaw;

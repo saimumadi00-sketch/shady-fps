@@ -136,7 +136,8 @@ export class NetworkClient {
     this.interpolation.push(packet, performance.now());
     const g = this.game,
       old = g.player,
-      oldHp = old.hp;
+      oldHp = old.hp,
+      oldSuppression = old.suppression || 0;
     // Other players' shots are not simulated locally: a fresh muzzle flash together with a
     // restarted fire cooldown marks a new shot, which plays at the shooter's position.
     for (const a of packet.actors) {
@@ -196,6 +197,13 @@ export class NetworkClient {
     });
     if (this.ready && old === g.player && g.player.hp < oldHp)
       g.audio.play(g.player.hp <= 0 ? "death" : "hurt", 0.4);
+    // A fresh near miss: the round's crack (the server does not send where it passed).
+    if (
+      this.ready &&
+      old === g.player &&
+      (g.player.suppression || 0) > oldSuppression + 0.05
+    )
+      g.audio.play("snap", 0.6);
     g.hit = Math.max(0, (g.player.hitUntil || 0) - g.time);
     g.hitKind = g.player.hitKind || "body";
     g.hurt = Math.max(0, (g.player.hurtUntil || 0) - g.time);
@@ -245,7 +253,10 @@ export class NetworkClient {
       p.cooldown === 0 &&
       p.mag > 0 &&
       a.reload <= 0 &&
-      a.cooldown <= 0
+      a.cooldown <= 0 &&
+      // The server holds fire until the gun is back up from a sprint.
+      !a.sprinting &&
+      !(a.sprintOut > 0)
     ) {
       p.mag--;
       p.cooldown = w.interval;

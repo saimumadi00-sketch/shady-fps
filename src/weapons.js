@@ -34,6 +34,14 @@ export const WEAPONS = Object.freeze(
       equipTime: 0.28,
       weight: 3.5,
       adsMove: 0.65,
+      // Seconds after a sprint before the gun is back on target and can fire.
+      sprintOut: 0.2,
+      // Shot bloom in degrees: growth per round, cap, recovery per second.
+      bloom: [0.025, 0.4, 1.0],
+      // Closed-bolt guns keep a round chambered through a tactical reload (magazine + 1).
+      chamber: true,
+      // How hard a near miss suppresses the target, relative to a rifle round.
+      suppress: 1,
     },
     {
       name: "SMG / COMPACT",
@@ -62,6 +70,14 @@ export const WEAPONS = Object.freeze(
       equipTime: 0.18,
       weight: 2.2,
       adsMove: 0.85,
+      // Seconds after a sprint before the gun is back on target and can fire.
+      sprintOut: 0.1,
+      // Shot bloom in degrees: growth per round, cap, recovery per second.
+      bloom: [0.035, 0.55, 1.4],
+      // Closed-bolt guns keep a round chambered through a tactical reload (magazine + 1).
+      chamber: true,
+      // How hard a near miss suppresses the target, relative to a rifle round.
+      suppress: 1,
     },
     {
       name: "P / SIDEARM",
@@ -90,6 +106,14 @@ export const WEAPONS = Object.freeze(
       equipTime: 0.15,
       weight: 1.2,
       adsMove: 0.8,
+      // Seconds after a sprint before the gun is back on target and can fire.
+      sprintOut: 0.08,
+      // Shot bloom in degrees: growth per round, cap, recovery per second.
+      bloom: [0.05, 0.4, 1.4],
+      // Closed-bolt guns keep a round chambered through a tactical reload (magazine + 1).
+      chamber: true,
+      // How hard a near miss suppresses the target, relative to a rifle round.
+      suppress: 0.8,
     },
     {
       name: "DMR / MARKSMAN RIFLE",
@@ -118,6 +142,14 @@ export const WEAPONS = Object.freeze(
       equipTime: 0.4,
       weight: 4.6,
       adsMove: 0.4,
+      // Seconds after a sprint before the gun is back on target and can fire.
+      sprintOut: 0.32,
+      // Shot bloom in degrees: growth per round, cap, recovery per second.
+      bloom: [0.12, 0.28, 0.7],
+      // Closed-bolt guns keep a round chambered through a tactical reload (magazine + 1).
+      chamber: true,
+      // How hard a near miss suppresses the target, relative to a rifle round.
+      suppress: 1.2,
     },
     {
       name: "LMG / SUPPORT",
@@ -146,11 +178,20 @@ export const WEAPONS = Object.freeze(
       equipTime: 0.55,
       weight: 7.5,
       adsMove: 0.4,
+      // Seconds after a sprint before the gun is back on target and can fire.
+      sprintOut: 0.4,
+      // Shot bloom in degrees: growth per round, cap, recovery per second.
+      bloom: [0.04, 0.5, 0.6],
+      // Closed-bolt guns keep a round chambered through a tactical reload (magazine + 1).
+      chamber: false,
+      // How hard a near miss suppresses the target, relative to a rifle round.
+      suppress: 1.6,
     },
   ].map((w) =>
     Object.freeze({
       ...w,
       damage: Object.freeze(w.damage),
+      bloom: Object.freeze(w.bloom),
       falloff: Object.freeze(w.falloff),
       interval: 60 / w.rpm,
       // Hitscan length only; damage falloff, not a hard cutoff, limits effective range.
@@ -200,20 +241,34 @@ export function hitboxes(target) {
     },
   ];
 }
-// Run and gun: firing is allowed while sprinting or sliding, at a wider hip cone.
+// Sliding still allows hip fire, at a wider cone. SPRINT_SPREAD is kept for a gun caught in the
+// last steps of a sprint by a non-player caller; players lower the gun to sprint (see sprintOut).
 export const SPRINT_SPREAD = 1.4;
 export const SLIDE_SPREAD = 1.7;
-// Current cone half-angle in radians from ADS progress, movement, and stance.
+// Firing in the air is far less accurate than firing with both feet planted.
+export const AIRBORNE_SPREAD = 2.2;
+// Shot bloom starts easing off after this long without firing.
+export const BLOOM_REST = 0.1;
+// Rounds a magazine can hold right now: one more if a round stays chambered.
+export function magazineCapacity(w, mag) {
+  return w.magazine + (w.chamber && mag > 0 ? 1 : 0);
+}
+// Current cone half-angle in radians from ADS progress, accumulated bloom, movement, and stance.
 export function spreadFor(a) {
   const w = WEAPONS[a.weapon],
     ads = clamp(a.adsProgress || 0, 0, 1);
   return (
-    (w.hipSpread + (w.adsSpread - w.hipSpread) * ads) *
+    (w.hipSpread + (w.adsSpread - w.hipSpread) * ads + (a.bloom || 0)) *
     DEG *
     (a.sliding ? SLIDE_SPREAD : a.sprinting ? SPRINT_SPREAD : 1) *
+    (a.airborne ? AIRBORNE_SPREAD : 1) *
     (a.moving ? w.movingSpread : a.crouched ? 0.85 : 1)
   );
 }
+// Near misses suppress: a round passing within this many metres of a head registers.
+export const SUPPRESSION_RADIUS = 1.5;
+// Seconds for full suppression to clear once the incoming fire stops.
+export const SUPPRESSION_DECAY = 0.9;
 // Learnable recoil patterns, indexed like WEAPONS. Each burst starts with a harder `first`
 // kick, climbs at 1x, then eases to `settle` after `settleAfter` shots. Horizontal kick follows
 // `drift` (repeating, in units of the weapon's recoilX) plus a random `jitter`. When firing
@@ -383,7 +438,12 @@ export class WeaponController {
     if (!canEquip(a, a.weapon)) return;
     const w = WEAPONS[a.weapon],
       s = a.ammo[a.weapon];
-    if (a.alive && a.reload <= 0 && s.mag < w.magazine && s.reserve > 0) {
+    if (
+      a.alive &&
+      a.reload <= 0 &&
+      s.mag < magazineCapacity(w, s.mag) &&
+      s.reserve > 0
+    ) {
       a.reloadEmpty = s.mag === 0;
       a.reloadTime = a.reloadEmpty ? w.reloadEmpty : w.reload;
       a.reload = a.reloadTime;
@@ -407,6 +467,10 @@ export class WeaponController {
       }
     }
     a.cooldown = Math.max(0, a.cooldown - dt);
+    // Bloom from sustained fire eases off after a short pause; switching guns does not clear it.
+    a.bloomRest = (a.bloomRest || 0) + dt;
+    if (a.bloom > 0 && a.bloomRest > BLOOM_REST)
+      a.bloom = Math.max(0, a.bloom - (WEAPONS[a.weapon]?.bloom[2] || 1) * dt);
     a.flash = Math.max(0, a.flash - dt);
     a.kick = Math.max(0, a.kick - dt * 0.12);
     if (a.reload > 0) {
@@ -433,7 +497,7 @@ export class WeaponController {
         a.reload = 0;
         const w = WEAPONS[a.weapon],
           s = a.ammo[a.weapon],
-          n = Math.min(w.magazine - s.mag, s.reserve);
+          n = Math.min(magazineCapacity(w, s.mag) - s.mag, s.reserve);
         s.mag += n;
         s.reserve -= n;
       }
@@ -447,6 +511,8 @@ export class WeaponController {
       w = WEAPONS[a.weapon],
       s = a.ammo[a.weapon];
     if (!a.alive || a.cooldown > 0 || a.reload > 0) return false;
+    // A gun lowered for a sprint has to come back up before it can fire.
+    if (a.sprintOut > 0) return false;
     if (s.mag === 0) {
       // Fully dry: the hammer clicks on an empty chamber, at most a few times a second.
       if (
@@ -474,6 +540,9 @@ export class WeaponController {
         pitch + cone * Math.sin(angle),
       ),
       o = [a.x, a.y + a.eye, a.z];
+    // Each round widens the cone a little; controlled bursts stay tight.
+    a.bloom = Math.min(w.bloom[1], (a.bloom || 0) + w.bloom[0]);
+    a.bloomRest = 0;
     // Start with the nearest wall/floor hit and shorten the ray for closer actor intersections.
     let length = game.arena.ray(o, d, w.range),
       victim = null,
@@ -491,6 +560,34 @@ export class WeaponController {
           head = box.head;
         }
       }
+    }
+    // Suppression: a round that passes close to an enemy's head (and is not stopped by cover
+    // first) builds pressure on them. It is feedback only and never moves aim or changes hits.
+    for (const target of game.actors) {
+      if (target === a || target === victim || !target.alive) continue;
+      if (target.team === a.team) continue;
+      const hx = target.x - o[0],
+        hy = target.y + (target.eye || 1.58) - o[1],
+        hz = target.z - o[2],
+        along = hx * d[0] + hy * d[1] + hz * d[2];
+      if (along < 2 || along > length) continue;
+      const miss = Math.hypot(
+        hx - d[0] * along,
+        hy - d[1] * along,
+        hz - d[2] * along,
+      );
+      if (miss >= SUPPRESSION_RADIUS) continue;
+      target.suppression = Math.min(
+        1,
+        (target.suppression || 0) + 0.3 * w.suppress,
+      );
+      // The crack of the passing round, heard from where it went by.
+      if (target === game.player)
+        game.audio.play("snap", 0.6, a.weapon, {
+          x: o[0] + d[0] * along,
+          y: o[1] + d[1] * along,
+          z: o[2] + d[2] * along,
+        });
     }
     // The tracer starts at the muzzle: at the hip ahead of the eye, right of centre and low;
     // aimed, the muzzle sits straight below the sight line, so the round leaves from there.

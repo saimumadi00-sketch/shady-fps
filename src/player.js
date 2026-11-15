@@ -32,7 +32,8 @@ export class PlayerController {
     const g = this.game,
       a = this.actor || g.player,
       i = this.input;
-    this.fireBuffer = Math.max(0, this.fireBuffer - dt);
+    // A press made while the gun is still coming up from a sprint is held, not lost.
+    if (!(a.sprintOut > 0)) this.fireBuffer = Math.max(0, this.fireBuffer - dt);
     if (!a.alive) {
       i.clear();
       this.fireBuffer = 0;
@@ -57,9 +58,16 @@ export class PlayerController {
       a.pitch = clamp(a.pitch - i.dy * scale, -1.45, 1.45);
     }
     i.dx = i.dy = 0;
+    // Fire intent ends a sprint (movement reads it); the gun then needs its sprint-out time.
+    a.wantsFire =
+      i.fire || this.fireBuffer > 0 || Boolean(i.actions?.has("fire"));
     this.movement.update(a, i, g.arena, dt, handling(a));
     // ADS accuracy and zoom ramp in over the equipped weapon's ADS time.
     const w = WEAPONS[a.weapon];
+    // While sprinting the gun is lowered; once the sprint ends it takes sprintOut to be ready.
+    a.sprintOut = a.sprinting
+      ? w.sprintOut
+      : Math.max(0, (a.sprintOut || 0) - dt);
     a.adsProgress = clamp(
       (a.adsProgress || 0) + (a.aim ? dt : -dt * 1.5) / w.adsTime,
       0,

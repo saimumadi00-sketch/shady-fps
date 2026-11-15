@@ -34,6 +34,7 @@
       <div id="hud" hidden>
         <!-- First child, so the scope overlay sits beneath every other HUD element. -->
         <div id="scope" aria-hidden="true" hidden><b></b><i></i><i></i></div>
+        <div id="grade" aria-hidden="true"></div>
         <div class="topline">
           <div class="map-label">
             <b id="mapName">Yard 07</b
@@ -57,7 +58,13 @@
         <div id="hitmarker" aria-hidden="true">
           <i></i><i></i><i></i><i></i>
         </div>
+        <div id="suppression" aria-hidden="true"></div>
         <div id="damage"></div>
+        <div id="hurtDir" aria-hidden="true"><i></i></div>
+        <div id="compass" aria-hidden="true">
+          <div id="compassTape"></div>
+          <strong id="heading" class="num">000</strong>
+        </div>
         <div id="notice" aria-live="polite"></div>
         <div class="bottomline">
           <div class="health">

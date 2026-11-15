@@ -886,6 +886,156 @@ input[type="range"] {
   box-shadow: inset 0 0 100px 35px #e45637; /* taste-skill-ignore: hurt indicator, not a surface shadow */
   opacity: 0;
 }
+/* Lens grade over the 3D view: darkened corners and a static film grain. Sits under the HUD. */
+#grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 50% 46%,
+      transparent 52%,
+      rgba(4, 7, 6, 0.34) 100%
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Suppression: incoming fire closes the edges of vision in. Opacity is set per frame. */
+#suppression {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 28%,
+    rgba(3, 5, 4, 0.5) 62%,
+    rgba(3, 5, 4, 0.9) 100%
+  );
+}
+/* Damage direction: the arc is rotated per frame toward where the round came from. */
+#hurtDir {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+#hurtDir i {
+  position: absolute;
+  left: -70px;
+  top: calc(-1 * min(30vh, 220px));
+  width: 140px;
+  height: 26px;
+  border-top: 5px solid var(--alarm, #e5484d);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  filter: drop-shadow(
+    0 0 6px rgba(229, 72, 77, 0.7)
+  ); /* taste-skill-ignore: hurt indicator */
+}
+/* Heading tape. The strip scrolls under a fixed centre mark; sector letters ride on it. */
+#compass {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  width: min(520px, 46vw);
+  height: 38px;
+  transform: translateX(-50%);
+  overflow: hidden;
+  pointer-events: none;
+  font-family:
+    ui-monospace, "Cascadia Mono", Consolas, SFMono-Regular, monospace;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(9, 11, 13, 0.5) 25%,
+    rgba(9, 11, 13, 0.5) 75%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 20%,
+    #000 80%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 20%,
+    #000 80%,
+    transparent
+  );
+}
+#compass::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 1px);
+  top: 0;
+  width: 2px;
+  height: 9px;
+  background: var(--crosshair-color, #a7ead4);
+}
+#compassTape {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  height: 14px;
+  will-change: transform;
+}
+#compassTape span {
+  position: absolute;
+  top: 0;
+  width: 40px;
+  margin-left: -20px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 236, 227, 0.72);
+  text-shadow: 0 1px 2px #000;
+}
+#compassTape span.cardinal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e9ece3;
+}
+#heading {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 10px;
+  font-weight: 600;
+  color: var(--crosshair-color, #a7ead4);
+  text-shadow: 0 1px 2px #000;
+}
+#compass > b {
+  position: absolute;
+  left: calc(50% - 7px);
+  top: 0;
+  width: 14px;
+  height: 11px;
+  font-size: 9px;
+  line-height: 11px;
+  text-align: center;
+  color: #050607;
+  background: #e9ece3;
+}
+#compass > b[data-owner="cyan"] {
+  background: #3fc7b8;
+}
+#compass > b[data-owner="ember"] {
+  background: #f56130;
+}
+@media (max-height: 520px) {
+  #compass {
+    bottom: 58px;
+    width: min(300px, 32vw);
+  }
+}
 #notice {
   position: absolute;
   top: 60%;

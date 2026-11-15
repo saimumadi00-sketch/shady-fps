@@ -49,6 +49,13 @@ const PRIVATE_FIELDS = [
   "recoverPitch",
   "recoverYaw",
   "viewPitch",
+  "bloom",
+  "bloomRest",
+  "sprintOut",
+  "wantsFire",
+  "suppression",
+  "hurtX",
+  "hurtZ",
 ];
 const finite = (v, limit) =>
   typeof v === "number" && Number.isFinite(v)

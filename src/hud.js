@@ -1,6 +1,8 @@
 // DOM presentation of simulation state; this module never changes combat outcomes.
 import { loadout } from "./loadouts.js";
 import { WEAPONS, spreadFor } from "./weapons.js";
+// Compass scale: screen pixels per degree of heading.
+const COMPASS_PX = 4;
 export class HUDController {
   // Cache frequently updated elements to avoid repeated selector lookups.
   constructor() {
@@ -24,6 +26,10 @@ export class HUDController {
       "countdown",
       "crosshair",
       "scope",
+      "compassTape",
+      "heading",
+      "hurtDir",
+      "suppression",
     ])
       this.nodes[id] = document.getElementById(id);
     this.healthPanel = document.querySelector(".health");
@@ -33,6 +39,63 @@ export class HUDController {
     this.keyHint = "1 primary · 2 pistol · Q or wheel to swap";
     this.objectives = document.getElementById("objectives");
     this.sectorNodes = [];
+    this.buildCompass();
+  }
+  // Heading tape: three copies of a 360-degree strip, so it can scroll past north seamlessly.
+  buildCompass() {
+    const tape = this.nodes.compassTape;
+    if (!tape) return;
+    const names = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S" };
+    Object.assign(names, { 225: "SW", 270: "W", 315: "NW" });
+    for (let copy = 0; copy < 3; copy++)
+      for (let deg = 0; deg < 360; deg += 15) {
+        const tick = document.createElement("span");
+        tick.textContent = names[deg] ?? String(deg).padStart(3, "0");
+        if (deg % 90 === 0) tick.className = "cardinal";
+        tick.style.left = (copy * 360 + deg) * COMPASS_PX + "px";
+        tape.append(tick);
+      }
+    this.compassMarks = [];
+  }
+  // Per-frame HUD elements that must follow the view without lag: the compass, the damage
+  // direction arc and the suppression vignette. Everything else updates at 20 Hz in update().
+  frame(game) {
+    const n = this.nodes,
+      a = game.player;
+    if (!n.compassTape || !a) return;
+    // Yaw 0 looks along -Z, which the maps treat as north; headings run clockwise.
+    const heading = ((((a.yaw * 180) / Math.PI) % 360) + 360) % 360;
+    n.compassTape.style.transform = `translateX(${-(360 + heading) * COMPASS_PX}px)`;
+    const text = String(Math.round(heading) % 360).padStart(3, "0");
+    if (n.heading.textContent !== text) n.heading.textContent = text;
+    // Conquest sectors ride the tape at their bearing.
+    const sectors = game.match.sectors || [];
+    sectors.forEach((s, i) => {
+      let mark = this.compassMarks[i];
+      if (!mark) {
+        mark = this.compassMarks[i] = document.createElement("b");
+        mark.textContent = s.id;
+        n.compassTape.parentNode.append(mark);
+      }
+      const bearing = Math.atan2(s.x - a.x, -(s.z - a.z)) - a.yaw,
+        offset =
+          (Math.atan2(Math.sin(bearing), Math.cos(bearing)) * 180) / Math.PI;
+      mark.hidden = Math.abs(offset) > 62;
+      mark.style.transform = `translateX(${offset * COMPASS_PX}px)`;
+      const owner =
+        s.owner === null ? "neutral" : s.owner === 0 ? "cyan" : "ember";
+      if (mark.dataset.owner !== owner) mark.dataset.owner = owner;
+    });
+    // Damage direction: an arc on the side of the screen the round came from.
+    const hurt = game.hurt > 0 && a.hurtX != null ? game.hurt : 0;
+    n.hurtDir.style.opacity = Math.min(1, hurt * 3.5);
+    if (hurt) {
+      const from = Math.atan2(a.hurtX - a.x, -(a.hurtZ - a.z)) - a.yaw;
+      n.hurtDir.style.transform = `rotate(${from}rad)`;
+    }
+    n.suppression.style.opacity = a.alive
+      ? Math.min(1, (a.suppression || 0) * 1.1)
+      : 0;
   }
   // Refresh score, ammo, health, notices, and death countdown from the current snapshot of state.
   update(game, quality, renderer) {
@@ -124,7 +187,9 @@ export class HUDController {
         (this.crossGap ?? gap) + (gap - (this.crossGap ?? gap)) * 0.3;
       cross.style.setProperty("--gap", this.crossGap.toFixed(1) + "px");
       cross.style.opacity =
-        a.sprinting || a.reload > 0 ? 0.35 : Math.max(0, 1 - aim * 2.5);
+        a.sprinting || a.sprintOut > 0 || a.reload > 0
+          ? 0.35
+          : Math.max(0, 1 - aim * 2.5);
     }
     // Scope overlay while fully aimed through a scope (the renderer hides the gun then).
     if (n.scope) n.scope.hidden = !renderer?.scoped;

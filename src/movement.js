@@ -47,7 +47,9 @@ export class TacticalMovement {
         k.has("ShiftRight") ||
         (i.touch && i.moveY > 0.92)) &&
       forward > 0.5 &&
-      !i.aim;
+      !i.aim &&
+      // Pulling the trigger brings the gun up: you cannot sprint and shoot at once.
+      !a.wantsFire;
     // Capture slide direction at entry; subsequent camera movement does not steer momentum.
     if (crouchPressed && a.sprinting && grounded && a.slideCooldown === 0) {
       a.sliding = true;
@@ -80,7 +82,7 @@ export class TacticalMovement {
       a.sliding ||
       (crouch && !a.ignoreCrouch) ||
       (a.crouched && !standingClear());
-    // Run and gun: sprinting never blocks or delays fire; spreadFor() widens the cone instead.
+    // Fire intent (a.wantsFire) ends the sprint above; the gun then needs its sprint-out time.
     a.sprinting =
       wantsSprint && !a.crouched && !a.sliding && grounded && !cancelled;
     a.aim = i.aim && !a.sliding;
@@ -132,5 +134,7 @@ export class TacticalMovement {
       a.y = landing;
       a.vy = 0;
     }
+    // Shots fired off the ground are much less accurate (see spreadFor).
+    a.airborne = a.y > landing + 0.02;
   }
 }

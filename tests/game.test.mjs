@@ -330,9 +330,11 @@ test("sprint crouch starts directional slide; jump cancels and restores standing
   assert.ok(p.y > 0);
   assert.ok(p.slideCooldown > 0);
 });
-// Run and gun: sprinting and sliding keep their movement and still fire, at a wider cone.
-test("run and gun: firing while sprinting and sliding, with wider hip spread", async () => {
-  const { spreadFor, SPRINT_SPREAD } = await import("../src/weapons.js");
+// Sprinting lowers the gun: the trigger ends the sprint and the first round waits for the
+// weapon's sprint-out time. A slide still fires from the hip, at a wider cone.
+test("sprint-out: firing ends the sprint and waits for the gun to come up", async () => {
+  const { spreadFor, SLIDE_SPREAD, WEAPONS } =
+    await import("../src/weapons.js");
   const { game, input } = setup();
   game.bots.update = () => {};
   const p = game.player;
@@ -341,21 +343,172 @@ test("run and gun: firing while sprinting and sliding, with wider hip spread", a
   for (let i = 0; i < 60; i++) game.update(1 / 60);
   input.keys.add("KeyW");
   input.keys.add("ShiftLeft");
-  input.fire = true;
+  for (let i = 0; i < 10; i++) game.update(1 / 60);
+  assert.equal(p.sprinting, true);
+  assert.equal(p.sprintOut, WEAPONS[0].sprintOut);
   const start = p.ammo[0].mag;
-  for (let i = 0; i < 20; i++) game.update(1 / 60);
-  assert.equal(p.sprinting, true, "firing must not cancel the sprint");
-  assert.ok(p.ammo[0].mag < start, "rifle fires while sprinting");
-  const sprintCone = spreadFor(p);
-  assert.ok(
-    Math.abs(sprintCone / spreadFor({ ...p, sprinting: false }) - SPRINT_SPREAD) < 1e-9,
-  );
+  input.fire = true;
+  game.update(1 / 60);
+  assert.equal(p.sprinting, false, "the trigger ends the sprint");
+  assert.equal(p.ammo[0].mag, start, "no round leaves a lowered gun");
+  // 0.2 s sprint-out at 60 Hz: still silent after 10 ticks, firing by 14.
+  for (let i = 0; i < 9; i++) game.update(1 / 60);
+  assert.equal(p.ammo[0].mag, start);
+  for (let i = 0; i < 4; i++) game.update(1 / 60);
+  assert.ok(p.ammo[0].mag < start, "fires once the gun is up");
+  // Letting go of the trigger with sprint still held picks the sprint back up.
+  input.fire = false;
+  game.update(1 / 60);
+  assert.equal(p.sprinting, true);
+  // A slide out of the sprint fires after the same short delay, with the slide cone.
   input.keys.add("KeyC");
   game.update(1 / 60);
   assert.equal(p.sliding, true);
+  assert.ok(
+    Math.abs(
+      spreadFor(p) / spreadFor({ ...p, sliding: false }) - SLIDE_SPREAD,
+    ) < 1e-9,
+  );
+  input.fire = true;
   const beforeSlideShots = p.ammo[0].mag;
-  for (let i = 0; i < 12; i++) game.update(1 / 60);
+  for (let i = 0; i < 20; i++) game.update(1 / 60);
   assert.ok(p.ammo[0].mag < beforeSlideShots, "rifle fires while sliding");
+});
+// A semi-automatic tap made mid-sprint is held until the gun is ready, even though the marksman
+// rifle's sprint-out is longer than the normal press buffer.
+test("sprint-out keeps a buffered semi-automatic press", () => {
+  const { game, input } = setup();
+  game.bots.update = () => {};
+  const p = game.player;
+  game.start("normal", 3, "recon");
+  Object.assign(p, { x: -10, z: -15, yaw: Math.PI / 2, shield: 0 });
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  input.keys.add("KeyW");
+  input.keys.add("ShiftLeft");
+  for (let i = 0; i < 10; i++) game.update(1 / 60);
+  assert.equal(p.sprinting, true);
+  const start = p.ammo[3].mag;
+  input.actions.add("fire");
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  assert.equal(p.ammo[3].mag, start - 1, "exactly one round, not lost");
+});
+// Sustained fire opens the cone up to the weapon's cap and a pause closes it again.
+test("shot bloom grows per round, caps, and recovers after a pause", async () => {
+  const { spreadFor, WEAPONS } = await import("../src/weapons.js");
+  const { game, input } = setup();
+  game.bots.update = () => {};
+  const { p } = isolate(game);
+  p.pitch = 1.2; // into the sky: nothing to hit
+  const rest = spreadFor(p),
+    [growth, cap] = WEAPONS[0].bloom;
+  assert.equal(p.bloom, 0);
+  input.fire = true;
+  game.update(1 / 60);
+  assert.ok(Math.abs(p.bloom - growth) < 1e-9, "one round adds one step");
+  for (let i = 0; i < 150; i++) game.update(1 / 60);
+  assert.ok(Math.abs(p.bloom - cap) < 1e-9, "bloom stops at the cap");
+  assert.ok(spreadFor(p) > rest * 1.15);
+  // Switching guns does not shake the instability off.
+  input.fire = false;
+  input.actions.add("Digit2");
+  game.update(1 / 60);
+  assert.equal(p.weapon, 2);
+  assert.ok(p.bloom > cap * 0.9);
+  for (let i = 0; i < 90; i++) game.update(1 / 60);
+  assert.equal(p.bloom, 0, "a pause clears it");
+});
+// Jumping shots are for emergencies only.
+test("airborne fire is far less accurate", async () => {
+  const { spreadFor, AIRBORNE_SPREAD } = await import("../src/weapons.js");
+  const { game, input } = setup();
+  game.bots.update = () => {};
+  const p = game.player;
+  Object.assign(p, { x: -10, z: -15 });
+  for (let i = 0; i < 30; i++) game.update(1 / 60);
+  assert.equal(p.airborne, false);
+  const planted = spreadFor(p);
+  input.actions.add("Space");
+  for (let i = 0; i < 6; i++) game.update(1 / 60);
+  assert.equal(p.airborne, true);
+  assert.ok(Math.abs(spreadFor(p) / planted - AIRBORNE_SPREAD) < 1e-9);
+  for (let i = 0; i < 90; i++) game.update(1 / 60);
+  assert.equal(p.airborne, false);
+});
+// Closed-bolt guns keep the chambered round through a tactical reload; an empty gun and the
+// open-bolt LMG fill to the plain magazine size.
+test("tactical reload leaves one in the chamber; empty and open-bolt reloads do not", async () => {
+  const { WEAPONS } = await import("../src/weapons.js");
+  const { game } = setup();
+  game.bots.update = () => {};
+  const run = (classId, weapon, mag) => {
+    game.start("normal", weapon, classId);
+    const p = game.player,
+      s = p.ammo[weapon];
+    // Away from the base pad, which would resupply the reserve mid-test.
+    Object.assign(p, { x: -5, z: -15 });
+    s.mag = mag;
+    const reserve = s.reserve;
+    game.weapons.reload(p);
+    assert.ok(p.reload > 0);
+    for (let i = 0; i < 60 * 7; i++) game.update(1 / 60);
+    assert.equal(s.mag + s.reserve, mag + reserve, "no rounds invented");
+    return s.mag;
+  };
+  assert.equal(run("assault", 0, 12), WEAPONS[0].magazine + 1);
+  assert.equal(run("assault", 0, 0), WEAPONS[0].magazine);
+  assert.equal(run("support", 4, 40), WEAPONS[4].magazine);
+  // A full magazine with a chambered round has nothing left to top up.
+  game.start("normal", 0, "assault");
+  const p = game.player;
+  p.ammo[0].mag = WEAPONS[0].magazine + 1;
+  game.weapons.reload(p);
+  assert.equal(p.reload, 0);
+});
+// Near misses build suppression on the target only: cover stops it, hits do not count, and it
+// never touches the target's aim.
+test("suppression comes from unobstructed near misses and decays", async () => {
+  const { SUPPRESSION_DECAY } = await import("../src/weapons.js");
+  const { game } = setup();
+  game.bots.update = () => {};
+  const { p, e } = isolate(game);
+  const aim = { yaw: e.yaw, pitch: e.pitch };
+  // One metre above the enemy's head: a clean miss that passes close.
+  const range = e.x - p.x,
+    pitch = Math.atan2(e.eye + 1 - p.eye, range);
+  assert.equal(game.weapons.fire(p, Math.PI / 2, pitch, 0), true);
+  assert.ok(e.suppression > 0.25, "a close round suppresses");
+  assert.equal(e.hp, 100);
+  assert.deepEqual({ yaw: e.yaw, pitch: e.pitch }, aim, "aim is untouched");
+  assert.equal(p.suppression, 0, "the shooter is not suppressed");
+  // It fades once the fire stops.
+  for (let i = 0; i < Math.ceil(SUPPRESSION_DECAY * 60) + 2; i++)
+    game.update(1 / 60);
+  assert.equal(e.suppression, 0);
+  // A round that hits is damage, not suppression.
+  p.cooldown = 0;
+  game.weapons.fire(p, Math.PI / 2, 0, 0);
+  assert.ok(e.hp < 100);
+  assert.equal(e.suppression, 0);
+  // A wall in the way stops the round before it reaches the target.
+  game.arena.solids.push({ x: 0, y: 2, z: -15, w: 0.5, h: 4, d: 4 });
+  p.cooldown = 0;
+  game.weapons.fire(p, Math.PI / 2, pitch, 0);
+  assert.equal(e.suppression, 0);
+  game.arena.solids.pop();
+  // Wide of the mark by several metres is not a near miss.
+  p.cooldown = 0;
+  game.weapons.fire(p, Math.PI / 2 - 0.6, 0, 0);
+  assert.equal(e.suppression, 0);
+});
+// The victim learns where the round came from.
+test("damage records the attacker's position for the direction indicator", () => {
+  const { game } = setup();
+  const { p, e } = isolate(game);
+  game.weapons.fire(p, Math.PI / 2, 0, 0);
+  assert.ok(e.hp < 100);
+  assert.deepEqual([e.hurtX, e.hurtZ], [p.x, p.z]);
+  game.spawns.spawn(e);
+  assert.equal(e.hurtX, null);
 });
 // Cover slide prerequisites, expiry, collision, and reset to prevent persistent movement-state bugs.
 test("slide needs sprint, expires, respects collision and resets on respawn", () => {

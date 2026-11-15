@@ -2,6 +2,7 @@
 // `recoil` is an optional GunRecoil state; without it the legacy actor.kick push-back is used.
 // `motion` is an optional ViewmodelMotion state (look sway, strafe lean, jump/land, sprint
 // blend, speed-synced bob). Without it a time-based hip bob is used, as in headless tests.
+import { WEAPONS } from "./weapons.js";
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -290,8 +291,14 @@ export class ViewmodelMotion {
     // Stride frequency follows ground speed so footfalls stay in step at any pace.
     if (moving)
       this.phase = (this.phase + dt * (3.2 + speed * 1.15)) % (Math.PI * 200);
-    this.sprint +=
-      ((actor.sprinting ? 1 : 0) - this.sprint) * k(actor.sprinting ? 9 : 13);
+    // The gun stays lowered until its sprint-out time has run, so it looks ready when it is.
+    const lowered = actor.sprinting
+      ? 1
+      : Math.min(
+          1,
+          (actor.sprintOut || 0) / (WEAPONS[actor.weapon]?.sprintOut || 0.2),
+        );
+    this.sprint += (lowered - this.sprint) * k(actor.sprinting ? 9 : 18);
     this.slide += ((actor.sliding ? 1 : 0) - this.slide) * k(10);
     const crouched = !!actor.crouched;
     this.crouch += ((crouched ? 1 : 0) - this.crouch) * k(10);

@@ -16,7 +16,12 @@ import {
   RESUPPLY_RADIUS,
 } from "./match.js";
 import { distance } from "./math.js";
-import { WeaponController, EffectPool, WEAPONS } from "./weapons.js";
+import {
+  WeaponController,
+  EffectPool,
+  WEAPONS,
+  SUPPRESSION_DECAY,
+} from "./weapons.js";
 import { BotController } from "./bots.js";
 import { PlayerController } from "./player.js";
 import { ConquestMatch } from "./conquest.js";
@@ -113,6 +118,8 @@ export class OfflineSimulation {
       }
       // Expire protection and regenerate health only after the damage-free grace period.
       a.shield = Math.max(0, a.shield - dt);
+      if (a.suppression > 0)
+        a.suppression = Math.max(0, a.suppression - dt / SUPPRESSION_DECAY);
       a.lastDamage += dt;
       if (a.lastDamage > 6) a.hp = Math.min(100, a.hp + 8 * dt);
       this.weapons.update(a, dt);

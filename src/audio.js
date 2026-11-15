@@ -330,6 +330,13 @@ export class AudioManager {
       }
       return kind === "headshot" ? 0.17 : 0.08;
     }
+    if (kind === "snap") {
+      // Supersonic crack of a round passing close, with a short hiss behind it.
+      burst("highpass", 3400, 0.8, 0.03, 0.9);
+      burst("bandpass", 1900, 1.4, 0.07, 0.3, 0.015);
+      tone("triangle", 2600, 900, 0.035, 0.12);
+      return 0.11;
+    }
     if (kind === "step") {
       // Soft heel scuff plus a low body thud, with slight variation per step.
       const pitch = 0.85 + Math.random() * 0.3;
