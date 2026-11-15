@@ -30,6 +30,13 @@ export const SPRINT_POSE = Object.freeze({
   roll: 0.4,
 });
 
+// Aiming down sights puts the sight this far in front of the eye (viewmodel units, already
+// scaled like the guns): close enough that the receiver frames the bottom of the view and the
+// sight reads large, as in a real cheek weld, instead of a small gun held out at arm's length.
+// A pistol is held out at arm's length in a two-handed grip, so its sights sit much further out.
+export const EYE_RELIEF = 0.3;
+export const PISTOL_EYE_RELIEF = 0.5;
+
 // Draw curve: eased rise over the first 85%, then a small overshoot that settles.
 export function drawOffset(t) {
   const x = clamp01(t);
@@ -51,6 +58,10 @@ export function viewmodelPose(
   recoil = null,
   motion = null,
 ) {
+  // `sightHeight` is the sight line's height, or { height, x, z } with the sight point itself
+  // (from describe()), which also brings the sight to EYE_RELIEF and centres it sideways.
+  const sight = typeof sightHeight === "number" ? null : sightHeight || null;
+  if (sight) sightHeight = sight.height;
   const aim = clamp01(aimBlend);
   const hip = 1 - aim;
   // The raise follows an arc rather than a straight line: the gun lifts to the eye line first,
@@ -111,6 +122,7 @@ export function viewmodelPose(
     x:
       rg.x +
       (pistol ? HIP_POSE.pistolX : HIP_POSE.x) * (1 - across) -
+      (sight ? sight.x * across : 0) -
       arc * 0.012 +
       SPRINT_POSE.x * sprint -
       reload.lift * 0.1 +
@@ -138,8 +150,11 @@ export function viewmodelPose(
     // The stock comes back toward the cheek when aiming.
     z:
       rg.z +
-      HIP_POSE.z +
-      aim * 0.035 +
+      (sight
+        ? HIP_POSE.z +
+          (-sight.z - (pistol ? PISTOL_EYE_RELIEF : EYE_RELIEF) - HIP_POSE.z) *
+            across
+        : HIP_POSE.z + aim * 0.035) +
       SPRINT_POSE.z * sprint +
       lower * 0.06 +
       m.z +

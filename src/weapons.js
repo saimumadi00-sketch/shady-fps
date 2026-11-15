@@ -492,16 +492,20 @@ export class WeaponController {
         }
       }
     }
-    // The tracer starts at the muzzle: ahead of the eye, right of centre and slightly low.
-    const right = [Math.cos(a.yaw), 0, Math.sin(a.yaw)];
+    // The tracer starts at the muzzle: at the hip ahead of the eye, right of centre and low;
+    // aimed, the muzzle sits straight below the sight line, so the round leaves from there.
+    const right = [Math.cos(a.yaw), 0, Math.sin(a.yaw)],
+      ads = Math.min(1, Math.max(0, a.adsProgress || 0)),
+      side = 0.16 * (1 - ads),
+      drop = 0.12 - 0.08 * ads;
     game.effects.add(
       o[0] + d[0] * length,
       o[1] + d[1] * length,
       o[2] + d[2] * length,
       victim ? (head ? "head" : "body") : "impact",
-      o[0] + d[0] * 0.7 + right[0] * 0.16,
-      o[1] + d[1] * 0.7 - 0.12,
-      o[2] + d[2] * 0.7 + right[2] * 0.16,
+      o[0] + d[0] * 0.7 + right[0] * side,
+      o[1] + d[1] * 0.7 - drop,
+      o[2] + d[2] * 0.7 + right[2] * side,
     );
     // A round that strikes the world cracks off it, positioned at the point of impact.
     if (!victim && length < w.range)

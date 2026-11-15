@@ -7,8 +7,8 @@
 //    punch, then on an empty gun run the side charging handle: reach, pull, let it slam.
 //  - Pistol: tilt in, drop or strip the magazine, insert straight up and seat it with the palm,
 //    then on an empty gun release the locked-back slide, which snaps forward.
-//  - LMG: open the feed cover, lift the belt off the tray, swap the ammo box, lay the belt,
-//    slap the cover shut, and charge it when empty.
+//  - LMG: open the feed cover, swap the ammo box, slap the cover shut, and charge it when
+//    empty.
 // The magazine falling from an empty gun follows real gravity over the reload's own duration.
 import { WEAPONS } from "./weapons.js";
 
@@ -23,7 +23,9 @@ function key(t, keys) {
       [t1, b] = keys[i + 1];
     if (t <= t1) {
       const u = smooth(clamp01((t - t0) / (t1 - t0 || 1)));
-      return Array.isArray(a) ? a.map((v, k) => v + (b[k] - v) * u) : a + (b - a) * u;
+      return Array.isArray(a)
+        ? a.map((v, k) => v + (b[k] - v) * u)
+        : a + (b - a) * u;
     }
   }
   return keys[keys.length - 1][1];
@@ -34,7 +36,11 @@ const bump = (t, t0, width) => {
   return u <= 0 || u >= 1 ? 0 : Math.sin(Math.PI * u) * (1 - u * 0.5);
 };
 const ZERO = [0, 0, 0];
-const add3 = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const add3 = (a, b, s = 1) => [
+  a[0] + b[0] * s,
+  a[1] + b[1] * s,
+  a[2] + b[2] * s,
+];
 
 // Rest pose: everything at zero.
 const REST = {
@@ -51,7 +57,6 @@ const REST = {
   bolt: 0,
   slide: 0,
   cover: 0,
-  belt: 0,
   pistol: false,
   stage: "",
 };
@@ -169,7 +174,11 @@ function rifle(t, empty, seconds, w) {
       pitch: tilt.pitch * envelope + punch * 0.035 - slam * 0.02,
     },
     hand,
-    handOffset: add3(add3(handOffset, [0, 0.012, 0], punch), [0, 0, bolt - 0.055], reach),
+    handOffset: add3(
+      add3(handOffset, [0, 0.012, 0], punch),
+      [0, 0, bolt - 0.055],
+      reach,
+    ),
     reach,
     magOffset,
     magPitch,
@@ -223,9 +232,7 @@ function pistol(t, empty, seconds) {
   const punch = bump(t, seat, 0.06);
   magOffset = add3(magOffset, [0, 0.01, 0], punch);
   // Empty: the slide is locked back from the last shot until the thumb drops the release.
-  const slide = empty
-    ? 0.075 * (1 - smooth(clamp01((t - release) / 0.02)))
-    : 0;
+  const slide = empty ? 0.075 * (1 - smooth(clamp01((t - release) / 0.02))) : 0;
   const slam = empty ? bump(t, release, 0.07) : 0;
   const envelope = key(t, [
     [0, 0],
@@ -273,12 +280,6 @@ function lmg(t, empty) {
     [0.18, 1],
     [0.71, 1],
     [slap, 0],
-  ]);
-  const belt = key(t, [
-    [0.18, 0],
-    [0.26, 1],
-    [0.63, 1],
-    [0.7, 0],
   ]);
   const hand = key(t, [
     [0.22, 0],
@@ -348,13 +349,16 @@ function lmg(t, empty) {
       pitch: 0.1 * envelope + punch * 0.025 - shut * 0.03,
     },
     hand,
-    handOffset: add3(add3(handOffset, [0, 0.01, 0], punch), [0, 0, bolt], reach),
+    handOffset: add3(
+      add3(handOffset, [0, 0.01, 0], punch),
+      [0, 0, bolt],
+      reach,
+    ),
     reach,
     magOffset: add3(magOffset, [0, 0.01, 0], punch),
     magPitch: 0,
     bolt,
     cover,
-    belt,
     stage:
       t < 0.18
         ? "REACH"
@@ -375,7 +379,9 @@ export function reloadPose(actor) {
   if (!active) return { ...REST, pistol: actor.weapon === 2 };
   const seconds =
     actor.reloadTime ||
-    (actor.reloadEmpty ? WEAPONS[actor.weapon].reloadEmpty : WEAPONS[actor.weapon].reload);
+    (actor.reloadEmpty
+      ? WEAPONS[actor.weapon].reloadEmpty
+      : WEAPONS[actor.weapon].reload);
   const t = clamp01(1 - actor.reload / seconds),
     empty = !!actor.reloadEmpty;
   const pose =
@@ -427,10 +433,6 @@ export function animateWeapon(base, out, pose) {
       }
       if (name === "slide") out[k + 2] += pose.slide || 0;
       if (name === "bolt") out[k + 2] += pose.bolt || 0;
-      if (name === "belt") {
-        out[k] += (pose.belt || 0) * 0.18;
-        out[k + 1] += (pose.belt || 0) * 0.06;
-      }
       // The support hand morphs from its handguard grip to its magazine grip (same
       // topology, so positions and normals blend vertex by vertex), then follows its path.
       if (name === "support") {
@@ -450,13 +452,15 @@ export function animateWeapon(base, out, pose) {
       }
       // Rotate the LMG cover about its hinge and rotate its normals by the same angle.
       if (name === "cover") {
+        // Hinged where the mesh measured its front-top edge.
+        const [hy, hz] = base.coverPivot;
         const a = -(pose.cover || 0) * 1.25,
           c = Math.cos(a),
           s = Math.sin(a),
-          y = out[k + 1] - 0.105,
-          z = out[k + 2] + 0.11;
-        out[k + 1] = 0.105 + y * c - z * s;
-        out[k + 2] = -0.11 + y * s + z * c;
+          y = out[k + 1] - hy,
+          z = out[k + 2] - hz;
+        out[k + 1] = hy + y * c - z * s;
+        out[k + 2] = hz + y * s + z * c;
         const ny = out[k + 4],
           nz = out[k + 5];
         out[k + 4] = ny * c - nz * s;

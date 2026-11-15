@@ -146,7 +146,11 @@ export class AudioManager {
         this.master = c.createDynamicsCompressor();
         this.master.threshold.value = -16;
         this.master.ratio.value = 4;
-        this.master.connect(c.destination);
+        // Master volume from Settings sits after the compressor.
+        this.volume = c.createGain();
+        this.volume.gain.value = (this.settings.values.volume ?? 80) / 100;
+        this.master.connect(this.volume);
+        this.volume.connect(c.destination);
         // One second of white noise, reused by every percussive cue.
         this.noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
         const data = this.noise.getChannelData(0);
@@ -191,6 +195,9 @@ export class AudioManager {
   play(kind, volume = 0.5, weapon = 0, source = null) {
     const c = this.context;
     if (!c || c.state !== "running" || !this.settings.values.sound) return;
+    const level = (this.settings.values.volume ?? 80) / 100;
+    if (level <= 0) return;
+    if (this.volume) this.volume.gain.value = level;
     if (this.voices >= (kind === "step" ? STEP_VOICE_LIMIT : MAX_VOICES))
       return;
     let range = 0,

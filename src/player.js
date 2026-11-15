@@ -5,11 +5,16 @@ import { TacticalMovement } from "./movement.js";
 import { WEAPONS, handling, compensateRecoil } from "./weapons.js";
 // Mouse deltas are pixels; touch drags use a larger multiplier. ADS slows aim in step
 // with the weapon's zoom, so a scoped marksman rifle stays controllable.
+// `sensitivity` is a number (mouse only) or { mouse, ads, touch } from Settings: touch play
+// uses the touch value instead of the mouse one, and `ads` scales aim while sighted.
 export function aimScale(a, input, sensitivity) {
+  const s =
+    typeof sensitivity === "number"
+      ? { mouse: sensitivity }
+      : sensitivity || {};
   const zoom = WEAPONS[a.weapon]?.adsZoom || 1.4;
-  return (
-    0.0024 * sensitivity * (a.aim ? 0.91 / zoom : 1) * (input.touch ? 1.8 : 1)
-  );
+  const base = input.touch ? 1.8 * (s.touch ?? 1) : (s.mouse ?? 1);
+  return 0.0024 * base * (a.aim ? (0.91 / zoom) * (s.ads ?? 1) : 1);
 }
 // Seconds a semi-automatic press stays queued, so taps during the fire interval are not lost.
 export const FIRE_BUFFER = 0.25;

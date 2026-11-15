@@ -1,12 +1,10 @@
 {
-  "version": "626d15b02284",
+  "version": "bfaf74be065c",
   "files": [
     "index.html",
     "arena.html",
     "game.js",
     "style.css",
-    "lobby.js",
-    "lobby.css",
     "assets/yard-map.svg",
     "assets/fonts/inter-latin.woff2",
     "assets/audio/shot-ar.mp3",
@@ -34,7 +32,7 @@
     "assets/audio/death.wav",
     "sw.js"
   ],
-  "rawBytes": 1717862,
-  "gzipBytes": 1148410,
-  "brotliBytes": 1112198
+  "rawBytes": 1489912,
+  "gzipBytes": 1179010,
+  "brotliBytes": 1122396
 }

@@ -98,7 +98,7 @@
       <section id="menu" class="overlay setup">
         <header class="bar">
           <div class="bar-inner">
-            <a class="brand" href="./" aria-label="Crosscurrent lobby">
+            <a class="brand" href="./" aria-label="Crosscurrent">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="mark">
                 <path d="M3 7h11l-3-3M21 17H10l3 3" />
                 <path d="M3 17 21 7" />
@@ -107,24 +107,125 @@
               <span class="scope" id="arenaEdition">Offline arena</span>
             </a>
             <nav aria-label="Main">
-              <a href="./">Lobby</a>
-              <a href="./arena.html" aria-current="page">Offline arena</a>
+              <a href="./arena.html" aria-current="page">Offline</a>
               <a href="./arena.html?online=1&mode=conquest">Private room</a>
             </nav>
+            <!-- The plate is the loadout; Mission and Settings open over it. -->
+            <div class="ops-tabs" role="tablist" aria-label="Setup">
+              <button
+                role="tab"
+                id="tab-loadout"
+                aria-controls="panel-loadout"
+                aria-selected="true"
+              >
+                Operator</button
+              ><button
+                role="tab"
+                id="tab-mission"
+                aria-controls="panel-mission"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Mission</button
+              ><button
+                role="tab"
+                id="tab-settings"
+                aria-controls="panel-settings"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Settings
+              </button>
+            </div>
           </div>
         </header>
         <div class="setup-page ops-page">
           <div class="ops">
-            <!-- Roster: one card per operator, drawn from the in-game character models. -->
+            <!-- The plate: the operator at full height holding their class weapon, each piece
+                 of kit labelled by a leader line to the control that changes it. -->
+            <section class="plate" aria-labelledby="operatorName">
+              <canvas
+                id="operatorStage"
+                width="1200"
+                height="760"
+                tabindex="0"
+                aria-label="Selected operator. Drag or use the arrow keys to turn."
+              ></canvas>
+              <div class="dossier">
+                <h2 id="operatorName" class="op-name">NOVA</h2>
+                <p id="operatorRole" class="op-role">Assault · rifleman</p>
+                <p id="classInfo" class="op-brief" aria-live="polite"></p>
+              </div>
+              <svg id="leaders" class="leaders" aria-hidden="true"></svg>
+              <section
+                id="panel-loadout"
+                class="callouts"
+                role="tabpanel"
+                aria-labelledby="tab-loadout"
+              >
+                <div class="callout callout-row" data-anchor="sight">
+                  <label
+                    ><span
+                      >Sight <small class="callout-tag">cosmetic</small></span
+                    ><select id="optic">
+                      <option value="iron">Factory sights</option>
+                      <option value="reflex">Reflex sight</option>
+                      <option value="scope">Scope</option>
+                    </select></label
+                  >
+                </div>
+                <div class="callout callout-row" data-anchor="finish">
+                  <label
+                    ><span
+                      >Finish <small class="callout-tag">cosmetic</small></span
+                    ><select id="finish">
+                      <option value="graphite">Graphite</option>
+                      <option value="sand">Desert sand</option>
+                      <option value="olive">Olive drab</option>
+                    </select></label
+                  >
+                </div>
+                <div class="callout callout-weapon" data-anchor="weapon">
+                  <label class="weapon-choice"
+                    >Weapon
+                    <select
+                      id="startingWeapon"
+                      aria-describedby="startingWeaponInfo"
+                    ></select>
+                  </label>
+                  <canvas
+                    id="weaponPreview"
+                    width="720"
+                    height="300"
+                    aria-label="Selected weapon, side view"
+                  ></canvas>
+                  <p
+                    id="startingWeaponInfo"
+                    class="weapon-info"
+                    aria-live="polite"
+                  ></p>
+                </div>
+                <div class="callout" data-anchor="muzzle">
+                  <span class="callout-label">Handling</span>
+                  <dl id="weaponRatings" class="ratings"></dl>
+                </div>
+                <div class="callout callout-row" data-anchor="sidearm">
+                  <span class="callout-label">Sidearm</span>
+                  <b id="sidearmInfo">Pistol · 12 rounds</b>
+                </div>
+              </section>
+            </section>
+
+            <!-- Roster: one file tab per operator; the tabs drive the class select. -->
             <aside class="ops-roster" aria-labelledby="roster-title">
-              <h2 id="roster-title">Select operator</h2>
+              <h2 id="roster-title">Operators</h2>
               <div
                 id="operatorList"
                 class="op-list"
                 role="radiogroup"
                 aria-labelledby="roster-title"
               ></div>
-              <!-- The class list the game logic reads; the operator cards drive it. -->
+              <!-- The class list the game logic reads; the operator tabs drive it. -->
               <label class="sr-select"
                 >Class<select
                   id="loadoutClass"
@@ -134,98 +235,8 @@
               ></label>
             </aside>
 
-            <!-- Stage: the selected operator at full height; drag or use arrow keys to turn. -->
-            <section class="ops-stage" aria-labelledby="operatorName">
-              <canvas
-                id="operatorStage"
-                width="760"
-                height="1000"
-                tabindex="0"
-                aria-label="Selected operator. Drag or use the arrow keys to turn."
-              ></canvas>
-              <div class="dossier">
-                <p id="operatorRole" class="op-role">Assault · rifleman</p>
-                <h2 id="operatorName" class="op-name">NOVA</h2>
-                <p id="classInfo" class="op-brief" aria-live="polite"></p>
-              </div>
-            </section>
-
-            <!-- Kit, mission and settings as tabs, so the operator stays the focus. -->
-            <aside class="ops-panel">
-              <div class="ops-tabs" role="tablist" aria-label="Setup">
-                <button
-                  role="tab"
-                  id="tab-loadout"
-                  aria-controls="panel-loadout"
-                  aria-selected="true"
-                >
-                  Loadout</button
-                ><button
-                  role="tab"
-                  id="tab-mission"
-                  aria-controls="panel-mission"
-                  aria-selected="false"
-                  tabindex="-1"
-                >
-                  Mission</button
-                ><button
-                  role="tab"
-                  id="tab-settings"
-                  aria-controls="panel-settings"
-                  aria-selected="false"
-                  tabindex="-1"
-                >
-                  Settings
-                </button>
-              </div>
-
-              <section
-                id="panel-loadout"
-                class="ops-tab-panel"
-                role="tabpanel"
-                aria-labelledby="tab-loadout"
-              >
-                <canvas
-                  id="weaponPreview"
-                  width="720"
-                  height="300"
-                  aria-label="Selected weapon preview"
-                ></canvas>
-                <label class="weapon-choice"
-                  >Weapon
-                  <select
-                    id="startingWeapon"
-                    aria-describedby="startingWeaponInfo"
-                  ></select>
-                </label>
-                <p
-                  id="startingWeaponInfo"
-                  class="weapon-info"
-                  aria-live="polite"
-                ></p>
-                <dl id="weaponRatings" class="ratings"></dl>
-                <div class="fields">
-                  <label
-                    >Finish<select id="finish">
-                      <option value="graphite">Graphite</option>
-                      <option value="sand">Desert sand</option>
-                      <option value="olive">Olive drab</option>
-                    </select></label
-                  >
-                  <label
-                    >Sight<select id="optic">
-                      <option value="iron">Factory sights</option>
-                      <option value="reflex">Reflex sight</option>
-                      <option value="scope">Scope</option>
-                    </select></label
-                  >
-                </div>
-                <p class="custom-note">
-                  Finish and sight are cosmetic; the marksman rifle always has a
-                  scope.
-                </p>
-              </section>
-
+            <!-- Mission and Settings open over the plate, beside the roster. -->
+            <div class="ops-drawer" id="opsDrawer" hidden>
               <section
                 id="panel-mission"
                 class="ops-tab-panel"
@@ -301,32 +312,6 @@
                   A sunlit freight terminal. Take a flank, hold the crossing and
                   keep your team ahead.
                 </p>
-                <div class="fields">
-                  <label class="wide"
-                    >Game mode<select id="matchMode">
-                      <option value="tdm">Team Deathmatch</option>
-                      <option value="conquest">
-                        Conquest · FreeDM Outpost
-                      </option>
-                    </select></label
-                  >
-                  <label class="wide" id="matchMapField"
-                    >Map<select id="matchMap"></select
-                  ></label>
-                  <label
-                    >Bot difficulty<select id="difficulty">
-                      <option value="easy">Easy</option>
-                      <option value="normal" selected>Normal</option>
-                      <option value="hard">Hard</option>
-                    </select></label
-                  ><label
-                    >Graphics<select id="quality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                    </select></label
-                  >
-                </div>
                 <!-- Score and time limits are copied into match rules on start/restart, not mid-match. -->
                 <div class="fields rule-fields">
                   <label
@@ -353,70 +338,47 @@
                 aria-labelledby="tab-settings"
                 hidden
               >
-                <div class="fields">
-                  <label
-                    >Callsign<input
-                      id="callsign"
-                      maxlength="16"
-                      value="You"
-                      autocomplete="off" /></label
-                  ><label
-                    >Crosshair<select id="crosshairColor">
-                      <option value="#a7ead4">Mint</option>
-                      <option value="#ffffff">White</option>
-                      <option value="#ffbf69">Amber</option>
-                      <option value="#ff6b9d">Pink</option>
-                    </select></label
-                  >
-                  <label class="wide range"
-                    ><span
-                      >Field of view
-                      <output id="fovValue" class="num">83°</output></span
-                    ><input id="fov" type="range" min="65" max="105" value="83"
-                  /></label>
-                  <label class="wide range"
-                    >Mouse sensitivity<input
-                      id="sensitivity"
-                      type="range"
-                      min="0.4"
-                      max="2"
-                      value="1"
-                      step="0.1"
-                  /></label>
-                  <label class="check"
-                    ><input id="sound" type="checkbox" checked /> Sound</label
-                  ><label class="check"
-                    ><input id="autoQuality" type="checkbox" checked /> Auto
-                    resolution</label
-                  >
-                </div>
+                <!-- Filled by src/settings-panel.js. -->
+                <div id="settingsMount"></div>
                 <figure class="sight-picture" aria-label="Crosshair preview">
                   <div class="reticle"><i></i><i></i><i></i><i></i></div>
                   <figcaption>Sight picture</figcaption>
                 </figure>
-                <div class="signals">
-                  <h3>Controls</h3>
-                  <p id="controlsHelp">
-                    WASD move · Mouse aim · Click fire · R reload · Space jump ·
-                    Shift sprint · C or Ctrl crouch and slide · Right click aim
-                    · 1 primary, 2 pistol · Q or wheel swap · Esc pause
-                  </p>
-                </div>
               </section>
-            </aside>
+              <button type="button" id="closeDrawer" class="secondary-button">
+                Back to operator
+              </button>
+            </div>
           </div>
 
-          <!-- Deploy bar: the operation, its rules and the one action. -->
+          <!-- Operation strip: mode, map and bots, the rules, and the one action. -->
           <footer class="deploy-bar">
             <div class="op-title">
-              <p class="op-line">
-                <span>Operation</span>
+              <h1 class="sr-select">
+                <span id="briefMapName">Yard 07</span> ·
                 <span id="briefMode">Team Deathmatch</span>
-              </p>
-              <h1><span id="briefMapName">Yard 07</span></h1>
+              </h1>
               <p class="summary">
                 <span id="status">Preparing the arena…</span>
               </p>
+            </div>
+            <div class="strip-fields">
+              <label
+                >Mode<select id="matchMode">
+                  <option value="tdm">Team Deathmatch</option>
+                  <option value="conquest">Conquest · FreeDM Outpost</option>
+                </select></label
+              >
+              <label id="matchMapField"
+                >Map<select id="matchMap"></select
+              ></label>
+              <label
+                >Bots<select id="difficulty">
+                  <option value="easy">Easy</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="hard">Hard</option>
+                </select></label
+              >
             </div>
             <div class="rules">
               <div>
@@ -427,7 +389,6 @@
                 <span>Time limit</span
                 ><b id="ruleDuration" class="num">07:00</b>
               </div>
-              <div><span>Respawn</span><b class="num">3 s</b></div>
             </div>
             <button id="play" class="primary" disabled>
               Loading <span id="progress">0%</span>
@@ -438,22 +399,66 @@
       <!-- Pause releases pointer capture so the player can select a weapon or return to setup. -->
       <section id="pause" class="overlay" hidden>
         <div class="dialog">
-          <h2>Paused</h2>
-          <p id="pauseReason">Combat is paused.</p>
-          <label class="weapon-choice"
-            >Equip weapon
-            <select
-              id="pauseWeapon"
-              aria-describedby="pauseWeaponInfo"
-            ></select>
-          </label>
-          <p id="pauseWeaponInfo" class="weapon-info" aria-live="polite"></p>
-          <label class="range"
-            ><span
-              >Field of view
-              <output id="pauseFovValue" class="num">83°</output></span
-            ><input id="pauseFov" type="range" min="65" max="105" value="83"
-          /></label>
+          <div class="pause-main">
+            <h2>Paused</h2>
+            <p id="pauseReason">Combat is paused.</p>
+            <label class="weapon-choice"
+              >Equip weapon
+              <select
+                id="pauseWeapon"
+                aria-describedby="pauseWeaponInfo"
+              ></select>
+            </label>
+            <p id="pauseWeaponInfo" class="weapon-info" aria-live="polite"></p>
+          </div>
+          <div class="pause-tuning">
+            <!-- Mid-match tuning mirrors the Settings sliders; touch play shows its own look speed. -->
+            <label class="range desktop-only" for="pauseSensitivity"
+              ><span
+                >Mouse sensitivity
+                <output id="pauseSensitivityValue" class="num"></output></span
+              ><input
+                id="pauseSensitivity"
+                type="range"
+                min="0.4"
+                max="2"
+                step="0.1"
+            /></label>
+            <label class="range desktop-only" for="pauseAdsSensitivity"
+              ><span
+                >Aim-down-sights sensitivity
+                <output
+                  id="pauseAdsSensitivityValue"
+                  class="num"
+                ></output></span
+              ><input
+                id="pauseAdsSensitivity"
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+            /></label>
+            <label class="range touch-only" for="pauseTouchSensitivity"
+              ><span
+                >Touch look sensitivity
+                <output
+                  id="pauseTouchSensitivityValue"
+                  class="num"
+                ></output></span
+              ><input
+                id="pauseTouchSensitivity"
+                type="range"
+                min="0.4"
+                max="2"
+                step="0.1"
+            /></label>
+            <label class="range" for="pauseFov"
+              ><span
+                >Field of view
+                <output id="pauseFovValue" class="num">83°</output></span
+              ><input id="pauseFov" type="range" min="65" max="105" value="83"
+            /></label>
+          </div>
           <button id="resume" class="primary">Resume match</button
           ><button id="back" class="secondary-button">Return to setup</button>
         </div>

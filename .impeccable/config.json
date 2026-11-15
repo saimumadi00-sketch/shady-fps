@@ -1,0 +1,50 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "style.css"
+        ],
+        "createdAt": "2026-11-11T13:11:52.136Z",
+        "reason": "DESIGN.md (Field Dossier, documented from incumbent code): the 2-3px Signal Teal edge stripe is the system's selection/active marker; the kill-feed edge is the non-colour team cue added for the accessibility fix"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-11T13:11:52.312Z",
+        "reason": "DESIGN.md: Inter is the incumbent, locally bundled system face (assets/fonts/inter-latin.woff2) recorded as the project's display and body font"
+      },
+      {
+        "rule": "*",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/sequence.html"
+        ],
+        "createdAt": "2026-11-11T13:53:55.571Z",
+        "reason": "Throwaway decision-round sketch (gitignored mocks), never shipped; the round is closed"
+      },
+      {
+        "rule": "*",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/specimen.html"
+        ],
+        "createdAt": "2026-11-11T13:53:55.725Z",
+        "reason": "Throwaway decision-round sketch (gitignored mocks), never shipped; the round is closed"
+      },
+      {
+        "rule": "*",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/bays.html"
+        ],
+        "createdAt": "2026-11-11T13:53:55.880Z",
+        "reason": "Throwaway decision-round sketch (gitignored mocks), never shipped; the round is closed"
+      }
+    ]
+  }
+}

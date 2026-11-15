@@ -30,34 +30,11 @@ const html = (await readFile("arena.html", "utf8")).replace(
   "./game.js",
 );
 await writeFile("dist/arena.html", html);
-// Bundle the interactive lobby, keeping every runtime asset local for offline deployments.
-await build({
-  entryPoints: ["src/lobby.js"],
-  bundle: true,
-  minify: true,
-  target: ["chrome90", "firefox90", "safari15"],
-  format: "esm",
-  outfile: "dist/lobby.js",
-  legalComments: "none",
-});
-await writeFile(
-  "dist/lobby.css",
-  (
-    await transform(await readFile("lobby.css", "utf8"), {
-      loader: "css",
-      minify: true,
-    })
-  ).code,
-);
-await writeFile(
-  "dist/index.html",
-  (await readFile("index.html", "utf8"))
-    .replace("./src/lobby.js", "./lobby.js")
-    .replace(/[ \t]*<script type="importmap">[\s\S]*?<\/script>\s*\n/, ""),
-);
+// The root forwards to the front end (arena.html), keeping query strings for shared links.
+await writeFile("dist/index.html", await readFile("index.html", "utf8"));
 await mkdir("dist/assets", { recursive: true });
 await cp("assets/yard-map.svg", "dist/assets/yard-map.svg");
-// The lobby's typeface ships with the build so the offline cache has it (Inter, SIL OFL 1.1).
+// The interface typeface ships with the build so the offline cache has it (Inter, SIL OFL 1.1).
 await cp("assets/fonts", "dist/assets/fonts", { recursive: true });
 await mkdir("dist/assets/maps", { recursive: true });
 await cp("assets/maps/freedm", "dist/assets/maps/freedm", { recursive: true });
@@ -69,8 +46,6 @@ const files = [
   "arena.html",
   "game.js",
   "style.css",
-  "lobby.js",
-  "lobby.css",
   "assets/yard-map.svg",
   "assets/fonts/inter-latin.woff2",
   ...SAMPLE_FILES.map((file) => "assets/audio/" + file),

@@ -62,3 +62,11 @@ Retro FPS SFX Free by heyheythere - https://heyheythere.itch.io/retro-fps-sfx-fr
 resampled to 22 kHz mono.
 
 File-by-file sources: assets/audio/CREDITS.md
+
+# Weapon models
+
+Assault rifle, SMG, pistol, marksman rifle and LMG models, and the red-dot, ACOG-style and LPVO
+optics: Project A2B pre-release v1 (https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release),
+first-party assets "100% free to use for personal and commercial projects", including
+distribution within games, with no attribution required. Converted by scripts/import-a2b.mjs
+into src/a2b-models.js (geometry plus colours baked from the texture atlases).
