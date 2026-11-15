@@ -34,9 +34,13 @@ export function createMultiplayerServer({
       const url = new URL(req.url, "http://localhost");
       if (url.pathname.startsWith("/api/")) {
         // No CORS: a page from a different origin cannot control a private session.
+        // An opaque origin ("null", e.g. a sandboxed frame) is not this server either.
         if (
           req.headers.origin &&
-          new URL(req.headers.origin).host !== req.headers.host
+          !(
+            URL.canParse(req.headers.origin) &&
+            new URL(req.headers.origin).host === req.headers.host
+          )
         )
           return json(res, 403, { error: "Use the same game server origin." });
         const token = req.headers.authorization?.replace(/^Bearer /, "");
@@ -121,14 +125,14 @@ export function createMultiplayerServer({
       res.end(req.method === "HEAD" ? undefined : body);
     } catch (error) {
       // Room rules throw plain Errors with player-facing text; anything else is internal.
+      const missing = error.code === "ENOENT" || error.code === "ENOTDIR";
       if (!res.headersSent)
-        json(res, 400, {
-          error:
-            error.code === "ENOENT"
-              ? "Not found"
-              : error.constructor === Error && !error.code
-                ? error.message
-                : "Request failed.",
+        json(res, missing ? 404 : 400, {
+          error: missing
+            ? "Not found"
+            : error.constructor === Error && !error.code
+              ? error.message
+              : "Request failed.",
         });
       else res.destroy();
     }
