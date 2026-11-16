@@ -56,7 +56,7 @@ There are no simulated systems in the front end: no fake ranks, levels, party ch
 | Swap weapon | Q or mouse wheel | SWAP |
 | Pause | Escape | PAUSE (top right) |
 
-Keyboard keys can be rebound under **Settings › Key bindings** (the Settings tab of the front end); a key that is already taken swaps with the action that had it. Settings also holds mouse, aim-down-sights and touch look sensitivity, invert Y, volume, field of view, graphics and reduced motion. If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Run and gun:** every weapon fires while sprinting or sliding with no sprint-to-fire delay, and firing does not break the sprint; the hip cone widens 1.4x while sprinting and 1.7x while sliding. Aiming down sights still ends a sprint.
+Keyboard keys can be rebound under **Settings › Key bindings** (the Settings tab of the front end); a key that is already taken swaps with the action that had it. Settings also holds mouse, aim-down-sights and touch look sensitivity, invert Y, volume, field of view, graphics and reduced motion. If the browser denies mouse capture, hold right mouse and drag to aim. Slides last up to 0.8 s (9.4 → 3.4 m/s), keep their entry direction, and have a 0.65 s cooldown. **Sprint-out:** sprinting lowers the gun. Pulling the trigger ends the sprint, and the first round waits for the weapon's sprint-out time (SMG 0.10 s, AR 0.20 s, DMR 0.32 s, LMG 0.40 s, pistol 0.08 s); a semi-automatic press made mid-sprint is held until the gun is up. A slide still fires from the hip after the same delay, with a 1.7x wider cone. Aiming down sights also ends a sprint.
 
 ## Classes and weapons
 
@@ -80,13 +80,18 @@ Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 | LMG | 26 → 17 | 30 – 110 | 700 | 100 | 4.80 / 5.80 | 1.5x | 3.2 / 0.20 | 0.38 |
 
 - Damage falls off linearly between the two distances; the head multiplier applies after falloff. Actors have separate head and body hitboxes.
-- Spread is a cone that blends from hip to ADS over the weapon's ADS time and is multiplied while moving (per weapon), sprinting (1.4x), sliding (1.7x) or reduced while crouched still (0.85x).
+- Spread is a cone that blends from hip to ADS over the weapon's ADS time and is multiplied while moving (per weapon), sliding (1.7x) or in the air (2.2x), or reduced while crouched still (0.85x).
+- **Shot bloom:** every round widens the cone a little, up to a cap, and it eases off after a 0.1 s pause, so controlled bursts stay tighter than a held trigger. Growth / cap in degrees, recovery per second: AR 0.025 / 0.40 / 1.0, SMG 0.035 / 0.55 / 1.4, pistol 0.05 / 0.40 / 1.4, DMR 0.12 / 0.28 / 0.7, LMG 0.04 / 0.50 / 0.6. Switching weapons does not clear it. The hip crosshair shows the live cone.
+- **One in the chamber:** reloading with rounds left keeps the chambered round, so the AR, SMG, pistol and DMR come back with magazine + 1 (31, 29, 13, 17). An empty reload, and the open-bolt LMG, fill to the plain magazine size.
+- **Suppression:** a round passing within 1.5 m of your head, without cover in the way, cracks past and closes in the edges of your view for up to 0.9 s (the LMG suppresses hardest). It is feedback only: it never moves your aim or changes hits.
 - **Recoil patterns** (`RECOIL_PATTERNS` in `src/weapons.js`): each gun climbs in a learnable shape with a harder first kick and a fixed sideways drift plus a little random jitter. The AR pulls right, then swings left mid-magazine and steadies. The SMG zigzags tightly. The LMG kicks hard, drifts left, then settles once the belt is running. The pistol and DMR give one mostly vertical kick per shot. When you stop firing, part of the climb eases back on its own: 55% AR, 65% SMG, 75% pistol, 70% DMR, 45% LMG. Pulling the mouse down during or after a burst counts against that recovery, so the view never drops below where you put it. Offline play, the server and online client prediction all run the same rules.
-- Shot feedback is presentation only and never changes hits: a camera punch that settles back, tracers, muzzle flashes on other players, sparks, dust and wall marks on impact, blood on body and head hits, ejected brass, and a hitmarker that is white for body hits, gold for headshots and red for kills (each with its own sound).
+- Shot feedback is presentation only and never changes hits: the muzzle flash lights nearby surfaces, taking a hit jolts the view and shows an arc toward the shooter, plus a camera punch that settles back, tracers, muzzle flashes on other players, sparks, dust and wall marks on impact, blood on body and head hits, ejected brass, and a hitmarker that is white for body hits, gold for headshots and red for kills (each with its own sound).
 - Movement speed scales with the carried primary's weight (also while the pistol is drawn); ADS strafe speed is per weapon.
 - 100 HP; regenerate 8 HP/s after 6 s without damage. 3 s respawn with a 1.5 s spawn shield that firing ends. No friendly fire; teammates block shots.
 
 Finishes and optics are cosmetic.
+
+The HUD carries a heading tape above the hint line (north is the map's -Z; Conquest sectors ride on it at their bearing).
 
 ## Private multiplayer
 

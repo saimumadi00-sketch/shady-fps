@@ -261,6 +261,15 @@ export class SpawnManager {
       noticeUntil: 0,
       networkNotice: "",
       adsProgress: 0,
+      // Gunplay state that never carries over between lives.
+      bloom: 0,
+      bloomRest: 0,
+      sprintOut: 0,
+      wantsFire: false,
+      airborne: false,
+      suppression: 0,
+      hurtX: null,
+      hurtZ: null,
       reloadTime: 0,
       reloadEmpty: false,
       // Server-applied recoil for networked players and the burst pattern reset with each life.
@@ -316,6 +325,9 @@ export class DamageSystem {
       return false;
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamage = 0;
+    // Where the round came from, for the victim's damage direction indicator.
+    target.hurtX = attacker.x;
+    target.hurtZ = attacker.z;
     // Hit confirmation distinguishes body hits, headshots and the killing blow.
     const hitKind = target.hp === 0 ? "kill" : headshot ? "head" : "body";
     if (g.humanControllers) {

@@ -58,12 +58,13 @@ assert.ok(await page.evaluate(() => __arena.game.player.ammo[0].mag < 30));
 results.push("Desktop movement and automatic fire");
 await page.screenshot({ path: "artifacts/game-desktop.png" });
 await page.keyboard.press("KeyR");
+// A tactical reload keeps the chambered round: magazine + 1.
 await page.waitForFunction(
-  () => __arena.game.player.ammo[0].mag === 30,
+  () => __arena.game.player.ammo[0].mag === 31,
   {},
   { timeout: 10000 },
 );
-assert.equal(await page.evaluate(() => __arena.game.player.ammo[0].mag), 30);
+assert.equal(await page.evaluate(() => __arena.game.player.ammo[0].mag), 31);
 results.push("Reload completes");
 await page.keyboard.press("Digit3");
 await page.waitForTimeout(300);

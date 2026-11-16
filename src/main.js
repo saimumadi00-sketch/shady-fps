@@ -543,6 +543,7 @@ try {
         );
       } else footsteps.clear();
       renderer.render(game, quality, game.time);
+      if (game.match.state === "playing") hud.frame(game);
       idleRenderTime = 0;
     }
     // Throttle DOM updates separately from the rendering frame rate.
