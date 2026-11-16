@@ -1,5 +1,5 @@
 // Match rules, roster creation, safe spawning, damage bookkeeping, and compact snapshots.
-import { CLASS_IDS, loadout, canEquip } from "./loadouts.js";
+import { CLASS_IDS, loadout, kitOf, canEquip } from "./loadouts.js";
 import { distance } from "./math.js";
 import { WEAPONS } from "./weapons.js";
 import { BODY_GAP } from "./world.js";
@@ -123,7 +123,7 @@ export class TeamManager {
 export const RESUPPLY_RADIUS = 2.5;
 export function resupply(a, full = false) {
   let changed = false;
-  for (const index of loadout(a.classId).weapons) {
+  for (const index of kitOf(a).weapons) {
     const w = WEAPONS[index],
       s = a.ammo[index];
     if (!s) continue;
@@ -139,7 +139,7 @@ export function resupply(a, full = false) {
 }
 // True when every carried weapon is completely empty.
 export function outOfAmmo(a) {
-  return loadout(a.classId).weapons.every(
+  return kitOf(a).weapons.every(
     (i) => !a.ammo[i] || (a.ammo[i].mag === 0 && a.ammo[i].reserve === 0),
   );
 }
@@ -189,7 +189,7 @@ export class SpawnManager {
   // Conquest spawns favour the uncontested owned point nearest the fight; TDM favours safety.
   spawn(a) {
     // Repair invalid equipped IDs before restoring only the class inventory.
-    if (!canEquip(a, a.weapon)) a.weapon = loadout(a.classId).primary;
+    if (!canEquip(a, a.weapon)) a.weapon = kitOf(a).primary;
     const g = this.game,
       sectors = g.match.sectors;
     let best = null,

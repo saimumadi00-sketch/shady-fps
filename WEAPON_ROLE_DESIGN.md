@@ -151,3 +151,7 @@ Measure new values on repeatable encounter scripts before tuning from public mat
 - Test universals individually against their intended specialists. Reject upgrades that are equal or better in damage delivery, handling, precision, and endurance simultaneously.
 
 No balance is considered validated from configuration values or a short software-renderer sample alone.
+
+## Armoury variants
+
+Each archetype above now has several guns (`primaries` per class in `src/loadouts.js`). A variant sets `base` to its archetype's index and inherits spread, recoil pattern, weight, ADS and sprint-out; it may change damage, falloff, rate of fire, magazine and reload. Variants trade within the archetype (more damage for less rate of fire, or a faster rate for a smaller magazine) so close-range TTK stays within about 15% of the baseline. The Kar98k is the one exception: a bolt action that kills with one head shot and needs two body shots. Weapon indices are wire IDs and must not be reordered.

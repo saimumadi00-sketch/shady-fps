@@ -1,5 +1,5 @@
 // Converts normalized local input into camera aim, movement, and weapon commands.
-import { loadout, slotWeapon } from "./loadouts.js";
+import { kitOf, slotWeapon } from "./loadouts.js";
 import { clamp } from "./math.js";
 import { TacticalMovement } from "./movement.js";
 import { WEAPONS, handling, compensateRecoil } from "./weapons.js";
@@ -75,10 +75,9 @@ export class PlayerController {
     );
     // 1 selects the class primary and 2 the sidearm; Q, the mouse wheel and SWAP toggle.
     for (let slot = 1; slot <= 2; slot++)
-      if (i.consume("Digit" + slot))
-        g.weapons.equip(a, slotWeapon(a.classId, slot));
+      if (i.consume("Digit" + slot)) g.weapons.equip(a, slotWeapon(a, slot));
     if (i.consume("switch")) {
-      const allowed = loadout(a.classId).weapons;
+      const allowed = kitOf(a).weapons;
       g.weapons.equip(
         a,
         allowed[(allowed.indexOf(a.weapon) + 1) % allowed.length],

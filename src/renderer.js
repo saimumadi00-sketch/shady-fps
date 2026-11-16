@@ -9,7 +9,7 @@ import {
   ViewmodelMotion,
   easeAim,
 } from "./viewmodel.js";
-import { WEAPONS, aimZoom, isScoped } from "./weapons.js";
+import { isPistol, WEAPONS, aimZoom, isScoped } from "./weapons.js";
 import { CameraPunch, CombatFx, punchStrength } from "./combat-fx.js";
 // The vertex shader shares lighting and transform logic across instances and weapon vertices.
 const VS = `#version 300 es
@@ -412,7 +412,7 @@ export class Renderer {
         0,
         0,
         VIEWMODEL_FOV +
-          ((p.weapon === 2 ? VIEWMODEL_FOV_PISTOL : VIEWMODEL_FOV_AIM) -
+          ((isPistol(p.weapon) ? VIEWMODEL_FOV_PISTOL : VIEWMODEL_FOV_AIM) -
             VIEWMODEL_FOV) *
             easeAim(this.aimBlend),
         this.canvas.width / this.canvas.height,

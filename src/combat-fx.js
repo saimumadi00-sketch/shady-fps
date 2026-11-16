@@ -2,7 +2,7 @@
 // bullet marks and ejected brass. Nothing here affects aim, hits or damage; it only reads the
 // simulation's shot effects (which also arrive over the network) and the local shot counter.
 import { direction } from "./math.js";
-import { WEAPONS } from "./weapons.js";
+import { weaponBase, WEAPONS } from "./weapons.js";
 
 const GRAVITY = 9.8;
 const TRACER_SPEED = 380; // m/s: slow enough to see, fast enough to read as a bullet.
@@ -61,7 +61,9 @@ export class CombatFx {
   }
   particle(props) {
     const p = this.particles[this.nextParticle++ % MAX_PARTICLES];
-    Object.assign(p, {
+    Object.assign(
+      p,
+      {
         age: 0,
         spin: 0,
         spinRate: 0,
@@ -70,7 +72,9 @@ export class CombatFx {
         angle: 0,
         pitch: 0,
         floor: undefined,
-      }, props);
+      },
+      props,
+    );
     p.max = p.life;
     return p;
   }
@@ -195,7 +199,8 @@ export class CombatFx {
     const r = this.random,
       f = direction(cam.yaw, cam.pitch),
       right = [Math.cos(cam.yaw), 0, Math.sin(cam.yaw)],
-      long = weapon === 3 ? 0.04 : weapon === 2 ? 0.018 : 0.03;
+      base = weaponBase(weapon),
+      long = base === 3 ? 0.04 : base === 2 ? 0.018 : 0.03;
     // The ejection port sits just right of and below the line of sight, ahead of the face.
     this.particle({
       type: "bit",
@@ -207,7 +212,7 @@ export class CombatFx {
       vz: right[2] * (1.5 + r() * 0.8) + f[2] * 0.3,
       floor: cam.floor,
       size: [0.009, 0.009, long],
-      color: weapon === 4 ? [0.85, 0.78, 0.6] : [1.3, 0.95, 0.42],
+      color: base === 4 ? [0.85, 0.78, 0.6] : [1.3, 0.95, 0.42],
       gravity: GRAVITY,
       spinRate: 18 + r() * 12,
       angle: cam.yaw,
@@ -288,4 +293,5 @@ export class CombatFx {
 }
 
 // Camera punch strength for a weapon relative to the assault rifle.
-export const punchStrength = (weapon) => (WEAPONS[weapon]?.kick || 0.019) / 0.019;
+export const punchStrength = (weapon) =>
+  (WEAPONS[weapon]?.kick || 0.019) / 0.019;

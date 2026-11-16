@@ -34,7 +34,7 @@ What players should remember about Crosscurrent compared with other browser shoo
 ## Capabilities and Constraints
 
 - Modes: Team Deathmatch (5v5, first to 15/30/50, 3/7/10-minute timer, four maps) and Conquest on FreeDM Outpost (three sectors, 150 tickets).
-- Classes: Assault (AR), Engineer (SMG), Support (LMG), Recon (DMR), each with a shared pistol. Finishes and optics are cosmetic.
+- Classes: Assault (rifles), Engineer (SMGs), Support (LMGs), Recon (marksman rifles), each with an armoury of modern and WW2 primaries and a shared pistol. Finishes and optics are cosmetic.
 - **Not built:** rankings, matchmaking, progression and party systems. The old simulated lobby that faked them was removed; design must not reintroduce fake versions or real-looking player data until they exist.
 - **Touch parity is binding.** Every screen and match feature must work on a phone in landscape, not only on desktop.
 - Stack: vanilla JS ES modules, Three.js, esbuild build, Playwright browser tests, Node multiplayer server.

@@ -7,6 +7,7 @@
 // rig) and moved so its firing-grip socket sits where the procedural guns' grips sat, which
 // keeps the firing arm and the hip framing where they were tuned.
 import { A2B_MODELS, A2B_QUANTUM } from "./a2b-models.js";
+import { procModel } from "./proc-guns.js";
 
 export const A2B_SCALE = 1.32;
 // Per weapon index: model, hand kind, and the built-in optic (the marksman rifle's scope).
@@ -16,6 +17,17 @@ export const A2B_GUNS = Object.freeze([
   { model: "demo_pistol", kind: "pistol" },
   { model: "br_scar_h", kind: "dmr", optic: "att_lpvo_scope" },
   { model: "lmg_m60", kind: "lmg" },
+  // Code-built guns (proc-guns.js). `optics: false` keeps period guns on their own sights.
+  { model: "proc_ak74", kind: "rifle" },
+  { model: "proc_stg44", kind: "rifle", optics: false },
+  { model: "proc_garand", kind: "rifle", optics: false },
+  { model: "proc_thompson", kind: "smg", optics: false },
+  { model: "proc_mp40", kind: "smg", optics: false },
+  { model: "proc_ump45", kind: "smg" },
+  { model: "proc_kar98k", kind: "dmr", optic: "proc_scope", optics: false },
+  { model: "proc_svd", kind: "dmr", optic: "proc_scope", optics: false },
+  { model: "proc_mg42", kind: "lmg", optics: false },
+  { model: "proc_m249", kind: "lmg" },
 ]);
 const OPTICS = { reflex: "att_red_dot_t2", scope: "att_acog_scope" };
 // Firing-grip socket targets: the palm centre on the procedural rifle and pistol grips.
@@ -35,6 +47,11 @@ const decoded = new Map();
 // Unpack a generated model once: positions in metres, indices, and colours per triangle.
 function decode(name) {
   if (decoded.has(name)) return decoded.get(name);
+  const built = procModel(name);
+  if (built) {
+    decoded.set(name, built);
+    return built;
+  }
   const m = A2B_MODELS[name],
     bytes = Uint8Array.from(atob(m.data), (c) => c.charCodeAt(0)),
     pos = new Int16Array(bytes.buffer, 0, m.vertices * 3),
@@ -70,11 +87,13 @@ const vertex = (m, i) => [
   m.pos[i * 3 + 2] * A2B_QUANTUM,
 ];
 
+// How far behind the firing grip a held long gun is drawn, in viewmodel units.
+const STOCK_IN_VIEW = 0.2;
 // The optic fitted for a cosmetic choice, or null for iron sights. Pistols take none.
 function opticFor(index, optic) {
   const gun = A2B_GUNS[index];
   if (gun.optic) return gun.optic;
-  if (gun.kind === "pistol") return null;
+  if (gun.kind === "pistol" || gun.optics === false) return null;
   return OPTICS[optic] || null;
 }
 
@@ -82,13 +101,28 @@ function opticFor(index, optic) {
 // `part(name, fn)` so they occupy contiguous ranges. Returns metadata for posing and effects.
 // `aimed` drops every triangle entirely behind the rear sight: aiming down sights puts the
 // eye just above the stock of these slim guns, where it would fill the bottom of the view.
-export function emitA2B(index, optic, finish, tri, part, aimed = false) {
+// `held` (first person) also drops the rear of the stock, which would otherwise reach back
+// past the camera and fill the corner of the view.
+export function emitA2B(
+  index,
+  optic,
+  finish,
+  tri,
+  part,
+  aimed = false,
+  held = false,
+) {
   const gun = A2B_GUNS[index],
     place = placer(gun),
     m = decode(gun.model),
     mount = opticFor(index, optic);
   const tint = finish && finish.tint,
-    cut = aimed ? describe(index, optic).aim[2] + 0.02 : Infinity;
+    cut = Math.min(
+      aimed ? describe(index, optic).aim[2] + 0.02 : Infinity,
+      held && gun.kind !== "pistol"
+        ? GRIP_AT.rifle[2] + STOCK_IN_VIEW
+        : Infinity,
+    );
   const emitPart = (model, p, offset = [0, 0, 0]) => {
     for (let t = p.t0; t < p.t0 + p.tn; t++) {
       const v = [0, 1, 2].map((j) =>
@@ -220,6 +254,11 @@ function slices(m, p, place) {
     n = Math.max(1, Math.round((all.max[2] - all.min[2]) / 0.06)),
     step = (all.max[2] - all.min[2]) / n,
     boxes = [];
+  // Work from the part's triangles, not just its vertices: a long flat-sided part has
+  // vertices only at its ends, and its surface still passes through every slice between.
+  const tris = [];
+  for (let t = p.t0; t < p.t0 + p.tn; t++)
+    tris.push([0, 1, 2].map((k) => place(vertex(m, m.idx[t * 3 + k]))));
   for (let i = 0; i < n; i++) {
     const z0 = all.min[2] + i * step,
       z1 = z0 + step;
@@ -227,14 +266,24 @@ function slices(m, p, place) {
       min: [Infinity, Infinity, z0],
       max: [-Infinity, -Infinity, z1],
     };
-    for (let k = p.v0; k < p.v0 + p.vn; k++) {
-      const v = place(vertex(m, k));
-      if (v[2] < z0 - 1e-6 || v[2] > z1 + 1e-6) continue;
+    const take = (v) => {
       for (const a of [0, 1]) {
         b.min[a] = Math.min(b.min[a], v[a]);
         b.max[a] = Math.max(b.max[a], v[a]);
       }
-    }
+    };
+    for (const tri of tris)
+      for (let k = 0; k < 3; k++) {
+        const u = tri[k],
+          v = tri[(k + 1) % 3];
+        if (u[2] >= z0 - 1e-6 && u[2] <= z1 + 1e-6) take(u);
+        // Where this edge crosses either face of the slice.
+        for (const z of [z0, z1]) {
+          if ((u[2] - z) * (v[2] - z) >= 0) continue;
+          const f = (z - u[2]) / (v[2] - u[2]);
+          take([u[0] + (v[0] - u[0]) * f, u[1] + (v[1] - u[1]) * f]);
+        }
+      }
     if (b.min[0] <= b.max[0]) boxes.push(b);
   }
   return boxes;
@@ -389,4 +438,79 @@ export function a2bShapes(index, { aabb, slab }) {
     shapes.supportZ = place(s.grip_l)[2];
   }
   return shapes;
+}
+
+// A gun reduced to one box per part, for soldiers seen in a match (the renderer draws
+// characters as instanced boxes). Coordinates are in the character's gun frame: x right,
+// y up, z toward the stock, origin at the middle of the gun, at THIRD_PERSON_SCALE.
+// Also returns where the hands go and how far the butt sits behind the origin.
+const THIRD_PERSON_SCALE = 0.8,
+  blocks = new Map();
+export function gunBlocks(index) {
+  if (blocks.has(index)) return blocks.get(index);
+  const gun = A2B_GUNS[index] || A2B_GUNS[0],
+    place = placer(gun),
+    m = decode(gun.model),
+    pistol = gun.kind === "pistol";
+  const raw = [];
+  const add = (model, p, offset) => {
+    const b = bounds(model, [p], (v) =>
+      place(v.map((n, i) => n + (offset ? offset[i] : 0))),
+    );
+    if (!(b.min[0] <= b.max[0])) return;
+    let r = 0,
+      g = 0,
+      bl = 0;
+    for (let t = p.t0; t < p.t0 + p.tn; t++) {
+      r += model.col[t * 3];
+      g += model.col[t * 3 + 1];
+      bl += model.col[t * 3 + 2];
+    }
+    const k = 1 / (255 * Math.max(1, p.tn));
+    raw.push({ ...b, color: [r * k, g * k, bl * k] });
+  };
+  for (const p of m.parts) if (p.name !== "trigger") add(m, p);
+  if (gun.optic) {
+    const o = decode(gun.optic);
+    for (const p of o.parts) add(o, p, m.sockets.rail_top);
+  }
+  const min = [Infinity, Infinity, Infinity],
+    max = [-Infinity, -Infinity, -Infinity];
+  for (const b of raw)
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k], b.min[k]);
+      max[k] = Math.max(max[k], b.max[k]);
+    }
+  const centre = min.map((v, k) => (v + max[k]) / 2),
+    S = THIRD_PERSON_SCALE,
+    local = (p) => p.map((v, k) => (v - centre[k]) * S);
+  const list = raw
+    .map((b) => ({
+      c: local(b.min.map((v, k) => (v + b.max[k]) / 2)),
+      // Never thinner than 2 cm, so sights and rods do not vanish at range.
+      s: b.min.map((v, k) => Math.max(0.02, (b.max[k] - v) * S)),
+      color: b.color,
+    }))
+    .filter((b) => Math.max(...b.s) > 0.035)
+    .sort((a, b) => b.s[0] * b.s[1] * b.s[2] - a.s[0] * a.s[1] * a.s[2])
+    .slice(0, 16);
+  const named = (re) => m.parts.filter((p) => re.test(p.name)),
+    gripBox = bounds(m, named(pistol ? /^frame$/ : /^pistol_grip$/), place),
+    grip = local(gripBox.min.map((v, k) => (v + gripBox.max[k]) / 2));
+  let support;
+  if (pistol) support = [grip[0], grip[1] - 0.03, grip[2] - 0.02];
+  else {
+    const hg = named(/^handguard$/).length
+      ? bounds(m, named(/^handguard$/), place)
+      : gripBox;
+    support = local([0, hg.min[1] - 0.02, place(m.sockets.grip_l)[2]]);
+  }
+  const result = {
+    blocks: list,
+    holds: { grip, support },
+    // A long gun's butt is in the shoulder; a pistol is held out at arm's length.
+    back: pistol ? 0.42 : (max[2] - centre[2]) * S,
+  };
+  blocks.set(index, result);
+  return result;
 }

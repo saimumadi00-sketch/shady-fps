@@ -1,7 +1,7 @@
 // Shared weapon tuning plus ammunition, hitscan, damage dispatch, and reusable visual effects.
 // Tuning follows WEAPON_ROLE_DESIGN.md. Angles are authored in degrees (cone half-angles) and
 // converted to radians at the simulation boundary; handling times are seconds.
-import { canEquip, loadout } from "./loadouts.js";
+import { canEquip, kitOf } from "./loadouts.js";
 import { clamp, direction, rayBox } from "./math.js";
 const DEG = Math.PI / 180;
 // Array indices are stable loadout IDs used by saves, actors, selectors, audio, and meshes.
@@ -187,8 +187,359 @@ export const WEAPONS = Object.freeze(
       // How hard a near miss suppresses the target, relative to a rifle round.
       suppress: 1.6,
     },
-  ].map((w) =>
+    // ---- Added primaries. `base` names the original weapon (0-4) whose hand pose, reload
+    // animation, sound recording and recoil pattern each one shares.
+    {
+      name: "AK-74",
+      label: "AK-74",
+      short: "AK",
+      description:
+        "Hard-hitting automatic rifle; kicks more than the assault rifle.",
+      era: "Modern",
+      base: 0,
+      automatic: true,
+      magazine: 30,
+      reserve: 120,
+      damage: [31, 20],
+      falloff: [20, 80],
+      headshot: 1.5,
+      rpm: 600,
+      reload: 2.4,
+      reloadEmpty: 2.9,
+      hipSpread: 1.9,
+      adsSpread: 0.12,
+      movingSpread: 1.5,
+      recoil: 0.36,
+      recoilX: 0.11,
+      kick: 0.022,
+      adsTime: 0.24,
+      adsZoom: 1.4,
+      equipTime: 0.3,
+      weight: 3.7,
+      adsMove: 0.62,
+      sprintOut: 0.22,
+      bloom: [0.03, 0.45, 1.0],
+      chamber: true,
+      suppress: 1,
+      soundRate: 0.92,
+    },
+    {
+      name: "STG 44",
+      label: "StG 44",
+      short: "STG",
+      description: "The first assault rifle: slower, steadier automatic fire.",
+      era: "WW2",
+      base: 0,
+      automatic: true,
+      magazine: 30,
+      reserve: 120,
+      damage: [30, 19],
+      falloff: [18, 70],
+      headshot: 1.5,
+      rpm: 540,
+      reload: 2.5,
+      reloadEmpty: 3.0,
+      hipSpread: 1.8,
+      adsSpread: 0.12,
+      movingSpread: 1.5,
+      recoil: 0.32,
+      recoilX: 0.07,
+      kick: 0.02,
+      adsTime: 0.26,
+      adsZoom: 1.35,
+      equipTime: 0.32,
+      weight: 4.6,
+      adsMove: 0.6,
+      sprintOut: 0.24,
+      bloom: [0.025, 0.4, 1.0],
+      chamber: true,
+      suppress: 1,
+      soundRate: 0.88,
+      optics: false,
+    },
+    {
+      name: "M1 GARAND",
+      label: "M1 Garand",
+      short: "M1",
+      description:
+        "Eight heavy semi-automatic rounds; the clip pings out when empty.",
+      era: "WW2",
+      base: 0,
+      automatic: false,
+      magazine: 8,
+      reserve: 64,
+      damage: [50, 38],
+      falloff: [35, 120],
+      headshot: 1.8,
+      rpm: 300,
+      reload: 2.2,
+      reloadEmpty: 2.2,
+      hipSpread: 2.6,
+      adsSpread: 0.05,
+      movingSpread: 2.2,
+      recoil: 0.75,
+      recoilX: 0.06,
+      kick: 0.04,
+      adsTime: 0.27,
+      adsZoom: 1.5,
+      equipTime: 0.34,
+      weight: 4.3,
+      adsMove: 0.55,
+      sprintOut: 0.26,
+      bloom: [0.1, 0.3, 0.8],
+      chamber: false,
+      suppress: 1.2,
+      sound: 3,
+      soundRate: 1.06,
+      optics: false,
+      // The en-bloc clip is thrown clear with a ring on the last round.
+      ping: true,
+    },
+    {
+      name: "THOMPSON",
+      label: "Thompson M1A1",
+      short: "M1A1",
+      description: "Heavy .45 submachine gun; strong up close, short reach.",
+      era: "WW2",
+      base: 1,
+      automatic: true,
+      magazine: 30,
+      reserve: 120,
+      damage: [28, 12],
+      falloff: [10, 40],
+      headshot: 1.5,
+      rpm: 700,
+      reload: 2.0,
+      reloadEmpty: 2.4,
+      hipSpread: 1.3,
+      adsSpread: 0.2,
+      movingSpread: 1.25,
+      recoil: 0.24,
+      recoilX: 0.12,
+      kick: 0.014,
+      adsTime: 0.17,
+      adsZoom: 1.2,
+      equipTime: 0.22,
+      weight: 4.5,
+      adsMove: 0.8,
+      sprintOut: 0.13,
+      bloom: [0.035, 0.55, 1.3],
+      chamber: true,
+      suppress: 1,
+      soundRate: 0.86,
+      optics: false,
+    },
+    {
+      name: "MP 40",
+      label: "MP 40",
+      short: "MP40",
+      description: "Slow-firing, very controllable submachine gun.",
+      era: "WW2",
+      base: 1,
+      automatic: true,
+      magazine: 32,
+      reserve: 128,
+      damage: [26, 12],
+      falloff: [12, 45],
+      headshot: 1.5,
+      rpm: 520,
+      reload: 1.9,
+      reloadEmpty: 2.3,
+      hipSpread: 1.2,
+      adsSpread: 0.15,
+      movingSpread: 1.2,
+      recoil: 0.17,
+      recoilX: 0.06,
+      kick: 0.011,
+      adsTime: 0.15,
+      adsZoom: 1.2,
+      equipTime: 0.2,
+      weight: 4.0,
+      adsMove: 0.85,
+      sprintOut: 0.11,
+      bloom: [0.03, 0.45, 1.4],
+      chamber: true,
+      suppress: 1,
+      soundRate: 0.93,
+      optics: false,
+    },
+    {
+      name: "UMP45",
+      label: "UMP45",
+      short: "UMP",
+      description: "Modern .45 submachine gun; fewer rounds, more reach.",
+      era: "Modern",
+      base: 1,
+      automatic: true,
+      magazine: 25,
+      reserve: 125,
+      damage: [27, 13],
+      falloff: [12, 48],
+      headshot: 1.5,
+      rpm: 650,
+      reload: 1.75,
+      reloadEmpty: 2.1,
+      hipSpread: 1.2,
+      adsSpread: 0.15,
+      movingSpread: 1.2,
+      recoil: 0.22,
+      recoilX: 0.09,
+      kick: 0.013,
+      adsTime: 0.15,
+      adsZoom: 1.25,
+      equipTime: 0.18,
+      weight: 2.5,
+      adsMove: 0.85,
+      sprintOut: 0.1,
+      bloom: [0.035, 0.5, 1.4],
+      chamber: true,
+      suppress: 1,
+      soundRate: 0.97,
+    },
+    {
+      name: "KAR98K",
+      label: "Kar98k",
+      short: "K98",
+      description:
+        "Scoped bolt-action rifle: one round at a time, lethal to the head at any range.",
+      era: "WW2",
+      base: 3,
+      automatic: false,
+      magazine: 5,
+      reserve: 40,
+      damage: [88, 70],
+      falloff: [50, 180],
+      headshot: 2,
+      rpm: 46,
+      reload: 3.0,
+      reloadEmpty: 3.0,
+      hipSpread: 4.5,
+      adsSpread: 0.012,
+      movingSpread: 3.2,
+      recoil: 1.3,
+      recoilX: 0.03,
+      kick: 0.06,
+      adsTime: 0.38,
+      adsZoom: 4.5,
+      equipTime: 0.42,
+      weight: 4.1,
+      adsMove: 0.38,
+      sprintOut: 0.34,
+      bloom: [0.15, 0.3, 0.7],
+      chamber: false,
+      suppress: 1.5,
+      soundRate: 0.9,
+      optics: false,
+      // Each round is chambered by hand: the bolt is worked after every shot.
+      bolt: true,
+    },
+    {
+      name: "SVD",
+      label: "SVD Dragunov",
+      short: "SVD",
+      description:
+        "Scoped semi-automatic rifle; hits harder and slower than the marksman rifle.",
+      era: "Modern",
+      base: 3,
+      automatic: false,
+      magazine: 10,
+      reserve: 50,
+      damage: [52, 40],
+      falloff: [50, 170],
+      headshot: 2,
+      rpm: 200,
+      reload: 2.7,
+      reloadEmpty: 3.2,
+      hipSpread: 4.2,
+      adsSpread: 0.02,
+      movingSpread: 3.0,
+      recoil: 0.95,
+      recoilX: 0.04,
+      kick: 0.05,
+      adsTime: 0.36,
+      adsZoom: 4,
+      equipTime: 0.4,
+      weight: 4.4,
+      adsMove: 0.4,
+      sprintOut: 0.33,
+      bloom: [0.12, 0.28, 0.7],
+      chamber: true,
+      suppress: 1.3,
+      soundRate: 0.96,
+      optics: false,
+    },
+    {
+      name: "MG 42",
+      label: "MG 42",
+      short: "MG42",
+      description: "Tears through a 50-round drum at 1,100 rounds a minute.",
+      era: "WW2",
+      base: 4,
+      automatic: true,
+      magazine: 50,
+      reserve: 200,
+      damage: [23, 16],
+      falloff: [30, 110],
+      headshot: 1.5,
+      rpm: 1100,
+      reload: 4.4,
+      reloadEmpty: 5.2,
+      hipSpread: 3.4,
+      adsSpread: 0.24,
+      movingSpread: 2.4,
+      recoil: 0.32,
+      recoilX: 0.17,
+      kick: 0.02,
+      adsTime: 0.4,
+      adsZoom: 1.35,
+      equipTime: 0.58,
+      weight: 8.5,
+      adsMove: 0.38,
+      sprintOut: 0.42,
+      bloom: [0.035, 0.55, 0.6],
+      chamber: false,
+      suppress: 1.6,
+      soundRate: 1.1,
+      optics: false,
+    },
+    {
+      name: "M249",
+      label: "M249 SAW",
+      short: "SAW",
+      description:
+        "Modern belt-fed machine gun: 100 rounds, lighter and faster than the LMG.",
+      era: "Modern",
+      base: 4,
+      automatic: true,
+      magazine: 100,
+      reserve: 200,
+      damage: [24, 16],
+      falloff: [28, 100],
+      headshot: 1.5,
+      rpm: 800,
+      reload: 5.0,
+      reloadEmpty: 6.0,
+      hipSpread: 3.0,
+      adsSpread: 0.2,
+      movingSpread: 2.2,
+      recoil: 0.33,
+      recoilX: 0.14,
+      kick: 0.021,
+      adsTime: 0.36,
+      adsZoom: 1.35,
+      equipTime: 0.5,
+      weight: 6.9,
+      adsMove: 0.42,
+      sprintOut: 0.38,
+      bloom: [0.04, 0.5, 0.6],
+      chamber: false,
+      suppress: 1.5,
+      soundRate: 1.16,
+    },
+  ].map((w, index) =>
     Object.freeze({
+      base: index,
+      era: "Modern",
       ...w,
       damage: Object.freeze(w.damage),
       bloom: Object.freeze(w.bloom),
@@ -199,6 +550,9 @@ export const WEAPONS = Object.freeze(
     }),
   ),
 );
+// The original weapon (0-4) a weapon behaves like for hands, reloads, sound and recoil.
+export const weaponBase = (index) => WEAPONS[index]?.base ?? 0;
+export const isPistol = (index) => weaponBase(index) === 2;
 // Linear falloff between the two distances, holding the near/far values outside them.
 export function damageAt(w, distance) {
   const [start, end] = w.falloff,
@@ -207,7 +561,7 @@ export function damageAt(w, distance) {
 }
 // Movement multipliers derive from the carried primary's bulk, even with the pistol drawn.
 export function handling(a) {
-  const primary = WEAPONS[loadout(a.classId).primary],
+  const primary = WEAPONS[kitOf(a).primary],
     w = WEAPONS[a.weapon] || primary;
   return {
     walk: clamp(1.08 - 0.02 * primary.weight, 0.88, 1.05),
@@ -323,18 +677,21 @@ export const RECOIL_PATTERNS = Object.freeze(
     },
   ].map((p) => Object.freeze({ ...p, drift: Object.freeze(p.drift) })),
 );
+// Added weapons use the pattern of the weapon they are based on.
+export const patternFor = (weapon) =>
+  RECOIL_PATTERNS[weapon] || RECOIL_PATTERNS[weaponBase(weapon)];
 // How quickly the recoverable climb eases back once a burst ends (per second).
 export const RECOIL_RECOVERY_RATE = 9;
 // Vertical multiplier for the `shot`-th round (0-based) of a burst.
 export function recoilScale(weapon, shot) {
-  const p = RECOIL_PATTERNS[weapon] || RECOIL_PATTERNS[0];
+  const p = patternFor(weapon);
   return shot === 0 ? p.first : shot < p.settleAfter ? 1 : p.settle;
 }
 // Per-shot aim displacement shared by the authoritative simulation and client-side prediction.
 // `shot` is the round's index in the current burst.
 export function recoilFor(a, random, shot = a.recoilShot || 0) {
   const w = WEAPONS[a.weapon],
-    p = RECOIL_PATTERNS[a.weapon] || RECOIL_PATTERNS[0],
+    p = patternFor(a.weapon),
     drift = p.drift[shot % p.drift.length];
   return {
     pitch: w.recoil * DEG * (a.aim ? 0.7 : 1) * recoilScale(a.weapon, shot),
@@ -344,7 +701,7 @@ export function recoilFor(a, random, shot = a.recoilShot || 0) {
 // Recoil burst state lives on the simulated actor and, for online prediction, on the client.
 // Record a fired round: advance the pattern and bank the share of its kick that will recover.
 export function trackRecoil(state, weapon, pitch, yaw) {
-  const p = RECOIL_PATTERNS[weapon] || RECOIL_PATTERNS[0];
+  const p = patternFor(weapon);
   state.recoilShot = (state.recoilShot || 0) + 1;
   state.recoilRest = 0;
   state.recoverPitch = (state.recoverPitch || 0) + pitch * p.recover;
@@ -635,6 +992,7 @@ export class WeaponController {
       // Presentation counter: the renderer kicks the viewmodel once per local shot.
       if (a === game.player) game.localShots = (game.localShots || 0) + 1;
       game.audio.play("shot", 1, a.weapon);
+      if (w.ping && s.mag === 0) game.audio.play("ping", 0.7, a.weapon);
     } else
       // Other actors' shots are positioned in 3D; the audio layer handles distance falloff.
       game.audio.play("shot", 0.75, a.weapon, {
@@ -651,10 +1009,11 @@ export class WeaponController {
 export function aimZoom(index, optic) {
   const w = WEAPONS[index];
   if (!w) return 1;
-  return optic === "scope" && index !== 2
+  return optic === "scope" && !isPistol(index) && w.optics !== false
     ? Math.max(w.adsZoom, 2.5)
     : w.adsZoom;
 }
 // Whether aiming this weapon looks through a scope (full-screen overlay, no viewmodel).
 export const isScoped = (index, optic) =>
-  index === 3 || (optic === "scope" && index !== 2);
+  weaponBase(index) === 3 ||
+  (optic === "scope" && !isPistol(index) && WEAPONS[index]?.optics !== false);

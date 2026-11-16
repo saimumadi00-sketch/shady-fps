@@ -1,5 +1,6 @@
 // Simulation owner: all authoritative movement, combat, timers, and respawns run here.
 import {
+  SIDEARM,
   CLASS_IDS,
   classForWeapon,
   loadout,
@@ -59,7 +60,9 @@ export class OfflineSimulation {
     for (const a of this.actors) this.spawns.spawn(a);
   }
   // Reset match state and loadout while reusing the arena, navigation graph, and effect pool.
-  start(difficulty, weapon = 0, classId = classForWeapon(weapon)) {
+  // `weapon` is what the player holds at the start (a primary or the pistol); `primary` is
+  // their chosen class primary when they start on the pistol.
+  start(difficulty, weapon = 0, classId = classForWeapon(weapon), primary) {
     classId = normalizeClass(classId);
     if (!Number.isInteger(weapon) || !WEAPONS[weapon]) weapon = 0;
     this.match.start();
@@ -68,6 +71,7 @@ export class OfflineSimulation {
     this.time = 0;
     this.hit = this.hurt = this.noticeTime = 0;
     for (const e of this.effects.items) e.life = 0;
+    const variety = Math.floor(this.random() * 12);
     for (const a of this.actors) {
       a.kills = a.deaths = 0;
       a.alive = false;
@@ -79,8 +83,17 @@ export class OfflineSimulation {
             ? "assault"
             : CLASS_IDS[(a.id % 5) % CLASS_IDS.length];
       const kit = loadout(a.classId);
-      a.weapon =
-        a.id === 0 && kit.weapons.includes(weapon) ? weapon : kit.primary;
+      // The player carries the primary they picked; bots share one draw per match, so the
+      // same slot on each team carries the same gun and the sides stay evenly armed.
+      a.primary =
+        a.id === 0
+          ? kit.primaries.includes(weapon)
+            ? weapon
+            : kit.primaries.includes(primary)
+              ? primary
+              : kit.primary
+          : kit.primaries[(variety + (a.id % 5)) % kit.primaries.length];
+      a.weapon = a.id === 0 && weapon === SIDEARM ? SIDEARM : a.primary;
       a.brain.think = a.id * 0.025;
     }
     for (const a of this.actors) this.spawns.spawn(a);

@@ -1,3 +1,4 @@
+import { WEAPONS } from "./weapons.js";
 // Game audio with 3D positioning. Gunshots, reloads, impacts and pain use recorded samples
 // (assets/audio, cached offline); every cue also has a synthesized version, built from
 // oscillators and a shared noise buffer, that plays until the recordings have decoded.
@@ -50,12 +51,18 @@ const SHOT_SAMPLE = [
 // `positioned` is true for other actors' guns: nothing chokes those, so their recording is
 // kept short and the reverb carries the tail instead.
 export function sampleFor(kind, weapon = 0, positioned = false) {
-  const key = WEAPON_KEY[weapon] || "ar";
+  // Added weapons use the recordings of the weapon they are based on; a gun may borrow
+  // another weapon's report (`sound`) and shift its pitch (`soundRate`).
+  const w = WEAPONS[weapon],
+    base = w?.base ?? 0,
+    key = WEAPON_KEY[base] || "ar";
   if (kind === "shot") {
-    const s = SHOT_SAMPLE[weapon] || SHOT_SAMPLE[0];
+    const voice = w?.sound ?? base,
+      s = SHOT_SAMPLE[voice] || SHOT_SAMPLE[0];
     return {
-      file: `shot-${key}.mp3`,
+      file: `shot-${WEAPON_KEY[voice] || "ar"}.mp3`,
       ...s,
+      rate: s.rate * (w?.soundRate ?? 1),
       tail: positioned ? Math.min(s.tail, 0.55) : s.tail,
       jitter: 0.03,
     };
@@ -320,6 +327,12 @@ export class AudioManager {
       if (Math.random() < 0.45)
         setTimeout(() => this.play("brass", 0.5), 420 + Math.random() * 260);
     }
+    // A bolt-action rifle is cycled by hand after every round.
+    if (kind === "shot" && WEAPONS[weapon]?.bolt)
+      setTimeout(
+        () => this.play("rack", source ? 0.45 : 0.6, weapon, source),
+        (lag + 0.42) * 1000,
+      );
     if (source) {
       const panner = c.createPanner();
       panner.panningModel = "HRTF";
@@ -488,6 +501,14 @@ export class AudioManager {
       burst("highpass", 4600, 0.7, 0.012, 0.55, 0.125);
       tone("triangle", 1750, 1650, 0.08, 0.3, 0.125);
       return 0.22;
+    }
+    if (kind === "ping") {
+      // The M1's empty clip springing clear: a bright steel ring that hangs for a moment.
+      burst("highpass", 5000, 0.8, 0.01, 0.5);
+      tone("sine", 3120, 3080, 0.34, 0.3);
+      tone("sine", 4690, 4640, 0.26, 0.16);
+      tone("sine", 6250, 6200, 0.16, 0.07);
+      return 0.36;
     }
     if (kind === "brass") {
       // A spent case bouncing on concrete: two or three small, quickly fading rings.

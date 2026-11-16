@@ -280,6 +280,7 @@ export class NetworkClient {
       p.lastShot = performance.now();
       g.localShots = (g.localShots || 0) + 1;
       g.audio.play("shot", 1, a.weapon);
+      if (w.ping && p.mag === 0) g.audio.play("ping", 0.7, a.weapon);
     }
     this.applyView(a);
   }

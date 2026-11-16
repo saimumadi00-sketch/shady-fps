@@ -60,7 +60,7 @@ Keyboard keys can be rebound under **Settings › Key bindings** (the Settings t
 
 ## Classes and weapons
 
-Every class carries its primary (slot 1) and the shared pistol (slot 2). Class is chosen before a match; respawning keeps class and equipped weapon and refills only that class's ammunition.
+Every class carries one primary (slot 1) and the shared pistol (slot 2). Class and primary are chosen before a match from that class's armoury; respawning keeps class and equipped weapon and refills only that weapon's ammunition. Bots draw from the same armouries, and the same squad slot on both teams gets the same gun so a match stays even.
 
 | Class | Primary | Role |
 |---|---|---|
@@ -69,7 +69,30 @@ Every class carries its primary (slot 1) and the shared pistol (slot 2). Class i
 | Support | LMG | 100-round belt and fastest close TTK, but slow ADS, heavy, long reloads |
 | Recon | DMR | Precise aimed fire, 2x headshots; poor hip fire and mobility |
 
-Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
+### Armoury
+
+Each class picks from modern and WW2 guns. Every gun inherits its archetype's handling (spread, recoil pattern, weight, ADS time) and changes damage, rate of fire and magazine:
+
+| Class | Gun | Era | Damage near → far | RPM | Mag | Notes |
+|---|---|---|---:|---:|---:|---|
+| Assault | AR | Modern | 28 → 18 | 650 | 30 | Baseline rifle; takes optics |
+| Assault | AK-74 | Modern | 31 → 20 | 600 | 30 | Harder hitting, slower; takes optics |
+| Assault | StG 44 | WW2 | 30 → 19 | 540 | 30 | Iron sights |
+| Assault | M1 Garand | WW2 | 50 → 38 | 300 | 8 | Semi-automatic, en-bloc clip pings when empty |
+| Engineer | SMG | Modern | 24 → 10 | 850 | 28 | Baseline; takes optics |
+| Engineer | UMP45 | Modern | 27 → 13 | 650 | 25 | Takes optics |
+| Engineer | Thompson M1A1 | WW2 | 28 → 12 | 700 | 30 | Iron sights |
+| Engineer | MP 40 | WW2 | 26 → 12 | 520 | 32 | Slow and controllable, iron sights |
+| Recon | DMR | Modern | 45 → 34 | 260 | 16 | Baseline; takes optics |
+| Recon | SVD | Modern | 52 → 40 | 200 | 10 | Fixed scope |
+| Recon | Kar98k | WW2 | 88 → 70 | 46 | 5 | Bolt action, fixed scope; a head shot kills |
+| Support | LMG | Modern | 26 → 17 | 700 | 100 | Baseline; takes optics |
+| Support | M249 SAW | Modern | 24 → 16 | 800 | 100 | Takes optics |
+| Support | MG 42 | WW2 | 23 → 16 | 1100 | 50 | Fastest fire in the game, short belt, iron sights |
+
+The five baseline guns and the pistol use Project A2B models. The other ten are low-poly models built in code (`src/proc-guns.js`), and the same parts are what other soldiers are seen carrying. They reuse the baseline recordings at a shifted pitch.
+
+Archetype tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 
 | Weapon | Damage near → far | Falloff (m) | RPM | Mag | Reload partial / empty (s) | Head | Hip / ADS spread (°) | ADS (s) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -145,6 +168,7 @@ To deploy statically, upload the contents of `dist/`. Serve `sw.js` and `index.h
 | `src/game.js` | `OfflineSimulation`: the single authority for rules, used offline and by the server |
 | `src/match.js` | TDM rules, roster, spawn selection (incl. Conquest forward spawns), damage, snapshots |
 | `src/conquest.js` | Sector capture, tickets, bleed, bot objective selection |
+| `src/proc-guns.js`, `a2b-guns.js`, `loadouts.js` | Code-built gun models, model placement and third-person gun boxes, class armouries |
 | `src/weapons.js` | Weapon tuning, falloff, hitboxes, spread, recoil patterns and recovery, reload lifecycle, effect pool |
 | `src/player.js` | Turns input into aim, movement, slot switching, ADS progress and fire |
 | `src/movement.js` | Sprint, slide/cancel, crouch clearance, gravity, weight-based speed |

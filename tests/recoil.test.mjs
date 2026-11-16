@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { OfflineSimulation } from "../src/game.js";
 import {
+  patternFor,
   WEAPONS,
   RECOIL_PATTERNS,
   recoilFor,
@@ -52,9 +53,11 @@ const run = (game, seconds) => {
 };
 
 test("every weapon has a pattern: harder first kick, fixed drift, bounded jitter", () => {
-  assert.equal(RECOIL_PATTERNS.length, WEAPONS.length);
+  // The five original weapons own a pattern; each added weapon uses its base weapon's.
+  assert.equal(RECOIL_PATTERNS.length, 5);
   for (let w = 0; w < WEAPONS.length; w++) {
-    const p = RECOIL_PATTERNS[w];
+    const p = patternFor(w);
+    assert.equal(p, RECOIL_PATTERNS[WEAPONS[w].base]);
     assert.ok(p.first >= 1 && p.recover > 0 && p.recover < 1);
     assert.ok(p.drift.every((d) => Math.abs(d) <= 1));
     // With the random term centred, the horizontal kick is exactly the pattern drift.
@@ -62,10 +65,13 @@ test("every weapon has a pattern: harder first kick, fixed drift, bounded jitter
     for (let shot = 0; shot < 12; shot++) {
       const k = recoilFor(a, () => 0.5, shot);
       assert.ok(
-        Math.abs(k.yaw - p.drift[shot % p.drift.length] * WEAPONS[w].recoilX * DEG) < 1e-12,
+        Math.abs(
+          k.yaw - p.drift[shot % p.drift.length] * WEAPONS[w].recoilX * DEG,
+        ) < 1e-12,
       );
       assert.ok(
-        Math.abs(k.pitch - WEAPONS[w].recoil * DEG * recoilScale(w, shot)) < 1e-12,
+        Math.abs(k.pitch - WEAPONS[w].recoil * DEG * recoilScale(w, shot)) <
+          1e-12,
       );
     }
   }
@@ -90,7 +96,10 @@ test("after a burst, part of the climb recovers and the pattern restarts", () =>
   run(game, 1);
   const kept = p.pitch - 0.4;
   const share = 1 - RECOIL_PATTERNS[0].recover;
-  assert.ok(Math.abs(kept - climbed * share) < climbed * 0.03, "settles at the kept share");
+  assert.ok(
+    Math.abs(kept - climbed * share) < climbed * 0.03,
+    "settles at the kept share",
+  );
   assert.equal(p.recoilShot, 0);
 });
 
@@ -110,7 +119,10 @@ test("pulling down during the burst cancels recovery instead of overshooting", (
   game.update(1 / 60);
   assert.ok(Math.abs(p.pitch - 0.4) < 1e-6);
   run(game, 1);
-  assert.ok(Math.abs(p.pitch - 0.4) < 1e-6, "aim stays where the player put it");
+  assert.ok(
+    Math.abs(p.pitch - 0.4) < 1e-6,
+    "aim stays where the player put it",
+  );
 });
 
 test("shared state helpers: no recovery while firing, decay after resting", () => {

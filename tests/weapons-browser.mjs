@@ -25,22 +25,24 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(base + "/arena.html?debug=1");
     assert.equal(await page.locator("#loadoutClass option").count(), 4);
-    // Each class exposes exactly its primary and the shared pistol in both selectors.
-    for (const [classId, primary] of [
-      ["assault", "0"],
-      ["support", "4"],
-      ["engineer", "1"],
-      ["recon", "3"],
+    // The start menu lists the class armoury plus the pistol; the pause menu lists the carried pair.
+    for (const [classId, primaries] of [
+      ["assault", ["0", "5", "6", "7"]],
+      ["support", ["4", "13", "14"]],
+      ["engineer", ["1", "8", "9", "10"]],
+      ["recon", ["3", "11", "12"]],
     ]) {
       await page.selectOption("#loadoutClass", classId);
-      for (const id of ["startingWeapon", "pauseWeapon"])
-        assert.deepEqual(
-          await page
-            .locator(`#${id} option`)
-            .evaluateAll((options) => options.map((option) => option.value)),
-          [primary, "2"],
-        );
-      assert.equal(await page.locator("#startingWeapon").inputValue(), primary);
+      const values = (id) =>
+        page
+          .locator(`#${id} option`)
+          .evaluateAll((options) => options.map((option) => option.value));
+      assert.deepEqual(await values("startingWeapon"), [...primaries, "2"]);
+      assert.deepEqual(await values("pauseWeapon"), [primaries[0], "2"]);
+      assert.equal(
+        await page.locator("#startingWeapon").inputValue(),
+        primaries[0],
+      );
     }
     // Weapon-only saves from before classes existed retain their inferred class after sidearm selection.
     await page.evaluate(() => {

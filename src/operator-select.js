@@ -4,7 +4,7 @@
 // #loadoutClass and #startingWeapon selects, so the game logic is unchanged.
 import { drawOperator } from "./operator-render.js";
 import { OPERATORS, OPERATOR_ORDER, weaponRatings } from "./operators.js";
-import { LOADOUTS } from "./loadouts.js";
+import { SIDEARM, LOADOUTS } from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
 
 const $ = (id) => document.getElementById(id);
@@ -247,7 +247,7 @@ export function initOperatorSelect() {
       );
       dl.append(dt, dd);
     }
-    const pistol = WEAPONS[2];
+    const pistol = WEAPONS[SIDEARM];
     $("sidearmInfo").textContent =
       `${pistol.label} · ${pistol.magazine} rounds`;
   }

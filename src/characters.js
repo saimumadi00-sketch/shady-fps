@@ -4,6 +4,7 @@
 import { TEAM_COLORS } from "./world.js";
 import { characterStyle } from "./model-style.js";
 import { legPose } from "./character-gait.js";
+import { gunBlocks } from "./a2b-guns.js";
 const SKINS = [
   [0.8, 0.6, 0.47],
   [0.5, 0.33, 0.25],
@@ -11,8 +12,6 @@ const SKINS = [
   [0.66, 0.46, 0.34],
 ];
 const INK = [0.07, 0.075, 0.08],
-  GUN = [0.16, 0.17, 0.18],
-  STEEL = [0.09, 0.1, 0.11],
   LENS = [0.09, 0.1, 0.11];
 // Height of the upper body from the hips to the top of the headgear.
 const UPPER = 0.9;
@@ -184,8 +183,10 @@ export function drawCharacter(add, a, time, shadows, blockGun = false) {
     return [x * ct + z1 * st, y1, -x * st + z1 * ct];
   };
   // The stock sits in the pocket of the right shoulder.
+  // In a match the carried gun is the real one, box for box (see gunBlocks).
+  const carried = blockGun ? gunBlocks(a.weapon) : null;
   const stock = at(0.135, 0.44, -0.095),
-    back = rot([0, 0, 0.325]),
+    back = rot([0, 0, carried ? carried.back : 0.325]),
     center = [stock[0] - back[0], stock[1] - back[1], stock[2] - back[2]];
   const onGun = ([x, y, z]) => {
     const r = rot([x, y, z]);
@@ -195,17 +196,10 @@ export function drawCharacter(add, a, time, shadows, blockGun = false) {
     const [px, py, pz] = onGun([x, y, z]);
     part(px, py, pz, w, h, d, tint, gunTwist, gunPitch + pitch);
   };
-  if (blockGun) {
-    // The same silhouette as the lobby and first-person rifles: stock, receiver with an
-    // optic, magazine and grip, handguard and barrel, in the weapon finishes.
-    gunPart(0, -0.02, 0.24, 0.07, 0.1, 0.2, GUN);
-    gunPart(0, 0, 0.0, 0.08, 0.11, 0.34, GUN);
-    gunPart(0, 0.08, -0.02, 0.05, 0.05, 0.12, INK);
-    gunPart(0, -0.12, -0.06, 0.06, 0.14, 0.07, STEEL, -0.25);
-    gunPart(0, -0.1, 0.09, 0.05, 0.11, 0.05, STEEL, 0.3);
-    gunPart(0, 0.005, -0.24, 0.075, 0.085, 0.16, INK);
-    gunPart(0, 0.02, -0.4, 0.035, 0.035, 0.18, STEEL);
-  } else
+  if (carried)
+    for (const b of carried.blocks)
+      gunPart(b.c[0], b.c[1], b.c[2], b.s[0], b.s[1], b.s[2], b.color);
+  else
     // Retain this signature (size and pose) so the lobby substitutes its detailed weapon mesh.
     gunPart(0, 0, 0, 0.13, 0.13, 0.65, INK);
   // Arms: upper arm to an elbow that hangs below the line to the hand, forearm, glove on the
@@ -229,10 +223,11 @@ export function drawCharacter(add, a, time, shadows, blockGun = false) {
   const mixAt = (p, q, t) => p.map((v, i) => v + (q[i] - v) * t);
   // Hands on the pistol grip and under the handguard. A detailed weapon (operator plate)
   // passes its own grip and handguard points in this gun frame via `a.holdPoints`.
-  const holds = a.holdPoints || {
-    grip: [0, -0.1, 0.15],
-    support: [0, -0.05, -0.17],
-  };
+  const holds = a.holdPoints ||
+    carried?.holds || {
+      grip: [0, -0.1, 0.15],
+      support: [0, -0.05, -0.17],
+    };
   for (const [side, hand] of [
     [1, onGun(holds.grip)],
     [-1, onGun(holds.support)],

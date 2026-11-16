@@ -7,7 +7,7 @@ import { Arena, NavigationSystem } from "../src/world.js";
 import { WEAPONS, EffectPool } from "../src/weapons.js";
 import { rayBox } from "../src/math.js";
 import { QualityManager } from "../src/settings.js";
-import { CLASS_IDS, LOADOUTS, classForWeapon } from "../src/loadouts.js";
+import { CLASS_IDS, LOADOUTS, classForWeapon, kitOf } from "../src/loadouts.js";
 // Reset a seeded simulation and lightweight input adapter for each independent rule test.
 function setup() {
   let seed = 42;
@@ -98,7 +98,7 @@ test("hitscan kills, gives one point, prevents repeated death, respawns at 3 sec
   game.update(1 / 60);
   assert.equal(e.alive, true);
   assert.equal(e.hp, 100);
-  assert.equal(e.ammo[0].mag, 30);
+  assert.equal(e.ammo[e.weapon].mag, WEAPONS[e.weapon].magazine);
 });
 // Protection rules must prevent both HP changes and score side effects.
 test("friendly fire and spawn protection cannot damage or score", () => {
@@ -582,8 +582,13 @@ test("starting weapon, respawn, and selection cover each class inventory", () =>
   for (let index = 0; index < WEAPONS.length; index++) {
     game.start("normal", index);
     const classId = classForWeapon(index),
-      kit = LOADOUTS[classId];
+      kit = kitOf(game.player);
     assert.equal(game.player.classId, classId);
+    // Every primary belongs to exactly one class, and is the one carried.
+    if (index !== 2) {
+      assert.ok(LOADOUTS[classId].primaries.includes(index));
+      assert.equal(kit.primary, index);
+    }
     assert.equal(game.player.weapon, index);
     game.spawns.spawn(game.player);
     assert.equal(game.player.classId, classId);
@@ -678,8 +683,11 @@ test("class restrictions reject foreign guns without changing weapon, ammo, or r
 test("bots spawn with class guns and only switch within their assigned inventory", () => {
   const { game } = setup();
   for (const a of game.actors.slice(1)) {
-    const kit = LOADOUTS[a.classId];
+    const kit = kitOf(a);
     assert.equal(a.weapon, kit.primary);
+    assert.ok(LOADOUTS[a.classId].primaries.includes(kit.primary));
+    // The same slot on the other team carries the same gun, so the sides are evenly armed.
+    if (a.id % 5) assert.equal(game.actors[(a.id + 5) % 10].primary, a.primary);
     for (let index = 0; index < WEAPONS.length; index++)
       if (!kit.weapons.includes(index))
         assert.deepEqual(a.ammo[index], { mag: 0, reserve: 0 });

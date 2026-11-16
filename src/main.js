@@ -13,6 +13,7 @@ import { settingsPanelHTML, mountKeybinds } from "./settings-panel.js";
 import { actionKeys, keyLabel } from "./bindings.js";
 import { initOperatorSelect } from "./operator-select.js";
 import {
+  SIDEARM,
   CLASS_IDS,
   LOADOUTS,
   loadout,
@@ -172,6 +173,13 @@ try {
   } catch {}
   // Keep menu and pause selectors synchronized; equipping never replenishes ammunition.
   let selectedClass = classForWeapon(selectedWeapon);
+  // The class primary the player picked; `selectedWeapon` is what they hold (it or the pistol).
+  let selectedPrimary = selectedWeapon === SIDEARM ? null : selectedWeapon;
+  try {
+    const saved = Number(localStorage.getItem("crosscurrent-primary"));
+    if (selectedPrimary === null && Number.isInteger(saved) && WEAPONS[saved])
+      selectedPrimary = saved;
+  } catch {}
   try {
     const saved = normalizeClass(localStorage.getItem("crosscurrent-class"));
     if (CLASS_IDS.includes(saved)) selectedClass = saved;
@@ -184,22 +192,31 @@ try {
   }
   $("loadoutClass").value = selectedClass;
   // Online equips travel as the same slot keys a player would press.
-  const slotKey = (index) =>
-    "Digit" + (loadout(selectedClass).weapons.indexOf(index) + 1);
+  const slotKey = (index) => (index === SIDEARM ? "Digit2" : "Digit1");
   // Rebuild both weapon selectors from the class definition; never expose other class guns.
   function refreshLoadout() {
     const kit = loadout(selectedClass);
-    if (!kit.weapons.includes(selectedWeapon)) selectedWeapon = kit.primary;
+    if (!kit.primaries.includes(selectedPrimary)) selectedPrimary = kit.primary;
+    if (selectedWeapon !== SIDEARM) selectedWeapon = selectedPrimary;
     $("classInfo").textContent =
-      `${kit.description} Carries the ${WEAPONS[kit.primary].label.toLowerCase()} and a pistol.`;
+      `${kit.description} Carries the ${WEAPONS[selectedPrimary].label} and a pistol.`;
     for (const id of ["startingWeapon", "pauseWeapon"]) {
       $(id).replaceChildren();
-      kit.weapons.forEach((index) => {
+      // Setup offers every primary of the class; mid-match you only have what you carry.
+      const choices =
+        id === "startingWeapon"
+          ? [...kit.primaries, SIDEARM]
+          : [selectedPrimary, SIDEARM];
+      choices.forEach((index) => {
         const w = WEAPONS[index];
         const option = document.createElement("option");
         option.value = String(index);
         option.textContent =
-          kit.weapons.indexOf(index) === 0 ? w.label : `${w.label} (sidearm)`;
+          index === SIDEARM
+            ? `${w.label} (sidearm)`
+            : w.era === "WW2"
+              ? `${w.label} (WW2)`
+              : w.label;
         $(id).append(option);
       });
       $(id).value = String(selectedWeapon);
@@ -214,6 +231,12 @@ try {
       id === "startingWeapon" ? "startingWeaponInfo" : "pauseWeaponInfo";
     $(id).addEventListener("change", () => {
       selectedWeapon = Number($(id).value);
+      if (selectedWeapon !== SIDEARM && selectedWeapon !== selectedPrimary) {
+        // A different primary: the kit, its description and the pause list all change.
+        selectedPrimary = selectedWeapon;
+        refreshLoadout();
+        customization.refresh();
+      }
       $("startingWeapon").value = String(selectedWeapon);
       weaponInfo("startingWeapon", "startingWeaponInfo");
       weaponInfo(id, infoId);
@@ -225,6 +248,7 @@ try {
         // Persist the inferred class too, so legacy primary saves retain their class after selecting a pistol.
         localStorage.setItem("crosscurrent-class", selectedClass);
         localStorage.setItem("crosscurrent-weapon", String(selectedWeapon));
+        localStorage.setItem("crosscurrent-primary", String(selectedPrimary));
       } catch {}
     });
   }
@@ -232,7 +256,7 @@ try {
   renderer.customization = customization.values;
   $("loadoutClass").addEventListener("change", () => {
     selectedClass = $("loadoutClass").value;
-    selectedWeapon = loadout(selectedClass).primary;
+    selectedWeapon = selectedPrimary = loadout(selectedClass).primary;
     refreshLoadout();
     customization.refresh();
     try {
@@ -271,7 +295,12 @@ try {
       return;
     }
     customization.apply(game);
-    game.start(settings.values.difficulty, selectedWeapon, selectedClass);
+    game.start(
+      settings.values.difficulty,
+      selectedWeapon,
+      selectedClass,
+      selectedPrimary,
+    );
     quality.configure();
     resume();
   }
@@ -295,9 +324,7 @@ try {
   // Solve each gun's hand poses in idle time (they are cached per gun), so the first draw or
   // switch to a weapon never stalls a frame. The selected class's guns go first.
   {
-    const order = [
-        ...new Set([...loadout(selectedClass).weapons, 0, 1, 2, 3, 4]),
-      ],
+    const order = [...new Set([selectedPrimary, SIDEARM, ...WEAPONS.keys()])],
       idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 60));
     const next = () => {
       if (!order.length) return;
@@ -425,6 +452,7 @@ try {
             name: settings.values.callsign || "You",
             classId: selectedClass,
             weapon: selectedWeapon,
+            primary: selectedPrimary,
           },
           create,
         );

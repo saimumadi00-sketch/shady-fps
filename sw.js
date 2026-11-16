@@ -39,6 +39,7 @@ const FILES = [
   "./src/game.js",
   "./src/hud.js",
   "./src/a2b-guns.js",
+  "./src/proc-guns.js",
   "./src/a2b-models.js",
   "./src/audio.js",
   "./src/bindings.js",

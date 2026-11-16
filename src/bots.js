@@ -1,6 +1,6 @@
 // Bot perception and navigation are staggered; movement and shooting still run at simulation frequency.
 import { distance, clamp } from "./math.js";
-import { loadout } from "./loadouts.js";
+import { kitOf, loadout } from "./loadouts.js";
 import { WEAPONS } from "./weapons.js";
 import { outOfAmmo } from "./match.js";
 // Bots keep this much personal space from any other actor so squads do not stack in one spot.
@@ -245,7 +245,7 @@ export class BotController {
       if (a.ammo[a.weapon].reserve > 0) g.weapons.reload(a);
       else {
         // Search the class inventory explicitly, even if another slot contains stale ammo.
-        const loaded = loadout(a.classId).weapons.find(
+        const loaded = kitOf(a).weapons.find(
           (index) => a.ammo[index].mag > 0 || a.ammo[index].reserve > 0,
         );
         if (loaded !== undefined) g.weapons.equip(a, loaded);

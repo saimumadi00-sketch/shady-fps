@@ -60,7 +60,7 @@ export function weaponMesh(
   }
   const gun = A2B_GUNS[index],
     tint = FINISH_TINT[finish];
-  const info = emitA2B(index, optic, tint && { tint }, tri, part, aimed);
+  const info = emitA2B(index, optic, tint && { tint }, tri, part, aimed, hands);
   // The reflex sight's dot is drawn by the HUD at the point of aim (see Hud.frame): a real dot
   // is collimated, so it sits on the target rather than on the glass.
   // A brief muzzle flash on the firing variant, at the barrel tip.
@@ -143,20 +143,39 @@ export function previewWeapon(canvas, index, finish, optic) {
   const w = canvas.width,
     h = canvas.height;
   ctx.clearRect(0, 0, w, h);
+  // A three-quarter side view, scaled so the longest rifle fits the canvas and a short gun is
+  // never drawn larger than the original fixed scale.
+  const flat = (i) => [
+    -mesh[i + 2] + mesh[i] * 0.36,
+    -mesh[i + 1] + mesh[i] * 0.2,
+  ];
+  let x0 = Infinity,
+    x1 = -Infinity,
+    y0 = Infinity,
+    y1 = -Infinity;
+  for (let i = 0; i < mesh.length; i += 9) {
+    const [x, y] = flat(i);
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  const scale = Math.min(
+      w * 0.64,
+      (w * 0.92) / (x1 - x0),
+      (h * 0.88) / (y1 - y0),
+    ),
+    ox = w / 2 - ((x0 + x1) / 2) * scale,
+    oy = h / 2 - ((y0 + y1) / 2) * scale;
   const faces = [];
   for (let i = 0; i < mesh.length; i += 27) {
     const points = [];
     let depth = 0;
     for (let j = 0; j < 3; j++) {
       const k = i + j * 9,
-        x = mesh[k],
-        y = mesh[k + 1],
-        z = mesh[k + 2];
-      points.push([
-        w * 0.52 - z * w * 0.64 + x * w * 0.23,
-        h * 0.5 - y * w * 0.64 + x * w * 0.13,
-      ]);
-      depth += x - z * 0.18;
+        [x, y] = flat(k);
+      points.push([ox + x * scale, oy + y * scale]);
+      depth += mesh[k] - mesh[k + 2] * 0.18;
     }
     const light =
       0.64 +

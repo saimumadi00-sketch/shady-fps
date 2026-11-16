@@ -67,7 +67,7 @@ for (const [label, kind, solve] of CASES)
 
 test("every class builds every weapon with hands, and reload poses share topology", () => {
   for (const classId of CLASS_IDS)
-    for (let weapon = 0; weapon < 5; weapon++) {
+    for (let weapon = 0; weapon < A2B_GUNS.length; weapon++) {
       const mesh = weaponMesh(weapon, "graphite", "iron", false, true, classId);
       const support = mesh.parts.find((p) => p.name === "support");
       assert.equal(mesh.supportAlt.length, support.end - support.start);
@@ -90,10 +90,14 @@ test("A2B guns: sight line above the grip, muzzle forward, optics raise the sigh
     assert.equal(weaponSight(i, "iron"), iron.sightHeight);
     if (gun.kind !== "pistol" && !gun.optic)
       for (const optic of ["reflex", "scope"])
-        assert.ok(
-          weaponSight(i, optic) > iron.sightHeight,
-          gun.model + " " + optic,
-        );
+        // Period guns keep their own sights whatever optic is chosen.
+        if (gun.optics === false)
+          assert.equal(weaponSight(i, optic), iron.sightHeight);
+        else
+          assert.ok(
+            weaponSight(i, optic) > iron.sightHeight,
+            gun.model + " " + optic,
+          );
   });
   // The LMG's feed cover hinges at its own front edge.
   const lmg = weaponMesh(4, "graphite", "iron");

@@ -1,6 +1,6 @@
 // DOM presentation of simulation state; this module never changes combat outcomes.
-import { loadout } from "./loadouts.js";
-import { WEAPONS, spreadFor } from "./weapons.js";
+import { kitOf, loadout } from "./loadouts.js";
+import { weaponBase, WEAPONS, spreadFor } from "./weapons.js";
 // How long each hit marker stays up, in milliseconds.
 const HIT_MARKER_MS = Object.freeze({ body: 200, head: 260, kill: 520 });
 // Compass scale: screen pixels per degree of heading.
@@ -105,8 +105,9 @@ export class HUDController {
       const lit =
         a.alive &&
         renderer?.customization?.optic === "reflex" &&
-        a.weapon !== 2 &&
-        a.weapon !== 3
+        weaponBase(a.weapon) !== 2 &&
+        weaponBase(a.weapon) !== 3 &&
+        WEAPONS[a.weapon].optics !== false
           ? Math.max(0, Math.min(1, ((renderer.aimBlend || 0) - 0.8) / 0.15))
           : 0;
       if (lit !== this.dotLit) n.reddot.style.opacity = this.dotLit = lit;
@@ -214,7 +215,7 @@ export class HUDController {
       a.reload > 0
         ? `Reloading ${a.reload.toFixed(1)} s`
         : s.mag === 0 && s.reserve === 0
-          ? loadout(a.classId).weapons.some(
+          ? kitOf(a).weapons.some(
               (i) => a.ammo[i].mag > 0 || a.ammo[i].reserve > 0,
             )
             ? "No ammo · switch weapon"

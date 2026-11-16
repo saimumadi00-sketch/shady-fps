@@ -2,7 +2,12 @@
 import { randomBytes } from "node:crypto";
 import { OfflineSimulation } from "../src/game.js";
 import { PlayerController } from "../src/player.js";
-import { CLASS_IDS, loadout, normalizeClass } from "../src/loadouts.js";
+import {
+  SIDEARM,
+  CLASS_IDS,
+  loadout,
+  normalizeClass,
+} from "../src/loadouts.js";
 const KEYS = new Set([
   "KeyW",
   "KeyA",
@@ -165,6 +170,12 @@ export class RoomService {
     if (!actor) throw new Error("That team is full. Choose the other team.");
     const requested = normalizeClass(data.classId),
       classId = CLASS_IDS.includes(requested) ? requested : "assault";
+    const kit = loadout(classId),
+      primary = kit.primaries.includes(data.primary)
+        ? data.primary
+        : kit.primaries.includes(data.weapon)
+          ? data.weapon
+          : kit.primary;
     const token = randomBytes(24).toString("hex");
     const input = new NetworkInput();
     const client = {
@@ -173,9 +184,9 @@ export class RoomService {
       actor,
       input,
       classId,
-      weapon: loadout(classId).weapons.includes(data.weapon)
-        ? data.weapon
-        : loadout(classId).primary,
+      // The chosen primary must belong to the class; the held weapon is it or the pistol.
+      primary,
+      weapon: data.weapon === SIDEARM ? SIDEARM : primary,
       lastInput: this.now(),
       lastActivity: this.now(),
       created: this.now(),
@@ -189,6 +200,7 @@ export class RoomService {
         .trim()
         .slice(0, 16) || "Pilot";
     actor.classId = classId;
+    actor.primary = client.primary;
     actor.weapon = client.weapon;
     actor.kills = actor.deaths = 0;
     room.game.spawns.spawn(actor);
@@ -212,6 +224,7 @@ export class RoomService {
     for (const c of room.clients.values()) {
       c.input.clear();
       c.actor.classId = c.classId;
+      c.actor.primary = c.primary;
       c.actor.weapon = c.weapon;
       room.game.spawns.spawn(c.actor);
     }

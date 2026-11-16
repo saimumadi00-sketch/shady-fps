@@ -2,7 +2,7 @@
 // `recoil` is an optional GunRecoil state; without it the legacy actor.kick push-back is used.
 // `motion` is an optional ViewmodelMotion state (look sway, strafe lean, jump/land, sprint
 // blend, speed-synced bob). Without it a time-based hip bob is used, as in headless tests.
-import { WEAPONS } from "./weapons.js";
+import { isPistol, WEAPONS } from "./weapons.js";
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -73,7 +73,7 @@ export function viewmodelPose(
   const arc = Math.sin(Math.PI * aim);
   // Aimed motion is steadied heavily but not frozen, so the sights still feel hand-held.
   const steady = hip + aim * 0.12;
-  const pistol = actor.weapon === 2;
+  const pistol = isPistol(actor.weapon);
   let sprint, slide, phase, amount, crouch, lower;
   if (motion) {
     sprint = reload.active ? 0 : motion.sprint * hip;

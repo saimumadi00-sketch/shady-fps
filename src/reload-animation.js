@@ -10,7 +10,7 @@
 //  - LMG: open the feed cover, swap the ammo box, slap the cover shut, and charge it when
 //    empty.
 // The magazine falling from an empty gun follows real gravity over the reload's own duration.
-import { WEAPONS } from "./weapons.js";
+import { weaponBase, WEAPONS } from "./weapons.js";
 
 const smooth = (x) => x * x * (3 - 2 * x);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -376,7 +376,8 @@ function lmg(t, empty) {
 // actors use the rest pose.
 export function reloadPose(actor) {
   const active = actor.reload > 0 && actor.alive;
-  if (!active) return { ...REST, pistol: actor.weapon === 2 };
+  const base = weaponBase(actor.weapon);
+  if (!active) return { ...REST, pistol: base === 2 };
   const seconds =
     actor.reloadTime ||
     (actor.reloadEmpty
@@ -385,11 +386,11 @@ export function reloadPose(actor) {
   const t = clamp01(1 - actor.reload / seconds),
     empty = !!actor.reloadEmpty;
   const pose =
-    actor.weapon === 2
+    base === 2
       ? pistol(t, empty, seconds)
-      : actor.weapon === 4
+      : base === 4
         ? lmg(t, empty)
-        : rifle(t, empty, seconds, actor.weapon);
+        : rifle(t, empty, seconds, base);
   return { ...REST, ...pose, active, t };
 }
 
