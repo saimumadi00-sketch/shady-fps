@@ -14,10 +14,10 @@ export const easeAim = (t) => {
 
 // Hip carry: gun low on the right, barrel converging slightly on the crosshair, a light cant.
 export const HIP_POSE = Object.freeze({
-  x: 0.165,
-  pistolX: 0.14,
-  y: -0.19,
-  z: -0.56,
+  x: 0.15,
+  pistolX: 0.13,
+  y: -0.158,
+  z: -0.5,
   yaw: 0.035,
   roll: 0.03,
 });
@@ -35,8 +35,8 @@ export const SPRINT_POSE = Object.freeze({
 // scaled like the guns): close enough that the receiver frames the bottom of the view and the
 // sight reads large, as in a real cheek weld, instead of a small gun held out at arm's length.
 // A pistol is held out at arm's length in a two-handed grip, so its sights sit much further out.
-export const EYE_RELIEF = 0.3;
-export const PISTOL_EYE_RELIEF = 0.5;
+export const EYE_RELIEF = 0.2;
+export const PISTOL_EYE_RELIEF = 0.52;
 
 // Draw curve: eased rise over the first 85%, then a small overshoot that settles.
 export function drawOffset(t) {

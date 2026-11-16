@@ -69,7 +69,9 @@ void main(){
 // weapon from stretching toward the screen centre and lets it sit close without distortion.
 // Aiming tightens it further, so the sights fill the eye and the hands drop out of the frame.
 const VIEWMODEL_FOV = (58 * Math.PI) / 180,
-  VIEWMODEL_FOV_AIM = (38 * Math.PI) / 180;
+  VIEWMODEL_FOV_AIM = (42 * Math.PI) / 180,
+  // A pistol is held out at arm's length, so it keeps a wider view of the hands and slide.
+  VIEWMODEL_FOV_PISTOL = (46 * Math.PI) / 180;
 export class Renderer {
   // Allocate reusable CPU buffers before creating GPU resources.
   constructor(canvas, arena) {
@@ -410,7 +412,9 @@ export class Renderer {
         0,
         0,
         VIEWMODEL_FOV +
-          (VIEWMODEL_FOV_AIM - VIEWMODEL_FOV) * easeAim(this.aimBlend),
+          ((p.weapon === 2 ? VIEWMODEL_FOV_PISTOL : VIEWMODEL_FOV_AIM) -
+            VIEWMODEL_FOV) *
+            easeAim(this.aimBlend),
         this.canvas.width / this.canvas.height,
       );
       g.uniformMatrix4fv(this.vp, false, this.matrix);
@@ -430,7 +434,8 @@ export class Renderer {
       const finish = this.customization?.finish || "graphite";
       // Cache by discrete model choices, never by animation time, to keep cache growth bounded.
       // Once the sights are mostly up, switch to the variant without the stock behind them.
-      const aimed = this.aimBlend > 0.55;
+      // A reload always uses the full variant: its support hand has to reach the magazine.
+      const aimed = this.aimBlend > 0.55 && !(p.reload > 0);
       const key =
         (aimed ? "ads:" : "") +
         p.weapon +

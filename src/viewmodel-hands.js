@@ -765,22 +765,14 @@ export function buildHands(emit, part, opts, capture) {
   const z0 = shapes.supportZ;
   const supportArm = (pose, reload) => {
     hand(pose);
+    // Sights up, a pistol's support forearm is below the frame: only the wrapped hand shows.
+    if (pistol && opts.aimed && !reload) return;
     if (pistol)
       forearm(
         pose,
         [-0.03, -0.08, 0.02],
-        reload ? [-0.26, -0.56, 0.42] : [-0.26, -0.48, 0.44],
-        reload ? [-0.32, -0.72, 0.8] : [-0.32, -0.68, 0.8],
-      );
-    else if (opts.aimed && !reload)
-      // Sights up, the support arm is tucked under the rifle: it drops straight out of the
-      // bottom of the view instead of filling the left of the sight picture.
-      forearm(
-        pose,
-        [0.02, -0.13, 0.05],
-        [0.0, -0.5, z0 + 0.3],
-        [-0.1, -0.85, 0.86],
-        0.05,
+        reload ? [-0.26, -0.56, 0.42] : [-0.13, -0.5, 0.44],
+        reload ? [-0.32, -0.72, 0.8] : [-0.2, -0.76, 0.8],
       );
     else
       forearm(
@@ -792,7 +784,11 @@ export function buildHands(emit, part, opts, capture) {
         reload ? [-0.4, -0.62, 0.86] : [-0.24, -0.8, 0.86],
       );
   };
-  part("support", () => supportArm(support, false));
+  // Sights up, the support hand is under the handguard and hidden by the rifle, so the aimed
+  // rifle variant draws none; a pistol's two-handed grip stays in view.
+  part("support", () => {
+    if (!opts.aimed || pistol) supportArm(support, false);
+  });
   return { supportAlt: capture(() => supportArm(magHold, true)) };
 }
 // Poses depend only on the weapon, not on finish, optic or class: solve once per weapon.

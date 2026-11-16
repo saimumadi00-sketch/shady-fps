@@ -544,7 +544,7 @@ try {
       } else footsteps.clear();
       renderer.render(game, quality, game.time);
       if (game.match.state === "playing") {
-        hud.frame(game);
+        hud.frame(game, renderer);
         // Incoming fire dulls what you hear as well as what you see.
         audio.setMuffle(
           game.player.alive ? (game.player.suppression || 0) * 0.85 : 0,

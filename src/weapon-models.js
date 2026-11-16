@@ -61,21 +61,8 @@ export function weaponMesh(
   const gun = A2B_GUNS[index],
     tint = FINISH_TINT[finish];
   const info = emitA2B(index, optic, tint && { tint }, tri, part, aimed);
-  // The reflex sight's dot, at the optic's aim point.
-  if (optic === "reflex" && gun.kind !== "pistol" && !gun.optic) {
-    const [, y, z] = info.aim,
-      d = 0.003;
-    profile(
-      [
-        [z - d, y - d],
-        [z + d, y - d],
-        [z + d, y + d],
-        [z - d, y + d],
-      ],
-      0.006,
-      [1, 0.2, 0.1],
-    );
-  }
+  // The reflex sight's dot is drawn by the HUD at the point of aim (see Hud.frame): a real dot
+  // is collimated, so it sits on the target rather than on the glass.
   // A brief muzzle flash on the firing variant, at the barrel tip.
   if (firing) {
     const [, y, tip] = info.muzzle;

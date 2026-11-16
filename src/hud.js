@@ -32,6 +32,7 @@ export class HUDController {
       "heading",
       "hurtDir",
       "suppression",
+      "reddot",
     ])
       this.nodes[id] = document.getElementById(id);
     this.healthPanel = document.querySelector(".health");
@@ -95,10 +96,21 @@ export class HUDController {
   }
   // Per-frame HUD elements that must follow the view without lag: the compass, the damage
   // direction arc and the suppression vignette. Everything else updates at 20 Hz in update().
-  frame(game) {
+  frame(game, renderer = null) {
     const n = this.nodes,
       a = game.player;
     if (!n.compassTape || !a) return;
+    // Reflex dot: lit once the sight is nearly up, on rifles fitted with the reflex optic.
+    if (n.reddot) {
+      const lit =
+        a.alive &&
+        renderer?.customization?.optic === "reflex" &&
+        a.weapon !== 2 &&
+        a.weapon !== 3
+          ? Math.max(0, Math.min(1, ((renderer.aimBlend || 0) - 0.8) / 0.15))
+          : 0;
+      if (lit !== this.dotLit) n.reddot.style.opacity = this.dotLit = lit;
+    }
     // Yaw 0 looks along -Z, which the maps treat as north; headings run clockwise.
     const heading = ((((a.yaw * 180) / Math.PI) % 360) + 360) % 360;
     n.compassTape.style.transform = `translateX(${-(360 + heading) * COMPASS_PX}px)`;

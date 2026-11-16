@@ -833,6 +833,22 @@ input[type="range"] {
   height: min(76vh, 76vw);
   transform: translate(-50%, -50%);
 }
+/* Reflex sight dot: a small emitter with a soft halo, fixed on the point of aim. */
+#reddot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, #ffd9d2 0 22%, #ff2414 55%);
+  box-shadow:
+    0 0 3px 1px rgba(255, 44, 24, 0.95),
+    0 0 9px 3px rgba(255, 36, 20, 0.45); /* taste-skill-ignore: emissive reticle */
+}
 #hitmarker {
   /* Distance from the centre to the inner end of each tick; animated per frame. */
   --reach: 6px;

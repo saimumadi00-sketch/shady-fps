@@ -95,7 +95,7 @@ Finishes and optics are cosmetic.
 
 **Hit markers:** four diagonal ticks animated every frame: white for a hit, amber for a headshot, larger and red for a kill (a kill is not overwritten by later hits from the same burst).
 
-**Viewmodel:** the gun and hands render with their own 58° field of view (38° when aiming), held close and low on the right with the stock off screen; aiming tucks the support arm under the rifle. First-person gloves and sleeves use field colours; the bright class palette stays on third-person models.
+**Viewmodel:** the gun and hands render with their own 58° field of view (42° when aiming, 46° for the pistol), held close on the right with the stock off screen. Aiming brings the rear sight 0.2 units from the eye, and the support hand, hidden under the rifle, is not drawn. The reflex sight's dot is a HUD element fixed on the point of aim, lit once the sight is nearly up. First-person gloves and sleeves use field colours; the bright class palette stays on third-person models.
 
 The HUD carries a heading tape above the hint line (north is the map's -Z; Conquest sectors ride on it at their bearing).
 
