@@ -563,25 +563,20 @@ export function solveHands(kind, shapes) {
 export function buildHands(emit, part, opts, capture) {
   const { kind, outfit } = opts;
   const pistol = kind === "pistol";
-  // Matches the anime squad look of the third-person models (characters.js): off-white
-  // gloves that read clearly against a dark rifle, ink palm pads and wrist strap, knuckle
-  // plates in the class accent, and the same sleeve as the third-person jacket (white cuff,
-  // class cloth, accent band, team-coloured shoulder). The trigger hand's index and thumb
+  // The same kit as the third-person soldier (characters.js): the class's combat sleeve and
+  // gloves, dark palm pads and wrist strap, hard knuckles. Very dark gloves are lifted a
+  // little so the hands still read against a dark rifle. The trigger hand's index and thumb
   // tips are cut off, showing skin.
-  const INK = [0.075, 0.085, 0.13],
-    // Field kit in first person: coyote gloves with dark palms and hard knuckles, and an
-    // olive combat sleeve that carries only a hint of the class cloth. The bright anime
-    // palette stays on the third-person models, where it identifies classes at range.
-    OLIVE = [0.25, 0.28, 0.19],
-    sleeve = outfit.cloth.map((c, i) => c * 0.3 + OLIVE[i] * 0.7),
+  const INK = [0.075, 0.08, 0.09],
+    sleeve = outfit.uniform || outfit.cloth,
     WHITE = sleeve.map((c) => c * 0.72),
     accent = sleeve.map((c) => c * 0.86),
     team = TEAM_COLORS[opts.team] || TEAM_COLORS[0],
-    glove = [0.47, 0.39, 0.27],
+    glove = (outfit.gloves || [0.47, 0.39, 0.27]).map((c) => Math.max(c, 0.24)),
     palmColor = [0.13, 0.13, 0.12],
     knuckle = [0.17, 0.17, 0.16],
     strap = INK,
-    skin = [0.85, 0.64, 0.51];
+    skin = [0.8, 0.6, 0.47];
 
   // Flat-shaded oriented box: ax/ay/az are orthogonal half-extent vectors. Every hand and
   // arm part is built from these so the viewmodel shares the squad's blocky, hard-edged look.

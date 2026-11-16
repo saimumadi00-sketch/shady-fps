@@ -18,7 +18,7 @@ A browser FPS with the feel and structure of a full modern military shooter: an 
 
 What players should remember about Crosscurrent compared with other browser shooters:
 
-- **Original anime operators.** The roster is original characters with their own identities, not generic soldiers.
+- **Four operators, four silhouettes.** Each class is a soldier at human proportions with its own kit (helmet and carrier, cap and radio pack, boonie and scarf, heavy pack and balaclava), so a class reads at range; team tape on the arms and headgear shows the side.
 - **Console-grade feel.** Class roles, learnable recoil patterns, damage falloff, sprint-out handling, shot bloom, suppression and slides are tuned like a full shooter (see `WEAPON_ROLE_DESIGN.md`).
 - **Zero friction.** No account, no install, playable offline, and fully playable on a phone.
 - **Squad fantasy.** The operator plate shows your operator at full height holding their class weapon with the squad behind them, and the kit is changed on the figure itself.

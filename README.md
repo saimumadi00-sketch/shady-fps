@@ -1,6 +1,6 @@
 # Crosscurrent — Yard 07
 
-A browser FPS with an operator-select front end, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are original anime-inspired procedural models. First-person weapons are low-poly models from the free [Project A2B](https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release) pack; gun and reload sounds are recordings credited in `THIRD_PARTY_NOTICES.md`.
+A browser FPS with an operator-select front end, offline 5v5 against bots, and private server-authoritative multiplayer. Everything is bundled locally: no account or remote asset download is required. Characters are procedural soldier models at human proportions, with kit that differs by class and team tape on the arms and headgear. First-person weapons are low-poly models from the free [Project A2B](https://projecta2b.itch.io/low-poly-3d-gun-pack-pre-release) pack; gun and reload sounds are recordings credited in `THIRD_PARTY_NOTICES.md`.
 
 ## Demo
 
@@ -79,7 +79,7 @@ Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 | DMR | 45 → 34 | 45 – 160 | 260 | 16 | 2.50 / 3.10 | 2x | 4.0 / 0.025 | 0.34 |
 | LMG | 26 → 17 | 30 – 110 | 700 | 100 | 4.80 / 5.80 | 1.5x | 3.2 / 0.20 | 0.38 |
 
-- Damage falls off linearly between the two distances; the head multiplier applies after falloff. Actors have separate head and body hitboxes.
+- Damage falls off linearly between the two distances; the head multiplier applies after falloff. Actors have separate head and body hitboxes sized to the drawn soldier: the head volume is the top 0.3 m (head, helmet and neck, 0.30 m wide), the body volume is 0.60 m wide.
 - Spread is a cone that blends from hip to ADS over the weapon's ADS time and is multiplied while moving (per weapon), sliding (1.7x) or in the air (2.2x), or reduced while crouched still (0.85x).
 - **Shot bloom:** every round widens the cone a little, up to a cap, and it eases off after a 0.1 s pause, so controlled bursts stay tighter than a held trigger. Growth / cap in degrees, recovery per second: AR 0.025 / 0.40 / 1.0, SMG 0.035 / 0.55 / 1.4, pistol 0.05 / 0.40 / 1.4, DMR 0.12 / 0.28 / 0.7, LMG 0.04 / 0.50 / 0.6. Switching weapons does not clear it. The hip crosshair shows the live cone.
 - **One in the chamber:** reloading with rounds left keeps the chambered round, so the AR, SMG, pistol and DMR come back with magazine + 1 (31, 29, 13, 17). An empty reload, and the open-bolt LMG, fill to the plain magazine size.

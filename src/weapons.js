@@ -215,8 +215,9 @@ export function handling(a) {
     adsMove: w.adsMove,
   };
 }
-// Separate head and body volumes. Heights match the drawn character (head top at stance height).
-export const HEAD_HEIGHT = 0.5;
+// Separate head and body volumes, sized to the drawn soldier: the head volume is the head,
+// helmet and neck (the top 0.3 m), the body volume spans the shoulders.
+export const HEAD_HEIGHT = 0.3;
 export function hitboxes(target) {
   const h = target.crouched ? 1.15 : 1.8,
     body = h - HEAD_HEIGHT;
@@ -225,18 +226,18 @@ export function hitboxes(target) {
       x: target.x,
       y: target.y + body / 2,
       z: target.z,
-      w: 0.68,
+      w: 0.6,
       h: body,
-      d: 0.58,
+      d: 0.42,
       head: false,
     },
     {
       x: target.x,
       y: target.y + body + HEAD_HEIGHT / 2,
       z: target.z,
-      w: 0.5,
+      w: 0.3,
       h: HEAD_HEIGHT,
-      d: 0.46,
+      d: 0.32,
       head: true,
     },
   ];

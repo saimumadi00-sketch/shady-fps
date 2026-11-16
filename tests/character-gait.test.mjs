@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { legPose } from "../src/character-gait.js";
+import { legPose, LEG_BONE } from "../src/character-gait.js";
 
 test("walking alternates foot contact and bends fixed-length leg bones", () => {
   for (const crouched of [false, true]) {
@@ -16,7 +16,7 @@ test("walking alternates foot contact and bends fixed-length leg bones", () => {
             [pose.knee, pose.ankle],
           ])
             assert.ok(
-              Math.abs(Math.hypot(a.y - b.y, a.z - b.z) - 0.31) < 1e-10,
+              Math.abs(Math.hypot(a.y - b.y, a.z - b.z) - LEG_BONE) < 1e-10,
             );
           assert.ok(pose.ankle.y >= 0.13);
           assert.ok(pose.knee.z < (pose.hip.z + pose.ankle.z) / 2);

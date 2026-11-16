@@ -11,9 +11,9 @@ export const CONQUEST_LAYOUT = Object.freeze({
   sectors: Object.freeze([
     Object.freeze({ id: "A", name: "West Depot", cell: [8, 20] }),
     // Placed by simulation: across 96 bot-only matches this spot (between two cells)
-    // gives the teams a 44 / 52 split of wins. A full cell west or east tips matches
-    // decisively to one side, so re-run that check after changing bot routing or this layout.
-    Object.freeze({ id: "B", name: "Central Yard", cell: [28.35, 16] }),
+    // gives the teams a 49 / 47 split of wins. A full cell west or east tips matches
+    // decisively to one side, so re-run that check after changing bot routing, hitboxes or this layout.
+    Object.freeze({ id: "B", name: "Central Yard", cell: [28.3, 16] }),
     Object.freeze({ id: "C", name: "East Relay", cell: [45, 24] }),
   ]),
   // One spawn column per team: [column, rows].
