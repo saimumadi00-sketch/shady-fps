@@ -588,6 +588,16 @@ test("HTTP errors keep room messages but hide internal exception text", async ()
     const malformed = await fetch(base + "/%E0%A4%A");
     assert.equal(malformed.status, 400);
     assert.equal((await malformed.json()).error, "Request failed.");
+    // A file that does not exist is a 404, not a bad request.
+    for (const path of ["/no-such-file.js", "/index.html/extra"])
+      assert.equal((await fetch(base + path)).status, 404, path);
+    // A sandboxed page sends the opaque origin "null"; it is refused like any other foreign origin.
+    const opaque = await fetch(base + "/api/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "null" },
+      body: "{}",
+    });
+    assert.equal(opaque.status, 403);
   } finally {
     app.close();
   }

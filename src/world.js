@@ -10,9 +10,10 @@ export const TEAM_COLORS = [
 export const CONQUEST_LAYOUT = Object.freeze({
   sectors: Object.freeze([
     Object.freeze({ id: "A", name: "West Depot", cell: [8, 20] }),
-    // Placed by simulation: across 48 bot-only matches this cell gives both teams an even share of
-    // wins and of time holding B. One cell west or east tips matches decisively to one side.
-    Object.freeze({ id: "B", name: "Central Yard", cell: [29, 16] }),
+    // Placed by simulation: across 96 bot-only matches this spot (between two cells)
+    // gives the teams a 44 / 52 split of wins. A full cell west or east tips matches
+    // decisively to one side, so re-run that check after changing bot routing or this layout.
+    Object.freeze({ id: "B", name: "Central Yard", cell: [28.35, 16] }),
     Object.freeze({ id: "C", name: "East Relay", cell: [45, 24] }),
   ]),
   // One spawn column per team: [column, rows].
@@ -222,34 +223,66 @@ export class NavigationSystem {
           n.links.push(neighbor);
       }
   }
-  // Use squared distance to map an arbitrary actor position onto a graph node.
-  nearest(a) {
+  // Use squared distance to map an arbitrary actor position onto a graph node. A position
+  // midway between nodes takes the one nearer `toward` (the other end of the route), then the
+  // one left of the line to it, rather than the lower index, which would favour one side of a
+  // point-symmetric map.
+  nearest(a, toward = null) {
     let best = 0,
-      d = Infinity;
+      d = Infinity,
+      reach = Infinity,
+      side = -Infinity;
+    const tx = toward ? toward.x - a.x : 0,
+      tz = toward ? toward.z - a.z : 0;
     for (let i = 0; i < this.nodes.length; i++) {
       const n = this.nodes[i],
         v = (n.x - a.x) ** 2 + (n.z - a.z) ** 2;
-      if (v < d) {
+      if (v > d + 1e-9) continue;
+      const r = toward ? (n.x - toward.x) ** 2 + (n.z - toward.z) ** 2 : 0,
+        s = tx * (n.z - a.z) - tz * (n.x - a.x);
+      if (
+        v < d - 1e-9 ||
+        r < reach - 1e-9 ||
+        (r < reach + 1e-9 && s > side + 1e-9)
+      ) {
         best = i;
         d = v;
+        reach = r;
+        side = s;
       }
     }
     return best;
   }
   // Cache paths by endpoint node IDs; breadth-first search is sufficient for equal-cost edges.
+  // Many routes tie on length. Neighbours are expanded nearest-the-goal first (then by which
+  // side of the goal line they sit on), so the chosen route depends only on the endpoints'
+  // relative layout. A fixed link order gave mirrored routes different shapes and, on
+  // point-symmetric maps, one spawn side a clear edge in bot matches.
   path(a, b) {
-    const start = this.nearest(a),
-      end = this.nearest(b),
+    const start = this.nearest(a, b),
+      end = this.nearest(b, a),
       key = start + ":" + end;
     if (this.cache.has(key)) return this.cache.get(key);
     // Use predecessor markers for both visitation and later path reconstruction.
-    const prev = new Int16Array(this.nodes.length).fill(-1),
+    const nodes = this.nodes,
+      goal = nodes[end],
+      prev = new Int16Array(nodes.length).fill(-1),
       queue = [start];
     prev[start] = start;
     for (let i = 0; i < queue.length; i++) {
       const n = queue[i];
       if (n === end) break;
-      for (const v of this.nodes[n].links)
+      const from = nodes[n],
+        gx = goal.x - from.x,
+        gz = goal.z - from.z;
+      const rank = (v) =>
+          (nodes[v].x - goal.x) ** 2 + (nodes[v].z - goal.z) ** 2,
+        side = (v) => gx * (nodes[v].z - from.z) - gz * (nodes[v].x - from.x);
+      const links = from.links.slice().sort((p, q) => {
+        const r = rank(p) - rank(q);
+        return Math.abs(r) > 1e-9 ? r : side(q) - side(p);
+      });
+      for (const v of links)
         if (prev[v] < 0) {
           prev[v] = n;
           queue.push(v);
@@ -260,7 +293,7 @@ export class NavigationSystem {
     if (prev[end] >= 0) {
       let v = end;
       while (v !== start) {
-        path.push(this.nodes[v]);
+        path.push(nodes[v]);
         v = prev[v];
       }
       path.reverse();

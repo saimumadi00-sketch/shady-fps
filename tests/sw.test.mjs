@@ -105,3 +105,21 @@ test("activating one installation preserves other installation caches", async ()
   await completion;
   assert.deepEqual(deleted, [prefix + "old"]);
 });
+
+// The development worker caches source modules one by one; a module missing from the list
+// breaks offline reloads of the source build as soon as something imports it.
+test("development cache list names every source module", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const listed = new Set(
+    [...source.matchAll(/"\.\/src\/([^"]+)"/g)].map((m) => m[1]),
+  );
+  const modules = (
+    await readdir(new URL("../src/", import.meta.url), { recursive: true })
+  )
+    .map((f) => f.replaceAll("\\", "/"))
+    .filter((f) => f.endsWith(".js"));
+  assert.deepEqual(
+    modules.filter((f) => !listed.has(f)),
+    [],
+  );
+});

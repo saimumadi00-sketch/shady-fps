@@ -102,3 +102,25 @@ for (const map of TDM_MAPS)
       );
     }
   });
+
+// Bot routes must not favour a side: on a point-symmetric map, the route between two mirrored
+// endpoints is the mirror image of the original. A fixed neighbour order once bent the two
+// teams' routes differently and gave Quarry's east spawn about 70% of bot-only wins.
+for (const map of TDM_MAPS)
+  test(`${map.name}: bot routes are mirror images for both teams`, () => {
+    const arena = new Arena("tdm", map.id),
+      nav = new NavigationSystem(arena),
+      flip = (p) => ({ x: -p.x || 0, z: -p.z || 0 });
+    const ends = [...arena.spawns[0], ...arena.spawns[1]];
+    for (let i = 0; i < nav.nodes.length; i += 7) ends.push(nav.nodes[i]);
+    for (const a of ends)
+      for (const b of ends) {
+        const route = nav.path(a, b),
+          mirrored = nav.path(flip(a), flip(b));
+        assert.deepEqual(
+          mirrored.map(({ x, z }) => [x, z]),
+          route.map((p) => [-p.x || 0, -p.z || 0]),
+          `${map.id} ${a.x},${a.z} -> ${b.x},${b.z}`,
+        );
+      }
+  });

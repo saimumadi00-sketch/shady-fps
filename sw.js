@@ -38,6 +38,15 @@ const FILES = [
   "./src/settings.js",
   "./src/game.js",
   "./src/hud.js",
+  "./src/a2b-guns.js",
+  "./src/a2b-models.js",
+  "./src/audio.js",
+  "./src/bindings.js",
+  "./src/operator-render.js",
+  "./src/operator-select.js",
+  "./src/operators.js",
+  "./src/outpost-map.js",
+  "./src/settings-panel.js",
 ];
 // Install atomically only after every required asset is cached; do not force takeover of active tabs.
 self.addEventListener("install", (e) =>
