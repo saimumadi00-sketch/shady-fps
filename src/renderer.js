@@ -65,6 +65,11 @@ void main(){
   float fog=smoothstep(18.,85.,dist)*(1.-firstPerson);
   pixel=vec4(mix(shaded,vec3(.5,.55,.56),fog*.72),1.);
 }`;
+// The gun and hands use a narrower field of view than the world, as shooters do: it keeps the
+// weapon from stretching toward the screen centre and lets it sit close without distortion.
+// Aiming tightens it further, so the sights fill the eye and the hands drop out of the frame.
+const VIEWMODEL_FOV = (58 * Math.PI) / 180,
+  VIEWMODEL_FOV_AIM = (38 * Math.PI) / 180;
 export class Renderer {
   // Allocate reusable CPU buffers before creating GPU resources.
   constructor(canvas, arena) {
@@ -404,7 +409,8 @@ export class Renderer {
         0,
         0,
         0,
-        (75 * Math.PI) / 180,
+        VIEWMODEL_FOV +
+          (VIEWMODEL_FOV_AIM - VIEWMODEL_FOV) * easeAim(this.aimBlend),
         this.canvas.width / this.canvas.height,
       );
       g.uniformMatrix4fv(this.vp, false, this.matrix);

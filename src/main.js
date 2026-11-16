@@ -543,7 +543,13 @@ try {
         );
       } else footsteps.clear();
       renderer.render(game, quality, game.time);
-      if (game.match.state === "playing") hud.frame(game);
+      if (game.match.state === "playing") {
+        hud.frame(game);
+        // Incoming fire dulls what you hear as well as what you see.
+        audio.setMuffle(
+          game.player.alive ? (game.player.suppression || 0) * 0.85 : 0,
+        );
+      } else audio.setMuffle(0);
       idleRenderTime = 0;
     }
     // Throttle DOM updates separately from the rendering frame rate.

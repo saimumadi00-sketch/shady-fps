@@ -79,14 +79,31 @@ export function weaponMesh(
   // A brief muzzle flash on the firing variant, at the barrel tip.
   if (firing) {
     const [, y, tip] = info.muzzle;
+    // A layered flash: a wide orange bloom, a long forward jet, and a white-hot core, with
+    // the short vertical vents a flash hider throws.
+    const jet = (length, half, width, color, back = 0.01) =>
+      profile(
+        [
+          [tip + back, y],
+          [tip - length * 0.28, y + half],
+          [tip - length, y],
+          [tip - length * 0.28, y - half],
+        ],
+        width,
+        color,
+      );
+    jet(0.2, 0.062, 0.11, [1, 0.5, 0.12]);
+    jet(0.36, 0.026, 0.035, [1, 0.74, 0.28]);
+    jet(0.13, 0.03, 0.045, [1, 0.96, 0.78]);
     profile(
       [
-        [tip, y + 0.03],
-        [tip - 0.12, y],
-        [tip, y - 0.03],
+        [tip - 0.015, y + 0.11],
+        [tip - 0.05, y],
+        [tip - 0.015, y - 0.11],
+        [tip + 0.01, y],
       ],
-      0.07,
-      [1, 0.76, 0.25],
+      0.014,
+      [1, 0.66, 0.2],
     );
   }
   // Hands appear only in gameplay meshes; armory previews show the weapon by itself.
@@ -114,6 +131,7 @@ export function weaponMesh(
         team,
         shapes: a2bShapes(index, shapeHelpers),
         key: gun.model,
+        aimed,
       },
       (fn) => {
         const kept = sink;
