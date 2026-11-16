@@ -3,6 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import {
+  CHOKE,
+  reverbSend,
   FootstepTracker,
   STRIDE,
   SAMPLE_FILES,
@@ -158,8 +160,19 @@ test("every weapon's shot and reload stages map to a shipped recording", () => {
       used.add(s.file);
     }
   });
-  // Automatic weapons fade their report quickly so sustained fire cannot exhaust the voices.
-  for (const w of [0, 1, 4]) assert.ok(sampleFor("shot", w).tail <= 0.6);
+  // Other actors' guns fade their report quickly so sustained fire cannot exhaust the voices;
+  // your own gun rings out, because each shot chokes the one before it.
+  for (const w of [0, 1, 4]) {
+    assert.ok(sampleFor("shot", w, true).tail <= 0.6);
+    assert.ok(sampleFor("shot", w).tail >= 1);
+  }
+  assert.ok(CHOKE > 0 && CHOKE < 0.2);
+  // Distant gunfire is mostly echo; footsteps and hit confirms stay dry.
+  assert.ok(reverbSend("shot", 60) > reverbSend("shot", 0));
+  assert.ok(reverbSend("shot", 500) <= 0.75);
+  for (const kind of ["step", "hit", "headshot", "kill", "brass"])
+    assert.equal(reverbSend(kind, 10), 0);
+  for (const kind of ["brass", "snap"]) assert.equal(sampleFor(kind), null);
   for (const kind of ["impact", "hurt", "death", "dry"])
     assert.ok(SAMPLE_FILES.includes(sampleFor(kind).file), kind);
   // Footsteps, hit markers and the kill chime stay synthesized.

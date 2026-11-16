@@ -14,12 +14,12 @@ export const easeAim = (t) => {
 
 // Hip carry: gun low on the right, barrel converging slightly on the crosshair, a light cant.
 export const HIP_POSE = Object.freeze({
-  x: 0.25,
-  pistolX: 0.2,
-  y: -0.235,
-  z: -0.77,
-  yaw: 0.02,
-  roll: 0.045,
+  x: 0.165,
+  pistolX: 0.14,
+  y: -0.19,
+  z: -0.56,
+  yaw: 0.035,
+  roll: 0.03,
 });
 // Low-ready sprint carry: muzzle swung down and across the body, rolled onto its side.
 export const SPRINT_POSE = Object.freeze({
@@ -137,7 +137,7 @@ export function viewmodelPose(
       rg.y +
       HIP_POSE.y +
       (-HIP_POSE.y - sightHeight) * lift -
-      arc * 0.01 +
+      arc * 0.004 +
       SPRINT_POSE.y * sprint -
       slide * 0.05 +
       reload.lift * 0.1 +

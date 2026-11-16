@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { viewmodelPose } from "../src/viewmodel.js";
+import { HIP_POSE, viewmodelPose } from "../src/viewmodel.js";
 
 test("aimed sights remain centered during walking, sprinting and sliding", () => {
   for (const sightHeight of [0.16, 0.205, 0.218])
@@ -48,17 +48,19 @@ test("hip motion stays bounded and reload lifts suppress sprint lowering", () =>
       { active: false, lift: 0 },
       0.16,
     );
-    assert.ok(Math.abs(pose.x - 0.2) <= 0.006);
-    assert.ok(pose.y > -0.245 && pose.y < -0.225);
+    assert.ok(Math.abs(pose.x - HIP_POSE.pistolX) <= 0.006);
+    assert.ok(Math.abs(pose.y - HIP_POSE.y) < 0.01);
     assert.ok(Object.values(pose).every(Number.isFinite));
   }
   // Sprinting drops to a low-ready carry: muzzle down, swung across and rolled.
   actor.sprinting = true;
   const sprint = viewmodelPose(actor, 0, 0, { active: false, lift: 0 }, 0.16);
-  assert.ok(sprint.y < -0.29 && sprint.pitch < -0.2 && sprint.roll > 0.3);
+  assert.ok(
+    sprint.y < HIP_POSE.y - 0.05 && sprint.pitch < -0.2 && sprint.roll > 0.3,
+  );
   actor.moving = false;
   const reload = viewmodelPose(actor, 0, 0, { active: true, lift: 1 }, 0.16);
-  assert.ok(Math.abs(reload.y + 0.135) < 1e-9);
+  assert.ok(Math.abs(reload.y - (HIP_POSE.y + 0.1)) < 1e-9);
 });
 
 test("ADS raise follows an arc: lifts before centring and cants mid-way", async () => {

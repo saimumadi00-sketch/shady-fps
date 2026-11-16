@@ -834,8 +834,11 @@ input[type="range"] {
   transform: translate(-50%, -50%);
 }
 #hitmarker {
-  --pop: 1;
+  /* Distance from the centre to the inner end of each tick; animated per frame. */
+  --reach: 6px;
   --tick: #ffffff;
+  --thick: 2px;
+  --long: 9px;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -843,18 +846,17 @@ input[type="range"] {
   height: 0;
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(
-    0 0 1px #000
-  ); /* taste-skill-ignore: legibility over bright scenes */
+  /* A dark edge keeps the ticks crisp over sky, sand and muzzle flash alike. */
+  filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); /* taste-skill-ignore: legibility over bright scenes */
 }
 #hitmarker i {
   position: absolute;
-  left: -1px;
-  top: calc(-12px * var(--pop));
-  width: 2px;
-  height: 8px;
+  left: calc(var(--thick) / -2);
+  top: calc(-1 * (var(--reach) + var(--long)));
+  width: var(--thick);
+  height: var(--long);
   background: var(--tick);
-  transform-origin: 1px calc(12px * var(--pop));
+  transform-origin: calc(var(--thick) / 2) calc(var(--reach) + var(--long));
 }
 #hitmarker i:nth-child(1) {
   transform: rotate(45deg);
@@ -869,15 +871,13 @@ input[type="range"] {
   transform: rotate(315deg);
 }
 #hitmarker[data-kind="head"] {
-  --tick: #ffd34d;
+  --tick: #ffc933;
+  --long: 10px;
 }
 #hitmarker[data-kind="kill"] {
   --tick: #ff3b30;
-}
-#hitmarker[data-kind="kill"] i {
-  width: 3px;
-  height: 11px;
-  left: -1.5px;
+  --thick: 3px;
+  --long: 13px;
 }
 /* Damage feedback: a red edge vignette whose opacity the HUD drives. */
 #damage {

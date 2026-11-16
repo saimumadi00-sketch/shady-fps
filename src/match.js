@@ -338,7 +338,7 @@ export class DamageSystem {
     if (attacker === g.player) {
       g.hit = hitKind === "kill" ? 0.32 : 0.13;
       g.hitKind = hitKind;
-      g.audio.play(headshot ? "headshot" : "hit", headshot ? 0.4 : 0.35);
+      g.audio.play(headshot ? "headshot" : "hit", 0.5);
     }
     if (target === g.player) {
       g.hurt = 0.4;
@@ -373,7 +373,7 @@ export class DamageSystem {
           (headshot ? "HEADSHOT · " : "ELIMINATED ") +
           target.name.toUpperCase();
         g.noticeTime = 2;
-        g.audio.play("kill", 0.4);
+        g.audio.play("kill", 0.55);
       }
     }
     return true;

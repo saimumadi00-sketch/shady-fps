@@ -569,15 +569,19 @@ export function buildHands(emit, part, opts, capture) {
   // class cloth, accent band, team-coloured shoulder). The trigger hand's index and thumb
   // tips are cut off, showing skin.
   const INK = [0.075, 0.085, 0.13],
-    WHITE = [0.98, 0.97, 0.94],
-    accent = outfit.accent,
+    // Field kit in first person: coyote gloves with dark palms and hard knuckles, and an
+    // olive combat sleeve that carries only a hint of the class cloth. The bright anime
+    // palette stays on the third-person models, where it identifies classes at range.
+    OLIVE = [0.25, 0.28, 0.19],
+    sleeve = outfit.cloth.map((c, i) => c * 0.3 + OLIVE[i] * 0.7),
+    WHITE = sleeve.map((c) => c * 0.72),
+    accent = sleeve.map((c) => c * 0.86),
     team = TEAM_COLORS[opts.team] || TEAM_COLORS[0],
-    glove = [0.84, 0.83, 0.8],
-    palmColor = [0.2, 0.21, 0.28],
-    knuckle = outfit.accent.map((c) => c * 0.85),
+    glove = [0.47, 0.39, 0.27],
+    palmColor = [0.13, 0.13, 0.12],
+    knuckle = [0.17, 0.17, 0.16],
     strap = INK,
-    skin = [0.85, 0.64, 0.51],
-    sleeve = outfit.cloth.map((c) => Math.min(1, c * 1.35));
+    skin = [0.85, 0.64, 0.51];
 
   // Flat-shaded oriented box: ax/ay/az are orthogonal half-extent vectors. Every hand and
   // arm part is built from these so the viewmodel shares the squad's blocky, hard-edged look.
@@ -740,10 +744,10 @@ export function buildHands(emit, part, opts, capture) {
     solveHands(kind, opts.shapes),
   );
   // Forearms leave each wrist opposite the fingers, dropping toward a low elbow.
-  const forearm = (pose, drop, elbow, shoulder) =>
+  const forearm = (pose, drop, elbow, shoulder, reach = 0.12) =>
     arm(
       pose.f.o,
-      add(add(pose.f.o, mul(pose.f.X, -0.12)), drop),
+      add(add(pose.f.o, mul(pose.f.X, -reach)), drop),
       elbow,
       shoulder,
       pose.f.Y,
@@ -768,14 +772,24 @@ export function buildHands(emit, part, opts, capture) {
         reload ? [-0.26, -0.56, 0.42] : [-0.26, -0.48, 0.44],
         reload ? [-0.32, -0.72, 0.8] : [-0.32, -0.68, 0.8],
       );
+    else if (opts.aimed && !reload)
+      // Sights up, the support arm is tucked under the rifle: it drops straight out of the
+      // bottom of the view instead of filling the left of the sight picture.
+      forearm(
+        pose,
+        [0.02, -0.13, 0.05],
+        [0.0, -0.5, z0 + 0.3],
+        [-0.1, -0.85, 0.86],
+        0.05,
+      );
     else
       forearm(
         pose,
-        [-0.04, -0.05, 0.06],
+        [-0.01, -0.11, 0.07],
         // The support elbow hangs below and left of the handguard, so the forearm rises to
         // the hand from the lower left instead of crossing the view from the chest.
-        reload ? [-0.34, -0.42, 0.3] : [-0.5, -0.36, z0 + 0.42],
-        reload ? [-0.42, -0.58, 0.86] : [-0.64, -0.58, 0.86],
+        reload ? [-0.3, -0.46, 0.3] : [-0.13, -0.5, z0 + 0.36],
+        reload ? [-0.4, -0.62, 0.86] : [-0.24, -0.8, 0.86],
       );
   };
   part("support", () => supportArm(support, false));

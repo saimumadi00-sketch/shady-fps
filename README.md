@@ -91,6 +91,12 @@ Tuning follows [WEAPON_ROLE_DESIGN.md](WEAPON_ROLE_DESIGN.md):
 
 Finishes and optics are cosmetic.
 
+**Audio:** recorded reports are layered with a low thump and the action cycling, and run through a generated outdoor reverb, so distant gunfire is mostly echo. Your own gun rings out after the last round because each shot cuts off the one before it. Positioned sounds arrive after the time sound takes to cross the distance, and incoming fire muffles what you hear. Hit, headshot and kill confirms, footsteps, the near-miss crack and falling brass are synthesized.
+
+**Hit markers:** four diagonal ticks animated every frame: white for a hit, amber for a headshot, larger and red for a kill (a kill is not overwritten by later hits from the same burst).
+
+**Viewmodel:** the gun and hands render with their own 58° field of view (38° when aiming), held close and low on the right with the stock off screen; aiming tucks the support arm under the rifle. First-person gloves and sleeves use field colours; the bright class palette stays on third-person models.
+
 The HUD carries a heading tape above the hint line (north is the map's -Z; Conquest sectors ride on it at their bearing).
 
 ## Private multiplayer

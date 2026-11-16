@@ -71,11 +71,13 @@ try {
     __arena.input.keys.add("KeyW");
   });
   const before = { x: g.actors[5].x, z: g.actors[5].z };
-  await friend.waitForTimeout(250);
+  // Poll rather than sleep a fixed 250 ms: a slow software-rendered frame can delay the
+  // first input packet past a fixed wait.
+  const moved = () =>
+    Math.hypot(g.actors[5].x - before.x, g.actors[5].z - before.z) > 0.1;
+  for (let i = 0; i < 40 && !moved(); i++) await friend.waitForTimeout(75);
   await friend.evaluate(() => __arena.input.keys.clear());
-  assert.ok(
-    Math.hypot(g.actors[5].x - before.x, g.actors[5].z - before.z) > 0.1,
-  );
+  assert.ok(moved());
   await host.waitForFunction(() => __arena.game.actors[5].name === "Friend");
   assert.ok(
     Math.hypot(

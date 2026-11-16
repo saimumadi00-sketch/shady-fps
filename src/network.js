@@ -206,6 +206,16 @@ export class NetworkClient {
       g.audio.play("snap", 0.6);
     g.hit = Math.max(0, (g.player.hitUntil || 0) - g.time);
     g.hitKind = g.player.hitKind || "body";
+    // The server confirmed a new hit since the last snapshot: play its confirm sound.
+    if (
+      this.ready &&
+      old === g.player &&
+      (g.player.hitUntil || 0) > (this.seenHitUntil || 0) + 1e-6
+    ) {
+      g.audio.play(g.hitKind === "head" ? "headshot" : "hit", 0.5);
+      if (g.hitKind === "kill") g.audio.play("kill", 0.55);
+    }
+    this.seenHitUntil = g.player.hitUntil || 0;
     g.hurt = Math.max(0, (g.player.hurtUntil || 0) - g.time);
     g.notice = g.player.networkNotice || "";
     g.noticeTime = Math.max(0, (g.player.noticeUntil || 0) - g.time);

@@ -7,7 +7,7 @@ import { rayBox } from "./math.js";
 // Cues beyond this distance are inaudible and skipped before allocating nodes.
 export const MAX_HEARING = 90;
 // Footsteps are low priority: drop them first when many voices are already playing.
-const MAX_VOICES = 28,
+const MAX_VOICES = 36,
   STEP_VOICE_LIMIT = 18;
 
 // Per-weapon gunshot character: body pitch, crack filter frequency and tail length.
@@ -35,22 +35,30 @@ export const SAMPLE_FILES = Object.freeze([
   "death.wav",
 ]);
 const WEAPON_KEY = ["ar", "smg", "pistol", "dmr", "lmg"];
-// Per weapon: how long the recorded report rings before it is faded out (so automatic fire
-// does not stack dozens of two-second tails), its playback rate and its level.
+// Per weapon: how long the recorded report may ring, its playback rate and level, and the
+// pitch of the low thump layered under it. Your own gun's previous report is cut off by the
+// next shot (see CHOKE), so automatic fire stays tight and only the last round's tail rings out.
 const SHOT_SAMPLE = [
-  { tail: 0.55, rate: 1, gain: 0.85 }, // AR, 5.56
-  { tail: 0.42, rate: 1.06, gain: 0.8 }, // SMG, 9 mm
-  { tail: 0.6, rate: 0.94, gain: 0.95 }, // Pistol, 9 mm close-mic
-  { tail: 1.1, rate: 1, gain: 0.95 }, // DMR, .308
-  { tail: 0.5, rate: 1, gain: 0.9 }, // LMG, 7.62x54R
+  { tail: 1.3, rate: 1, gain: 0.85, thump: 82 }, // AR, 5.56
+  { tail: 1.0, rate: 1.06, gain: 0.8, thump: 105 }, // SMG, 9 mm
+  { tail: 1.0, rate: 0.94, gain: 0.95, thump: 115 }, // Pistol, 9 mm close-mic
+  { tail: 1.8, rate: 1, gain: 0.95, thump: 62 }, // DMR, .308
+  { tail: 1.3, rate: 1, gain: 0.9, thump: 68 }, // LMG, 7.62x54R
 ];
 // Which recording a cue uses for a weapon, or null to keep the synthesized one. The SMG has
 // no magazine recordings of its own and reuses the rifle's, played slightly faster and lighter.
-export function sampleFor(kind, weapon = 0) {
+// `positioned` is true for other actors' guns: nothing chokes those, so their recording is
+// kept short and the reverb carries the tail instead.
+export function sampleFor(kind, weapon = 0, positioned = false) {
   const key = WEAPON_KEY[weapon] || "ar";
   if (kind === "shot") {
     const s = SHOT_SAMPLE[weapon] || SHOT_SAMPLE[0];
-    return { file: `shot-${key}.mp3`, ...s, jitter: 0.03 };
+    return {
+      file: `shot-${key}.mp3`,
+      ...s,
+      tail: positioned ? Math.min(s.tail, 0.55) : s.tail,
+      jitter: 0.03,
+    };
   }
   if (kind === "mag-out" || kind === "mag-in" || kind === "rack") {
     const stage = kind === "rack" ? "rack" : kind.slice(4);
@@ -79,6 +87,17 @@ export function sampleFor(kind, weapon = 0) {
   return null;
 }
 
+// Seconds over which the previous local report fades when the next round fires.
+export const CHOKE = 0.09;
+// Sound takes time to arrive: distant gunfire lags its muzzle flash.
+export const SPEED_OF_SOUND = 343;
+// Share of a cue sent to the outdoor reverb. Distant cues are mostly echo.
+export function reverbSend(kind, range = 0) {
+  if (kind === "shot") return Math.min(0.75, 0.24 + range / 70);
+  if (kind === "impact" || kind === "snap") return 0.18;
+  if (kind === "land" || kind === "death" || kind === "hurt") return 0.08;
+  return 0;
+}
 // Wall muffling: a blocked sound loses its highs and much of its level, but stays audible.
 export const OCCLUDED = Object.freeze({ cutoff: 650, gain: 0.45 });
 // Low-pass cutoff and gain for a positioned cue: air dulls distant sounds, walls muffle them.
@@ -117,6 +136,57 @@ export class AudioManager {
     // Decoded recordings by file name; filled in the background after unlock().
     this.samples = new Map();
     this.loading = false;
+    // Gain node of the local gun's ringing report, faded when the next shot fires.
+    this.report = null;
+  }
+  // An outdoor impulse response: a few hard slap-backs off nearby structures, then a tail
+  // that darkens as it decays. Generated once; no file to download.
+  buildReverb(c) {
+    const seconds = 1.7,
+      length = Math.floor(c.sampleRate * seconds),
+      impulse = c.createBuffer(2, length, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      let low = 0;
+      for (let i = 0; i < length; i++) {
+        const time = i / c.sampleRate,
+          // One-pole low-pass whose cutoff falls with time: late echoes lose their highs.
+          k = 0.55 * Math.exp(-time * 2.6) + 0.04;
+        low += (Math.random() * 2 - 1 - low) * k;
+        data[i] =
+          low * Math.exp(-time * 3.4) * (time < 0.012 ? time / 0.012 : 1);
+      }
+      for (const [at, level] of ch
+        ? [
+            [0.052, 0.5],
+            [0.118, 0.34],
+            [0.207, 0.2],
+          ]
+        : [
+            [0.041, 0.5],
+            [0.097, 0.36],
+            [0.171, 0.22],
+          ]) {
+        const start = Math.floor(at * c.sampleRate);
+        for (let i = 0; i < 260; i++)
+          data[start + i] +=
+            (Math.random() * 2 - 1) * level * Math.exp(-i / 70);
+      }
+    }
+    return impulse;
+  }
+  // Incoming fire dulls hearing: 0 is clear, 1 is heavily muffled.
+  setMuffle(amount) {
+    const c = this.context;
+    if (!c || !this.muffle) return;
+    const a = Math.max(0, Math.min(1, amount || 0));
+    if (Math.abs(a - (this.muffled || 0)) < 0.02) return;
+    this.muffled = a;
+    this.muffle.frequency.setTargetAtTime(
+      18000 * Math.pow(1500 / 18000, a),
+      c.currentTime,
+      0.05,
+    );
   }
   // Fetch and decode every recording once. Failures are silent: the synth covers them.
   loadSamples() {
@@ -146,11 +216,25 @@ export class AudioManager {
         this.master = c.createDynamicsCompressor();
         this.master.threshold.value = -16;
         this.master.ratio.value = 4;
-        // Master volume from Settings sits after the compressor.
+        this.master.attack.value = 0.002;
+        this.master.release.value = 0.12;
+        // Suppression muffle (see setMuffle), then master volume from Settings.
+        this.muffle = c.createBiquadFilter();
+        this.muffle.type = "lowpass";
+        this.muffle.frequency.value = 18000;
         this.volume = c.createGain();
         this.volume.gain.value = (this.settings.values.volume ?? 80) / 100;
-        this.master.connect(this.volume);
+        this.master.connect(this.muffle);
+        this.muffle.connect(this.volume);
         this.volume.connect(c.destination);
+        // Shared outdoor reverb; cues send to it by kind and distance (reverbSend).
+        try {
+          this.reverb = c.createConvolver();
+          this.reverb.buffer = this.buildReverb(c);
+          this.reverb.connect(this.master);
+        } catch {
+          this.reverb = null;
+        }
         // One second of white noise, reused by every percussive cue.
         this.noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
         const data = this.noise.getChannelData(0);
@@ -211,10 +295,31 @@ export class AudioManager {
       if (c.currentTime - this.lastShot < 0.026) return;
       this.lastShot = c.currentTime;
     }
-    const t = c.currentTime,
+    // A positioned cue is heard after the sound has crossed the distance.
+    const lag = source ? range / SPEED_OF_SOUND : 0;
+    const t = c.currentTime + lag,
       out = c.createGain(),
       nodes = [out];
     out.gain.value = volume * (path ? path.gain : 1);
+    const wet = this.reverb ? reverbSend(kind, range) : 0;
+    if (wet > 0) {
+      const send = c.createGain();
+      // Walls soak up the direct sound more than the echo around them.
+      send.gain.value = wet * (path && path.gain < 1 ? 0.7 : 1);
+      out.connect(send);
+      send.connect(this.reverb);
+      nodes.push(send);
+    }
+    // Your own gun: the next shot cuts the last report short, and brass lands a moment later.
+    if (kind === "shot" && !source) {
+      if (this.report) {
+        this.report.gain.cancelScheduledValues(t);
+        this.report.gain.setTargetAtTime(0.0001, t, CHOKE / 3);
+      }
+      this.report = out;
+      if (Math.random() < 0.45)
+        setTimeout(() => this.play("brass", 0.5), 420 + Math.random() * 260);
+    }
     if (source) {
       const panner = c.createPanner();
       panner.panningModel = "HRTF";
@@ -236,22 +341,29 @@ export class AudioManager {
       panner.connect(this.master);
       nodes.push(air, panner);
     } else out.connect(this.master);
-    const length = this.voice(kind, weapon, t, out, nodes);
+    const length = this.voice(kind, weapon, t, out, nodes, Boolean(source));
     this.voices++;
     // Disconnect finished voices so audio nodes do not accumulate during long matches.
-    setTimeout(
-      () => {
-        for (const n of nodes) n.disconnect();
-        this.voices--;
-      },
-      (length + 0.1) * 1000,
-    );
+    let live = true;
+    const done = () => {
+      if (!live) return;
+      live = false;
+      for (const n of nodes) n.disconnect();
+      this.voices--;
+    };
+    // A choked report is silent within a few CHOKE lengths: free its voice then, not after
+    // the full tail, so automatic fire cannot crowd out footsteps and other guns.
+    if (kind === "shot" && !source) {
+      if (this.reportDone) setTimeout(this.reportDone, CHOKE * 4000);
+      this.reportDone = done;
+    }
+    setTimeout(done, (lag + length + 0.1) * 1000);
   }
   // Build the synthesis graph for one cue into `out`; returns its length in seconds.
-  voice(kind, weapon, t, out, nodes) {
+  voice(kind, weapon, t, out, nodes, positioned = false) {
     const c = this.context;
     // A decoded recording replaces the synthesized cue; it is faded out after `tail` seconds.
-    const sample = sampleFor(kind, weapon),
+    const sample = sampleFor(kind, weapon, positioned),
       buffer = sample && this.samples.get(sample.file);
     if (buffer) {
       const s = c.createBufferSource(),
@@ -269,6 +381,36 @@ export class AudioManager {
       s.start(t);
       s.stop(t + length + 0.02);
       nodes.push(s, g);
+      if (kind === "shot") {
+        // Chest thump under the recording, and the action cycling just after it.
+        const o = c.createOscillator(),
+          og = c.createGain(),
+          from = sample.thump || 80;
+        o.frequency.setValueAtTime(from * 1.6, t);
+        o.frequency.exponentialRampToValueAtTime(from * 0.5, t + 0.11);
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.linearRampToValueAtTime(0.55, t + 0.004);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+        o.connect(og);
+        og.connect(out);
+        o.start(t);
+        o.stop(t + 0.15);
+        const click = c.createBufferSource(),
+          cf = c.createBiquadFilter(),
+          cg = c.createGain();
+        click.buffer = this.noise;
+        cf.type = "bandpass";
+        cf.frequency.value = 2900;
+        cf.Q.value = 2.5;
+        cg.gain.setValueAtTime(0.0001, t);
+        cg.gain.setValueAtTime(0.16, t + 0.03);
+        cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+        click.connect(cf);
+        cf.connect(cg);
+        cg.connect(out);
+        click.start(t + 0.03, Math.random() * 0.8, 0.04);
+        nodes.push(o, og, click, cf, cg);
+      }
       return length;
     }
     // Recording-only cues with no synthesized version yet stay silent until they load.
@@ -310,48 +452,101 @@ export class AudioManager {
     };
     if (kind === "shot") {
       const w = SHOT_TONE[weapon] || SHOT_TONE[0];
-      burst("bandpass", w.crack, 0.9, 0.05, 0.55);
-      burst("lowpass", 900, 0.7, w.tail, 0.32);
-      tone("sawtooth", w.body, Math.max(35, w.body * 0.3), 0.09, 0.12);
-      tone("sine", 70, 38, w.tail * 0.8, 0.35);
+      burst("highpass", 2400, 0.7, 0.014, 0.9);
+      burst("bandpass", w.crack, 0.9, 0.05, 0.6);
+      burst("lowpass", 900, 0.7, w.tail, 0.36);
+      tone("sawtooth", w.body, Math.max(35, w.body * 0.3), 0.09, 0.14);
+      tone("sine", w.body * 0.9, 38, w.tail * 0.8, 0.5);
       // Slap-back: the report returns off the yard's containers and walls a moment later.
       burst("lowpass", 1400, 0.6, w.tail * 0.9, 0.11, 0.075);
       burst("lowpass", 700, 0.6, w.tail * 1.2, 0.06, 0.16);
       return w.tail + 0.2;
     }
-    if (kind === "hit" || kind === "headshot") {
-      // A dull impact thump, plus a bright metallic tink when the round finds a helmet.
-      burst("lowpass", 1100, 1.1, 0.06, 0.6);
-      tone("sine", 160, 60, 0.07, 0.35);
-      tone("triangle", 1900, 1700, 0.045, 0.14);
-      if (kind === "headshot") {
-        tone("sine", 2600, 2450, 0.16, 0.22);
-        tone("sine", 3900, 3700, 0.1, 0.1);
+    if (kind === "hit") {
+      // Hit confirm: a dry, tight tick with a little body, short enough to hear every round
+      // of a burst land.
+      burst("highpass", 4200, 0.7, 0.012, 0.75);
+      burst("bandpass", 1500, 1.6, 0.03, 0.5);
+      tone("sine", 240, 120, 0.035, 0.3);
+      return 0.05;
+    }
+    if (kind === "headshot") {
+      // A harder crack and a short ring off the helmet.
+      burst("highpass", 5200, 0.7, 0.012, 0.9);
+      burst("bandpass", 2300, 2.4, 0.04, 0.55);
+      tone("sine", 2050, 1900, 0.14, 0.2, 0.004);
+      tone("sine", 3080, 2900, 0.09, 0.09, 0.004);
+      tone("sine", 200, 90, 0.05, 0.3);
+      return 0.16;
+    }
+    if (kind === "kill") {
+      // Kill confirm: a weighty knock followed by two rising ticks.
+      burst("lowpass", 700, 1, 0.07, 0.7);
+      tone("sine", 150, 52, 0.14, 0.6);
+      burst("highpass", 4000, 0.7, 0.012, 0.55, 0.05);
+      tone("triangle", 1250, 1150, 0.05, 0.3, 0.05);
+      burst("highpass", 4600, 0.7, 0.012, 0.55, 0.125);
+      tone("triangle", 1750, 1650, 0.08, 0.3, 0.125);
+      return 0.22;
+    }
+    if (kind === "brass") {
+      // A spent case bouncing on concrete: two or three small, quickly fading rings.
+      const pitch = 4300 + Math.random() * 1700;
+      let at = 0;
+      for (let i = 0, level = 0.16; i < 2 + (Math.random() < 0.5); i++) {
+        tone(
+          "sine",
+          pitch * (1 + i * 0.07),
+          pitch * (0.97 + i * 0.07),
+          0.05,
+          level,
+          at,
+        );
+        tone("sine", pitch * 1.52, pitch * 1.5, 0.03, level * 0.5, at);
+        at += 0.07 + Math.random() * 0.06;
+        level *= 0.5;
       }
-      return kind === "headshot" ? 0.17 : 0.08;
+      return at + 0.06;
     }
     if (kind === "snap") {
-      // Supersonic crack of a round passing close, with a short hiss behind it.
-      burst("highpass", 3400, 0.8, 0.03, 0.9);
-      burst("bandpass", 1900, 1.4, 0.07, 0.3, 0.015);
-      tone("triangle", 2600, 900, 0.035, 0.12);
-      return 0.11;
+      // Supersonic crack of a round passing close, then the falling hiss of it going by.
+      burst("highpass", 3600, 0.8, 0.022, 1);
+      burst("bandpass", 2100, 1.2, 0.05, 0.4, 0.008);
+      const s = c.createBufferSource(),
+        f = c.createBiquadFilter(),
+        g = c.createGain();
+      s.buffer = this.noise;
+      f.type = "bandpass";
+      f.Q.value = 3;
+      f.frequency.setValueAtTime(3200, t + 0.02);
+      f.frequency.exponentialRampToValueAtTime(600, t + 0.2);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.setValueAtTime(0.3, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.21);
+      s.connect(f);
+      f.connect(g);
+      g.connect(out);
+      s.start(t + 0.02, Math.random() * 0.7, 0.22);
+      nodes.push(s, f, g);
+      return 0.24;
     }
     if (kind === "step") {
-      // Soft heel scuff plus a low body thud, with slight variation per step.
-      const pitch = 0.85 + Math.random() * 0.3;
-      burst("lowpass", 650 * pitch, 1.2, 0.07, 0.28);
-      burst("bandpass", 2400 * pitch, 2, 0.03, 0.05);
-      tone("sine", 95 * pitch, 50, 0.06, 0.22);
-      return 0.08;
+      // Boot on grit: the heel's dull thud, then the sole rolling onto loose stone.
+      const pitch = 0.85 + Math.random() * 0.3,
+        roll = 0.045 + Math.random() * 0.02;
+      burst("lowpass", 420 * pitch, 1, 0.06, 0.4);
+      tone("sine", 88 * pitch, 46, 0.07, 0.28);
+      burst("bandpass", 1500 * pitch, 0.9, 0.05, 0.16, roll);
+      burst("highpass", 3800, 0.6, 0.03, 0.05, roll + 0.01);
+      return roll + 0.07;
     }
     if (kind === "land") {
       burst("lowpass", 500, 1, 0.12, 0.4);
       tone("sine", 80, 40, 0.1, 0.35);
       return 0.13;
     }
-    const duration = kind === "reload" ? 0.12 : kind === "kill" ? 0.23 : 0.075;
-    const f = kind === "kill" ? 1100 : kind === "hurt" ? 85 : 350;
+    const duration = kind === "reload" ? 0.12 : 0.075;
+    const f = kind === "hurt" ? 85 : 350;
     tone("sine", f, Math.max(35, f * 0.3), duration, 0.1);
     return duration;
   }

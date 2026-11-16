@@ -1,6 +1,8 @@
 // DOM presentation of simulation state; this module never changes combat outcomes.
 import { loadout } from "./loadouts.js";
 import { WEAPONS, spreadFor } from "./weapons.js";
+// How long each hit marker stays up, in milliseconds.
+const HIT_MARKER_MS = Object.freeze({ body: 200, head: 260, kill: 520 });
 // Compass scale: screen pixels per degree of heading.
 const COMPASS_PX = 4;
 export class HUDController {
@@ -57,6 +59,40 @@ export class HUDController {
       }
     this.compassMarks = [];
   }
+  // Hit marker, animated per frame on the wall clock so it lands the instant the round does and
+  // stays smooth at any simulation rate. Each new hit restarts it: the ticks snap in tight,
+  // spread, and fade. A kill is red, larger and lingers; a headshot is amber.
+  hitMarker(game, marker, now = performance.now()) {
+    if (!marker) return;
+    const hit = game.hit || 0;
+    // game.hit jumps up on every confirmed hit and counts down between them.
+    if (hit > (this.seenHit || 0) + 0.01) {
+      const kind = game.hitKind || "body";
+      // A kill is not replaced by the body hits of other rounds from the same burst.
+      if (!(this.hitShown === "kill" && kind !== "kill" && now < this.hitEnd)) {
+        this.hitShown = kind;
+        this.hitStart = now;
+        this.hitEnd = now + HIT_MARKER_MS[kind];
+        if (marker.dataset.kind !== kind) marker.dataset.kind = kind;
+      }
+    }
+    this.seenHit = hit;
+    if (!(now < this.hitEnd)) {
+      if (this.hitVisible) marker.style.opacity = 0;
+      this.hitVisible = false;
+      return;
+    }
+    const life = (now - this.hitStart) / (this.hitEnd - this.hitStart),
+      // Fast ease-out spread over the first third, then hold.
+      spread = 1 - Math.pow(1 - Math.min(1, life * 3), 3),
+      kill = this.hitShown === "kill";
+    marker.style.setProperty(
+      "--reach",
+      ((kill ? 7 : 5) + spread * (kill ? 9 : 5)).toFixed(1) + "px",
+    );
+    marker.style.opacity = life < 0.45 ? 1 : (1 - life) / 0.55;
+    this.hitVisible = true;
+  }
   // Per-frame HUD elements that must follow the view without lag: the compass, the damage
   // direction arc and the suppression vignette. Everything else updates at 20 Hz in update().
   frame(game) {
@@ -93,6 +129,7 @@ export class HUDController {
       const from = Math.atan2(a.hurtX - a.x, -(a.hurtZ - a.z)) - a.yaw;
       n.hurtDir.style.transform = `rotate(${from}rad)`;
     }
+    this.hitMarker(game, n.hitmarker);
     n.suppression.style.opacity = a.alive
       ? Math.min(1, (a.suppression || 0) * 1.1)
       : 0;
@@ -193,12 +230,6 @@ export class HUDController {
     }
     // Scope overlay while fully aimed through a scope (the renderer hides the gun then).
     if (n.scope) n.scope.hidden = !renderer?.scoped;
-    // The marker pops out on each hit and eases back; kills hold longer and read red.
-    const marker = n.hitmarker,
-      kind = game.hit > 0 ? game.hitKind || "body" : "";
-    if (marker.dataset.kind !== kind) marker.dataset.kind = kind;
-    marker.style.opacity = game.hit > 0 ? Math.min(1, game.hit * 12) : 0;
-    marker.style.setProperty("--pop", 1 + Math.min(game.hit, 0.13) * 3);
     n.damage.style.opacity = game.hurt * 0.9;
     // Name the controls of the device in use: keys on desktop, button labels on touch.
     const touch = document.body.classList.contains("touch-mode");
