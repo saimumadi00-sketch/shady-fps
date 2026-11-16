@@ -1,5 +1,5 @@
 {
-  "version": "3c7927691064",
+  "version": "45ff6421efcd",
   "files": [
     "index.html",
     "arena.html",
@@ -32,7 +32,7 @@
     "assets/audio/death.wav",
     "sw.js"
   ],
-  "rawBytes": 1502391,
-  "gzipBytes": 1183556,
-  "brotliBytes": 1126159
+  "rawBytes": 1502328,
+  "gzipBytes": 1183527,
+  "brotliBytes": 1126142
 }
