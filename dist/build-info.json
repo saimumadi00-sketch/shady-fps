@@ -1,5 +1,5 @@
 {
-  "version": "45ff6421efcd",
+  "version": "8e5f9242a2f1",
   "files": [
     "index.html",
     "arena.html",
@@ -7,6 +7,11 @@
     "style.css",
     "assets/yard-map.svg",
     "assets/fonts/inter-latin.woff2",
+    "assets/fonts/barlow-latin-400-normal.woff2",
+    "assets/fonts/barlow-latin-500-normal.woff2",
+    "assets/fonts/barlow-latin-600-normal.woff2",
+    "assets/fonts/barlow-condensed-latin-600-normal.woff2",
+    "assets/fonts/barlow-condensed-latin-700-normal.woff2",
     "assets/audio/shot-ar.mp3",
     "assets/audio/shot-smg.mp3",
     "assets/audio/shot-pistol.mp3",
@@ -32,7 +37,7 @@
     "assets/audio/death.wav",
     "sw.js"
   ],
-  "rawBytes": 1502328,
-  "gzipBytes": 1183527,
-  "brotliBytes": 1126142
+  "rawBytes": 1606724,
+  "gzipBytes": 1294344,
+  "brotliBytes": 1237459
 }

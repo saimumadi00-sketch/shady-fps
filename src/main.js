@@ -318,6 +318,11 @@ try {
     $("roomPanel").hidden = false;
     operators.showTab("mission");
     $("arenaEdition").textContent = "Private room";
+    // The switch in the bar shows which of the two you are in.
+    for (const link of document.querySelectorAll(".bar nav a"))
+      if (link.getAttribute("href").includes("online="))
+        link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
     customization.values.duration = 420;
     customization.values.target = 30;
     customization.refresh();

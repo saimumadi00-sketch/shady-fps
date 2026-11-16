@@ -48,6 +48,11 @@ const files = [
   "style.css",
   "assets/yard-map.svg",
   "assets/fonts/inter-latin.woff2",
+  "assets/fonts/barlow-latin-400-normal.woff2",
+  "assets/fonts/barlow-latin-500-normal.woff2",
+  "assets/fonts/barlow-latin-600-normal.woff2",
+  "assets/fonts/barlow-condensed-latin-600-normal.woff2",
+  "assets/fonts/barlow-condensed-latin-700-normal.woff2",
   ...SAMPLE_FILES.map((file) => "assets/audio/" + file),
 ];
 // Version the cache from deployed assets and worker source so logic-only worker changes invalidate it.

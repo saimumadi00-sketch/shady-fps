@@ -115,7 +115,8 @@ export function initOperatorSelect() {
         finish: $("finish").value,
         optic: $("optic").value,
         frameX: frameX(),
-        squad: OPERATOR_ORDER.filter((k) => k !== id),
+        // The showcase is the chosen operator alone, in front of their name.
+        squad: [],
       });
     drawLeaders(anchors, r, dpr);
   }

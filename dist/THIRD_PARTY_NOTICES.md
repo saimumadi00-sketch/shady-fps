@@ -51,6 +51,13 @@ The original contributor list is included at assets/maps/freedm/CREDITS.
 Project Authors, licensed under the SIL Open Font License, Version 1.1
 (https://openfontlicense.org). Source: https://github.com/rsms/inter.
 
+## Barlow and Barlow Condensed typefaces
+
+`assets/fonts/barlow-latin-*.woff2` and `assets/fonts/barlow-condensed-latin-*.woff2` (the interface
+typefaces) are Barlow by Jeremy Tribby and the Barlow Project Authors, licensed under the SIL Open
+Font License, Version 1.1 (https://openfontlicense.org). Source: https://github.com/jpt/barlow.
+The files are the Latin subsets distributed by Fontsource.
+
 # Sound effects
 
 Gunshot, reload and dry-fire recordings: Snake's Authentic Gun Sounds and Snake's SECOND
